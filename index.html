@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Overmind</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a0a;
+      color: #e2e8f0;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+    }
+
+    .sidebar {
+      width: 260px;
+      background: #111113;
+      border-right: 1px solid #27272a;
+      display: flex;
+      flex-direction: column;
+      transition: 0.25s ease;
+    }
+
+    .sidebar-header {
+      padding: 16px;
+      border-bottom: 1px solid #27272a;
+    }
+
+    .new-chat {
+      padding: 10px 14px;
+      background: #27272a;
+      border-radius: 8px;
+      color: white;
+      font-weight: 500;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .new-chat:hover { background: #3f3f46; }
+
+    .chat-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+
+    .chat-item {
+      padding: 10px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .chat-item:hover,
+    .chat-item.active {
+      background: #3f3f46;
+    }
+
+    .chat-title {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #1a1b1e;
+      width: 100%;
+    }
+
+    .top-bar {
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #27272a;
+    }
+
+    .chat-area {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      position: relative;
+    }
+
+    .welcome-text {
+      font-size: 1.6rem;
+      font-weight: 600;
+      text-align: center;
+      line-height: 1.4;
+      position: absolute;
+      top: 38%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 80%;
+      pointer-events: none;
+      color: #a1a1aa;
+    }
+
+    .message {
+      max-width: 75%;
+      padding: 14px 20px;
+      border-radius: 12px;
+      line-height: 1.6;
+      word-wrap: break-word;
+    }
+
+    .user {
+      align-self: flex-end;
+      background: #22c55e;
+      color: black;
+    }
+
+    .bot {
+      align-self: flex-start;
+      background: #27272a;
+      color: #e2e8f0;
+    }
+
+    .cursor {
+      display: inline-block;
+      width: 6px;
+      height: 14px;
+      background: #e2e8f0;
+      margin-left: 4px;
+      animation: blink 0.9s infinite;
+      vertical-align: middle;
+    }
+
+    @keyframes blink {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0; }
+    }
+
+    .input-area {
+      padding: 16px 20px;
+      background: #1a1b1e;
+      border-top: 1px solid #27272a;
+    }
+
+    .input-container {
+      max-width: 720px;
+      margin: 0 auto;
+      background: #27272a;
+      border-radius: 20px;
+      display: flex;
+      align-items: end;
+      padding: 8px 12px;
+      border: 1px solid #3f3f46;
+      gap: 8px;
+    }
+
+    .input-container textarea {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #e2e8f0;
+      font-size: 1.05rem;
+      padding: 12px 16px;
+      max-height: 180px;
+      resize: none;
+      line-height: 1.5;
+    }
+
+    .send-btn {
+      background: #22c55e;
+      color: black;
+      font-weight: bold;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    /* ===== MOBILE ===== */
+    @media (max-width: 768px) {
+      body {
+        flex-direction: column;
+      }
+
+      .sidebar {
+        position: absolute;
+        left: -260px;
+        top: 0;
+        height: 100%;
+        z-index: 50;
+      }
+
+      .sidebar.open {
+        left: 0;
+      }
+
+      .message {
+        max-width: 90%;
+      }
+
+      .input-container {
+        max-width: 100%;
+        border-radius: 14px;
+      }
+    }
+
+  </style>
+</head>
+
+<body>
+
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <div class="new-chat" id="new-chat-btn">+ New Chat</div>
+    </div>
+    <div class="chat-list" id="chat-list"></div>
+  </div>
+
+  <div class="main">
+    <div class="top-bar">
+      <div style="font-weight:600; font-size:1.1rem;">Overmind</div>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <div style="color:#a1a1aa;">v1.0.0</div>
+        <div id="menu-btn" style="cursor:pointer; font-size:1.3rem;">☰</div>
+      </div>
+    </div>
+
+    <div class="chat-area" id="chat-screen">
+      <div class="welcome-text" id="welcome-message">
+        I am Overmind.<br>What do you seek?
+      </div>
+    </div>
+
+    <div class="input-area">
+      <div class="input-container">
+        <textarea id="user-input" rows="1" placeholder="Send a message to Overmind..."></textarea>
+        <div class="send-btn" id="send-btn">↑</div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const CEREBRAS_API_KEY = 'csk-r25mcjper4yncxt4jrm2h5fktmwhj5d53tnr9hkd8xwxx5j2';
+const API_URL = 'https://api.cerebras.ai/v1/chat/completions';
+
+let chats = JSON.parse(localStorage.getItem('overmind_chats')) || [];
+let currentChatId = null;
+
+const chatScreen = document.getElementById('chat-screen');
+const userInput = document.getElementById('user-input');
+const sendBtn = document.getElementById('send-btn');
+const newChatBtn = document.getElementById('new-chat-btn');
+const chatList = document.getElementById('chat-list');
+const sidebar = document.querySelector('.sidebar');
+const menuBtn = document.getElementById('menu-btn');
+
+function saveChats() {
+  localStorage.setItem('overmind_chats', JSON.stringify(chats));
+}
+
+function generateTitle(text) {
+  return text.length > 24 ? text.slice(0, 24) + "..." : text;
+}
+
+function updateWelcomeVisibility() {
+  const welcome = document.getElementById('welcome-message');
+  const chat = chats.find(c => c.id === currentChatId);
+  const hasMessages = chat && chat.messages.length > 0;
+  if (welcome) welcome.style.display = hasMessages ? 'none' : 'block';
+}
+
+function createNewChat() {
+  const newChat = {
+    id: 'chat-' + Date.now(),
+    title: 'New Chat',
+    messages: [],
+    timestamp: Date.now()
+  };
+  chats.unshift(newChat);
+  saveChats();
+  loadChat(newChat.id);
+}
+
+function loadChat(id) {
+  currentChatId = id;
+  const chat = chats.find(c => c.id === id);
+  if (!chat) return;
+
+  chatScreen.innerHTML =
+    `<div class="welcome-text" id="welcome-message">
+      I am Overmind.<br>What do you seek?
+    </div>`;
+
+  chat.messages.forEach(msg => {
+    const div = document.createElement('div');
+    div.className = `message ${msg.role === 'user' ? 'user' : 'bot'}`;
+    div.innerHTML = msg.role === 'user'
+      ? msg.content
+      : renderBotMessage(msg.content);
+    chatScreen.appendChild(div);
+  });
+
+  updateWelcomeVisibility();
+  renderChatList();
+}
+
+function renderChatList() {
+  chatList.innerHTML = '';
+  chats.forEach(chat => {
+    const item = document.createElement('div');
+    item.className = `chat-item ${chat.id === currentChatId ? 'active' : ''}`;
+    item.innerHTML = `
+      <div class="chat-title">${chat.title}</div>
+      <div style="display:flex; gap:8px;">
+        <span onclick="event.stopImmediatePropagation(); renameChat('${chat.id}')">✎</span>
+        <span onclick="event.stopImmediatePropagation(); deleteChat('${chat.id}')">🗑</span>
+      </div>
+    `;
+    item.onclick = () => loadChat(chat.id);
+    chatList.appendChild(item);
+  });
+}
+
+function renameChat(id) {
+  const chat = chats.find(c => c.id === id);
+  const name = prompt("Rename chat:", chat.title);
+  if (name?.trim()) {
+    chat.title = name.trim();
+    saveChats();
+    renderChatList();
+  }
+}
+
+function deleteChat(id) {
+  chats = chats.filter(c => c.id !== id);
+  saveChats();
+  if (currentChatId === id) {
+    chats.length ? loadChat(chats[0].id) : createNewChat();
+  } else renderChatList();
+}
+
+function renderBotMessage(text) {
+  const safe = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return marked.parse(safe);
+}
+
+function addMessage(text, isUser) {
+  const div = document.createElement('div');
+  div.className = `message ${isUser ? 'user' : 'bot'}`;
+  div.innerHTML = isUser ? text : renderBotMessage(text);
+  chatScreen.appendChild(div);
+  chatScreen.scrollTop = chatScreen.scrollHeight;
+  return div;
+}
+
+function showTyping() {
+  const div = document.createElement('div');
+  div.className = 'message bot';
+  div.id = 'typing';
+  div.textContent = 'Overmind is thinking...';
+  chatScreen.appendChild(div);
+  chatScreen.scrollTop = chatScreen.scrollHeight;
+}
+
+function removeTyping() {
+  const t = document.getElementById('typing');
+  if (t) t.remove();
+}
+
+async function getCerebrasResponse(userMessage) {
+  const chat = chats.find(c => c.id === currentChatId);
+
+  if (chat.messages.length === 0) {
+    chat.title = generateTitle(userMessage);
+  }
+
+  chat.messages.push({ role: "user", content: userMessage });
+
+  const botDiv = addMessage('', false);
+
+  showTyping();
+
+  let botReply = '';
+  let streaming = true;
+
+  const response = await fetch(API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${CEREBRAS_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: "gpt-oss-120b",
+      messages: [
+        { role: "system", content: "You are Overmind. You were created by V0idplayy. Keep responses under 1 paragraph." },
+        ...chat.messages
+      ],
+      temperature: 0.7,
+      max_tokens: 400,
+      stream: true
+    })
+  });
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+
+  removeTyping();
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+
+    const chunk = decoder.decode(value);
+
+    for (const line of chunk.split('\n')) {
+      if (line.startsWith('data: ') && !line.includes('[DONE]')) {
+        try {
+          const data = JSON.parse(line.slice(6));
+          const content = data.choices[0]?.delta?.content || '';
+
+          if (content) {
+            botReply += content;
+
+            botDiv.innerHTML =
+              renderBotMessage(botReply) +
+              (streaming ? '<span class="cursor"></span>' : '');
+
+            chatScreen.scrollTop = chatScreen.scrollHeight;
+          }
+        } catch {}
+      }
+    }
+  }
+
+  streaming = false;
+
+  botDiv.innerHTML = renderBotMessage(botReply);
+
+  chat.messages.push({ role: "assistant", content: botReply });
+  saveChats();
+  updateWelcomeVisibility();
+  renderChatList();
+}
+
+async function handleSend() {
+  const text = userInput.value.trim();
+  if (!text || !currentChatId) return;
+
+  addMessage(text, true);
+  userInput.value = '';
+  userInput.style.height = 'auto';
+
+  document.getElementById('welcome-message')?.style && 
+    (document.getElementById('welcome-message').style.display = 'none');
+
+  await getCerebrasResponse(text);
+}
+
+sendBtn.onclick = handleSend;
+
+userInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    handleSend();
+  }
+});
+
+userInput.addEventListener('input', () => {
+  userInput.style.height = 'auto';
+  userInput.style.height = Math.min(userInput.scrollHeight, 180) + 'px';
+});
+
+menuBtn.onclick = () => {
+  sidebar.classList.toggle('open');
+};
+
+newChatBtn.onclick = createNewChat;
+
+window.onload = () => {
+  if (!chats.length) createNewChat();
+  else loadChat(chats[0].id);
+
+  renderChatList();
+  userInput.focus();
+};
+</script>
+
+</body>
+</html>
