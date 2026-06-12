@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Overmind</title>
+  <title>Overmind — AI with Update Log</title>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <link rel="icon" href="./favicon.ico" type="image/x-icon">
   <style>
@@ -30,6 +30,7 @@
       --tab-bg: #1f2023;
       --tab-active-bg: #22c55e;
       --tab-active-text: #000;
+      --update-highlight: #2a2f36;
     }
 
     body[data-theme="light"] {
@@ -55,6 +56,7 @@
       --tab-bg: #f1f5f9;
       --tab-active-bg: #16a34a;
       --tab-active-text: #fff;
+      --update-highlight: #eef2ff;
     }
 
     body[data-font="serif"] { font-family: Georgia, "Times New Roman", Times, serif; }
@@ -299,6 +301,9 @@
     .modal-header {
       padding: 16px 18px;
       border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
     .modal-footer {
@@ -455,6 +460,40 @@
       line-height: 1.4;
     }
 
+    /* Update log specific styles */
+    .update-entry {
+      background: var(--panel-bg);
+      border-radius: 16px;
+      padding: 18px;
+      margin-bottom: 20px;
+      border-left: 4px solid var(--accent);
+      transition: 0.1s ease;
+    }
+    .update-version {
+      font-size: 1.2rem;
+      font-weight: 700;
+      display: flex;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .update-date {
+      font-size: 0.7rem;
+      background: var(--tab-bg);
+      padding: 4px 10px;
+      border-radius: 40px;
+      color: var(--text);
+      font-weight: normal;
+    }
+    .update-list {
+      margin-left: 20px;
+      line-height: 1.55;
+    }
+    .update-list li {
+      margin: 8px 0;
+    }
+
     @media (max-width: 768px) {
       body { flex-direction: column; }
       .sidebar {
@@ -487,7 +526,10 @@
     <div class="top-bar">
       <div style="font-weight:600; font-size:1.1rem;">Overmind</div>
       <div style="display:flex; gap:10px; align-items:center;">
-        <div style="color:var(--muted);">v1.1.0</div>
+        <div class="updates-btn" id="open-updates-btn" style="background: var(--panel-bg); border-radius: 28px; padding: 4px 12px; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:6px; margin-right:4px;">
+          📋 <span>Update log</span>
+        </div>
+        <div style="color:var(--muted);">v1.2.0</div>
         <div id="menu-btn" style="cursor:pointer; font-size:1.3rem; user-select:none;">☰</div>
       </div>
     </div>
@@ -641,6 +683,22 @@
     </div>
   </div>
 
+  <!-- UPDATE LOG MODAL (new feature) -->
+  <div class="modal-backdrop" id="updates-modal">
+    <div class="modal" style="max-width: 560px;">
+      <div class="modal-header">
+        <span>📰 Update Log · Recent changes</span>
+        <button class="close-modal-btn" id="updates-close-icon" style="background:transparent; border:none; font-size:1.3rem; cursor:pointer; color:var(--text);">✕</button>
+      </div>
+      <div class="modal-body" id="update-log-content" style="max-height: 60vh; overflow-y: auto; padding: 16px 18px;">
+        <!-- dynamic update entries will appear here -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn primary" id="updates-close-footer">Got it</button>
+      </div>
+    </div>
+  </div>
+
 <script>
 const CEREBRAS_API_KEY = 'csk-r25mcjper4yncxt4jrm2h5fktmwhj5d53tnr9hkd8xwxx5j2';
 const API_URL = 'https://api.cerebras.ai/v1/chat/completions';
@@ -720,6 +778,38 @@ const languageSelect = document.getElementById('language-select');
 const safetySelect = document.getElementById('safety-select');
 const exportChatsBtn = document.getElementById('export-chats-btn');
 const clearChatsBtn = document.getElementById('clear-chats-btn');
+
+const UPDATE_HISTORY = [
+  { version: "v1.2.0", date: "June 12, 2026", changes: ["✨ Added **Update Log** — view recent improvements directly from the top bar.", "⚙ Added settings menu."] },
+];
+
+function renderUpdateLog() {
+  const container = document.getElementById('update-log-content');
+  if (!container) return;
+  container.innerHTML = `<div style="margin-bottom:8px;"><hr style="margin:8px 0;"></div>`;
+  UPDATE_HISTORY.forEach(update => {
+    const entry = document.createElement('div');
+    entry.className = 'update-entry';
+    entry.innerHTML = `
+      <div class="update-version">
+        <strong style="font-size:1.2rem;">${update.version}</strong>
+        <span class="update-date">${update.date}</span>
+      </div>
+      <ul class="update-list">
+        ${update.changes.map(c => `<li>${marked.parseInline(c)}</li>`).join('')}
+      </ul>
+    `;
+    container.appendChild(entry);
+  });
+  const tip = document.createElement('div');
+  tip.style.marginTop = '16px';
+  tip.style.padding = '12px';
+  tip.style.background = 'var(--update-highlight)';
+  tip.style.borderRadius = '14px';
+  tip.style.fontSize = '0.85rem';
+  tip.innerHTML = '💡 Overmind evolves with your feedback. More features coming soon.';
+  container.appendChild(tip);
+}
 
 function saveChats() {
   if (settings.neverStore) return;
@@ -1111,15 +1201,14 @@ async function handleSend() {
   getCerebrasResponse(text);
 }
 
+// --- Event listeners (original + update log modal) ---
 sendBtn.onclick = handleSend;
-
 userInput.addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
     handleSend();
   }
 });
-
 userInput.addEventListener('input', () => {
   userInput.style.height = 'auto';
   userInput.style.height = Math.min(userInput.scrollHeight, 180) + 'px';
@@ -1136,7 +1225,6 @@ clearChatsBtn.onclick = clearAllChats;
 settingsModal.addEventListener('click', e => {
   if (e.target === settingsModal) closeSettings();
 });
-
 window.addEventListener('keydown', e => {
   if (e.key === 'Escape') closeSettings();
 });
@@ -1157,7 +1245,6 @@ memoryToggle.addEventListener('keydown', e => {
     toggleMemory();
   }
 });
-
 noStoreToggle.addEventListener('click', toggleNoStore);
 noStoreToggle.addEventListener('keydown', e => {
   if (e.key === 'Enter' || e.key === ' ') {
@@ -1165,6 +1252,19 @@ noStoreToggle.addEventListener('keydown', e => {
     toggleNoStore();
   }
 });
+
+const updatesModal = document.getElementById('updates-modal');
+const openUpdatesBtn = document.getElementById('open-updates-btn');
+const closeUpdates = () => updatesModal.classList.remove('open');
+if (openUpdatesBtn) {
+  openUpdatesBtn.onclick = () => {
+    renderUpdateLog();
+    updatesModal.classList.add('open');
+  };
+}
+document.getElementById('updates-close-icon')?.addEventListener('click', closeUpdates);
+document.getElementById('updates-close-footer')?.addEventListener('click', closeUpdates);
+updatesModal?.addEventListener('click', (e) => { if (e.target === updatesModal) closeUpdates(); });
 
 window.onload = () => {
   loadChats();
