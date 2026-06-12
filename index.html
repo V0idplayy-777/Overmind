@@ -7,42 +7,112 @@
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <link rel="icon" href="./favicon.ico" type="image/x-icon">
   <style>
+    :root {
+      --bg: #0a0a0a;
+      --sidebar-bg: #111113;
+      --main-bg: #1a1b1e;
+      --topbar-bg: #1a1b1e;
+      --panel-bg: #27272a;
+      --panel-hover: #3f3f46;
+      --border: #27272a;
+      --text: #e2e8f0;
+      --muted: #a1a1aa;
+      --bot-bg: #27272a;
+      --user-bg: #22c55e;
+      --user-text: #000;
+      --error-bg: #991b1b;
+      --error-text: #fecaca;
+      --error-border: #f87171;
+      --accent: #22c55e;
+      --input-text: #e2e8f0;
+      --input-placeholder: #9ca3af;
+      --shadow: rgba(0,0,0,0.25);
+      --tab-bg: #1f2023;
+      --tab-active-bg: #22c55e;
+      --tab-active-text: #000;
+    }
+
+    body[data-theme="light"] {
+      --bg: #f4f6f8;
+      --sidebar-bg: #ffffff;
+      --main-bg: #f8fafc;
+      --topbar-bg: #ffffff;
+      --panel-bg: #e5e7eb;
+      --panel-hover: #d1d5db;
+      --border: #d1d5db;
+      --text: #111827;
+      --muted: #6b7280;
+      --bot-bg: #ffffff;
+      --user-bg: #16a34a;
+      --user-text: #ffffff;
+      --error-bg: #fee2e2;
+      --error-text: #991b1b;
+      --error-border: #fca5a5;
+      --accent: #16a34a;
+      --input-text: #111827;
+      --input-placeholder: #6b7280;
+      --shadow: rgba(0,0,0,0.08);
+      --tab-bg: #f1f5f9;
+      --tab-active-bg: #16a34a;
+      --tab-active-text: #fff;
+    }
+
+    body[data-font="serif"] { font-family: Georgia, "Times New Roman", Times, serif; }
+    body[data-font="mono"] { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
+    body[data-font="system"] { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
     * { margin: 0; padding: 0; box-sizing: border-box; }
+
     body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #0a0a0a;
-      color: #e2e8f0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
       height: 100vh;
       overflow: hidden;
       display: flex;
+      transition: background .2s ease, color .2s ease;
     }
+
     .sidebar {
       width: 260px;
-      background: #111113;
-      border-right: 1px solid #27272a;
+      background: var(--sidebar-bg);
+      border-right: 1px solid var(--border);
       display: flex;
       flex-direction: column;
       transition: 0.25s ease;
+      box-shadow: 0 0 24px var(--shadow);
     }
+
     .sidebar-header {
       padding: 16px;
-      border-bottom: 1px solid #27272a;
+      border-bottom: 1px solid var(--border);
     }
-    .new-chat {
+
+    .new-chat, .settings-btn {
       padding: 10px 14px;
-      background: #27272a;
+      background: var(--panel-bg);
       border-radius: 8px;
-      color: white;
+      color: var(--text);
       font-weight: 500;
       cursor: pointer;
       text-align: center;
+      user-select: none;
     }
-    .new-chat:hover { background: #3f3f46; }
+
+    .new-chat:hover, .settings-btn:hover {
+      background: var(--panel-hover);
+    }
+
+    .settings-btn {
+      margin-top: 10px;
+    }
+
     .chat-list {
       flex: 1;
       overflow-y: auto;
       padding: 8px;
     }
+
     .chat-item {
       padding: 10px 14px;
       border-radius: 8px;
@@ -52,29 +122,35 @@
       justify-content: space-between;
       align-items: center;
     }
+
     .chat-item:hover,
     .chat-item.active {
-      background: #3f3f46;
+      background: var(--panel-hover);
     }
+
     .chat-title {
       flex: 1;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
+
     .main {
       flex: 1;
       display: flex;
       flex-direction: column;
-      background: #1a1b1e;
+      background: var(--main-bg);
     }
+
     .top-bar {
       padding: 14px 20px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-bottom: 1px solid #27272a;
+      border-bottom: 1px solid var(--border);
+      background: var(--topbar-bg);
     }
+
     .chat-area {
       flex: 1;
       padding: 20px;
@@ -84,6 +160,7 @@
       gap: 12px;
       position: relative;
     }
+
     .welcome-text {
       font-size: 1.6rem;
       font-weight: 600;
@@ -95,78 +172,94 @@
       transform: translate(-50%, -50%);
       width: 80%;
       pointer-events: none;
-      color: #a1a1aa;
+      color: var(--muted);
     }
+
     .message {
       max-width: 75%;
       padding: 14px 20px;
       border-radius: 12px;
       line-height: 1.6;
       word-wrap: break-word;
+      box-shadow: 0 8px 24px var(--shadow);
     }
+
     .user {
       align-self: flex-end;
-      background: #22c55e;
-      color: black;
+      background: var(--user-bg);
+      color: var(--user-text);
     }
+
     .bot {
       align-self: flex-start;
-      background: #27272a;
-      color: #e2e8f0;
+      background: var(--bot-bg);
+      color: var(--text);
+      border: 1px solid var(--border);
     }
+
     .error-message {
       align-self: flex-start;
-      background: #991b1b;
-      color: #fecaca;
-      border: 1px solid #f87171;
+      background: var(--error-bg);
+      color: var(--error-text);
+      border: 1px solid var(--error-border);
       max-width: 75%;
       padding: 14px 20px;
       border-radius: 12px;
     }
+
     .cursor {
       display: inline-block;
       width: 6px;
       height: 14px;
-      background: #e2e8f0;
+      background: var(--text);
       margin-left: 4px;
       animation: blink 0.9s infinite;
       vertical-align: middle;
     }
+
     @keyframes blink {
       0%, 50% { opacity: 1; }
       51%, 100% { opacity: 0; }
     }
+
     .input-area {
       padding: 16px 20px;
-      background: #1a1b1e;
-      border-top: 1px solid #27272a;
+      background: var(--main-bg);
+      border-top: 1px solid var(--border);
     }
+
     .input-container {
       max-width: 720px;
       margin: 0 auto;
-      background: #27272a;
+      background: var(--panel-bg);
       border-radius: 20px;
       display: flex;
       align-items: end;
       padding: 8px 12px;
-      border: 1px solid #3f3f46;
+      border: 1px solid var(--border);
       gap: 8px;
     }
+
     .input-container textarea {
       flex: 1;
       background: transparent;
       border: none;
       outline: none;
-      color: #e2e8f0;
+      color: var(--input-text);
       font-size: 1.05rem;
       padding: 12px 16px;
       max-height: 180px;
       resize: none;
       line-height: 1.5;
     }
+
+    .input-container textarea::placeholder {
+      color: var(--input-placeholder);
+    }
+
     .send-btn {
-      background: #22c55e;
-      color: black;
+      background: var(--accent);
+      color: var(--user-text);
       font-weight: bold;
       width: 44px;
       height: 44px;
@@ -177,6 +270,191 @@
       cursor: pointer;
       flex-shrink: 0;
     }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .modal-backdrop.open { display: flex; }
+
+    .modal {
+      width: min(92vw, 620px);
+      background: var(--sidebar-bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: 0 20px 50px var(--shadow);
+      overflow: hidden;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-header {
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-footer {
+      border-top: 1px solid var(--border);
+      padding: 14px 18px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .modal-body {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .settings-tabs {
+      display: flex;
+      gap: 2px;
+      padding: 10px;
+      background: var(--tab-bg);
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+
+    .settings-tab {
+      flex: 1;
+      min-width: 90px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--panel-bg);
+      color: var(--text);
+      cursor: pointer;
+      font-weight: 600;
+      text-align: center;
+      user-select: none;
+      transition: .15s ease;
+    }
+
+    .settings-tab:hover {
+      filter: brightness(1.05);
+    }
+
+    .settings-tab.active {
+      background: var(--tab-active-bg);
+      color: var(--tab-active-text);
+      border-color: var(--tab-active-bg);
+    }
+
+    .settings-panel {
+      display: none;
+      padding: 16px 18px;
+      overflow-y: auto;
+      gap: 16px;
+    }
+
+    .settings-panel.active {
+      display: grid;
+    }
+
+    .field-label {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: .93rem;
+    }
+
+    .select, .text-input {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--panel-bg);
+      color: var(--text);
+      outline: none;
+    }
+
+    .text-input::placeholder {
+      color: var(--input-placeholder);
+    }
+
+    .btn {
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--panel-bg);
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .btn.primary {
+      background: var(--accent);
+      color: var(--user-text);
+      border-color: transparent;
+    }
+
+    .btn:hover { filter: brightness(1.05); }
+    .btn.danger {
+      background: #dc2626;
+      color: white;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .toggle {
+      width: 48px;
+      height: 28px;
+      border-radius: 999px;
+      background: #6b7280;
+      position: relative;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: .2s ease;
+    }
+
+    .toggle.on {
+      background: var(--accent);
+    }
+
+    .toggle::after {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: white;
+      transition: .2s ease;
+    }
+
+    .toggle.on::after {
+      left: 23px;
+    }
+
+    .help-text {
+      font-size: .88rem;
+      color: var(--muted);
+      line-height: 1.45;
+      margin-top: 6px;
+    }
+
+    .thinking-info {
+      font-size: .88rem;
+      color: var(--muted);
+      margin-top: 6px;
+      line-height: 1.4;
+    }
+
     @media (max-width: 768px) {
       body { flex-direction: column; }
       .sidebar {
@@ -188,6 +466,11 @@
       }
       .sidebar.open { left: 0; }
       .message { max-width: 90%; }
+
+      .settings-tab {
+        flex: 0 1 auto;
+        min-width: 80px;
+      }
     }
   </style>
 </head>
@@ -195,22 +478,24 @@
   <div class="sidebar">
     <div class="sidebar-header">
       <div class="new-chat" id="new-chat-btn">+ New Chat</div>
+      <div class="settings-btn" id="settings-open-btn">Settings</div>
     </div>
     <div class="chat-list" id="chat-list"></div>
   </div>
+
   <div class="main">
     <div class="top-bar">
       <div style="font-weight:600; font-size:1.1rem;">Overmind</div>
       <div style="display:flex; gap:10px; align-items:center;">
-        <div style="color:#a1a1aa;">v1.0.1</div>
-        <div id="menu-btn" style="cursor:pointer; font-size:1.3rem;">☰</div>
+        <div style="color:var(--muted);">v1.1.0</div>
+        <div id="menu-btn" style="cursor:pointer; font-size:1.3rem; user-select:none;">☰</div>
       </div>
     </div>
+
     <div class="chat-area" id="chat-screen">
-      <div class="welcome-text" id="welcome-message">
-        I am Overmind.<br>What do you seek?
-      </div>
+      <div class="welcome-text" id="welcome-message">I am Overmind.<br>What do you seek?</div>
     </div>
+
     <div class="input-area">
       <div class="input-container">
         <textarea id="user-input" rows="1" placeholder="Send a message to Overmind..."></textarea>
@@ -219,12 +504,196 @@
     </div>
   </div>
 
+  <div class="modal-backdrop" id="settings-modal">
+    <div class="modal">
+      <div class="modal-header"><strong>Settings</strong></div>
+
+      <div class="modal-body">
+        <div class="settings-tabs">
+          <button class="settings-tab active" data-tab="appearance">Appearance</button>
+          <button class="settings-tab" data-tab="behavior">Behavior</button>
+          <button class="settings-tab" data-tab="identity">Identity</button>
+          <button class="settings-tab" data-tab="language">Language</button>
+          <button class="settings-tab" data-tab="privacy">Privacy</button>
+        </div>
+
+        <div class="settings-panel active" id="tab-appearance">
+          <div>
+            <label class="field-label" for="theme-select">Theme mode</label>
+            <select class="select" id="theme-select">
+              <option value="dark">Dark</option>
+              <option value="light">Light</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label" for="font-select">Font style</label>
+            <select class="select" id="font-select">
+              <option value="system">System</option>
+              <option value="serif">Serif</option>
+              <option value="mono">Mono</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label" for="emoji-select">Emoji usage</label>
+            <select class="select" id="emoji-select">
+              <option value="none">None</option>
+              <option value="occasional">Occasional</option>
+              <option value="frequent">Frequent</option>
+            </select>
+            <div class="help-text">Control how often emojis appear in responses.</div>
+          </div>
+        </div>
+
+        <div class="settings-panel" id="tab-behavior">
+          <div>
+            <label class="field-label" for="thinking-select">Thinking style</label>
+            <select class="select" id="thinking-select">
+              <option value="fast">Fast answer</option>
+              <option value="balanced">Balanced</option>
+              <option value="step">Step-by-step reasoning</option>
+            </select>
+            <div class="thinking-info" id="thinking-info"></div>
+          </div>
+          <div>
+            <label class="field-label" for="tone-select">Tone</label>
+            <select class="select" id="tone-select">
+              <option value="neutral">Neutral</option>
+              <option value="friendly">Friendly</option>
+              <option value="formal">Formal</option>
+              <option value="quirky">Quirky</option>
+              <option value="concise">Concise</option>
+            </select>
+            <div class="help-text">Controls how warm or stiff responses sound.</div>
+          </div>
+          <div>
+            <label class="field-label" for="language-select">Preferred language</label>
+            <select class="select" id="language-select">
+              <option value="English">English</option>
+              <option value="Spanish">Spanish</option>
+              <option value="French">French</option>
+              <option value="German">German</option>
+              <option value="Portuguese">Portuguese</option>
+              <option value="Mandarin">Mandarin</option>
+              <option value="Japanese">Japanese</option>
+              <option value="Korean">Korean</option>
+            </select>
+            <div class="help-text">The bot will prefer this language unless you say otherwise.</div>
+          </div>
+        </div>
+
+        <div class="settings-panel" id="tab-identity">
+          <div>
+            <label class="field-label" for="assistant-name-input">Assistant name used in prompt</label>
+            <input class="text-input" id="assistant-name-input" type="text" maxlength="32" placeholder="Overmind">
+            <div class="help-text">This only changes what the model calls itself. The UI name stays Overmind.</div>
+          </div>
+        </div>
+
+        <div class="settings-panel" id="tab-language">
+          <div>
+            <label class="field-label" for="swear-select">Swearing mode</label>
+            <select class="select" id="swear-select">
+              <option value="natural_only_when_allowed">Only when allowed</option>
+              <option value="never">Never swear</option>
+              <option value="always">Always swear naturally</option>
+            </select>
+            <div class="help-text">“Only when allowed” is the default. It stays polite unless the user gives permission or the tone clearly warrants it.</div>
+          </div>
+          <div>
+            <label class="field-label" for="safety-select">Safety level</label>
+            <select class="select" id="safety-select">
+              <option value="strict">Strict</option>
+              <option value="moderate">Moderate</option>
+              <option value="permissive">Permissive</option>
+            </select>
+            <div class="help-text">How conservative the bot is with risky topics. “Moderate” is the default.</div>
+          </div>
+        </div>
+
+        <div class="settings-panel" id="tab-privacy">
+          <div class="toggle-row">
+            <div>
+              <div class="field-label" style="margin-bottom:0;">Memory</div>
+              <div class="help-text" style="margin-top:4px;">When on, the bot can use prior chats as extra context.</div>
+            </div>
+            <div class="toggle" id="memory-toggle" role="switch" aria-checked="true" tabindex="0"></div>
+          </div>
+
+          <div class="toggle-row">
+            <div>
+              <div class="field-label" style="margin-bottom:0;">Never store chat history</div>
+              <div class="help-text" style="margin-top:4px;">If on, chats won’t be saved to localStorage.</div>
+            </div>
+            <div class="toggle" id="no-store-toggle" role="switch" aria-checked="false" tabindex="0"></div>
+          </div>
+
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="btn" id="export-chats-btn">Export chats</button>
+            <button class="btn danger" id="clear-chats-btn">Clear all chats</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn" id="settings-close-btn">Close</button>
+        <button class="btn primary" id="settings-save-btn">Save</button>
+      </div>
+    </div>
+  </div>
+
 <script>
 const CEREBRAS_API_KEY = 'csk-r25mcjper4yncxt4jrm2h5fktmwhj5d53tnr9hkd8xwxx5j2';
 const API_URL = 'https://api.cerebras.ai/v1/chat/completions';
 
+const DEFAULT_SETTINGS = {
+  theme: 'dark',
+  font: 'system',
+  thinking: 'balanced',
+  emoji: 'occasional',
+  tone: 'neutral',
+  language: 'English',
+  assistantName: 'Overmind',
+  swearMode: 'natural_only_when_allowed',
+  safetyLevel: 'moderate',
+  memoryEnabled: true,
+  neverStore: false
+};
+
+const THINKING_PROMPTS = {
+  fast: 'Respond concisely and directly. Keep answers short.',
+  balanced: 'Respond clearly with a helpful amount of detail.',
+  step: 'Reason carefully and explain your solution in a step-by-step way.'
+};
+
+const EMOJI_PROMPTS = {
+  none: 'Do not use emojis in responses.',
+  occasional: 'Use emojis occasionally, when they fit naturally.',
+  frequent: 'Use emojis frequently to add warmth and personality.'
+};
+
+const TONE_PROMPTS = {
+  neutral: 'Use a neutral, balanced tone.',
+  friendly: 'Use a warm, friendly tone.',
+  formal: 'Use a formal, professional tone.',
+  quirky: 'Use a playful, quirky tone.',
+  concise: 'Be very concise and direct.'
+};
+
+const SWEAR_PROMPTS = {
+  natural_only_when_allowed: 'Avoid swearing unless the user explicitly allows it or the tone clearly warrants it.',
+  never: 'Do not swear at all.',
+  always: 'Swear naturally when it fits the tone, without being excessive.'
+};
+
+const SAFETY_PROMPTS = {
+  strict: 'Be very conservative with risky topics. Refuse or soften potentially harmful content.',
+  moderate: 'Use balanced moderation for risky topics. Refuse clearly when needed.',
+  permissive: 'Be lenient with risky topics. Only refuse overtly harmful content.'
+};
+
 let chats = [];
 let currentChatId = null;
+let settings = loadSettings();
 
 const chatScreen = document.getElementById('chat-screen');
 const userInput = document.getElementById('user-input');
@@ -233,12 +702,35 @@ const newChatBtn = document.getElementById('new-chat-btn');
 const chatList = document.getElementById('chat-list');
 const sidebar = document.querySelector('.sidebar');
 const menuBtn = document.getElementById('menu-btn');
+const settingsModal = document.getElementById('settings-modal');
+const settingsOpenBtn = document.getElementById('settings-open-btn');
+const settingsCloseBtn = document.getElementById('settings-close-btn');
+const settingsSaveBtn = document.getElementById('settings-save-btn');
+const themeSelect = document.getElementById('theme-select');
+const fontSelect = document.getElementById('font-select');
+const thinkingSelect = document.getElementById('thinking-select');
+const thinkingInfo = document.getElementById('thinking-info');
+const assistantNameInput = document.getElementById('assistant-name-input');
+const swearSelect = document.getElementById('swear-select');
+const memoryToggle = document.getElementById('memory-toggle');
+const noStoreToggle = document.getElementById('no-store-toggle');
+const emojiSelect = document.getElementById('emoji-select');
+const toneSelect = document.getElementById('tone-select');
+const languageSelect = document.getElementById('language-select');
+const safetySelect = document.getElementById('safety-select');
+const exportChatsBtn = document.getElementById('export-chats-btn');
+const clearChatsBtn = document.getElementById('clear-chats-btn');
 
 function saveChats() {
+  if (settings.neverStore) return;
   localStorage.setItem('overmind_chats', JSON.stringify(chats));
 }
 
 function loadChats() {
+  if (settings.neverStore) {
+    chats = [];
+    return;
+  }
   try {
     const saved = localStorage.getItem('overmind_chats');
     chats = saved ? JSON.parse(saved) : [];
@@ -247,8 +739,59 @@ function loadChats() {
   }
 }
 
+function saveSettings() {
+  localStorage.setItem('overmind_settings', JSON.stringify(settings));
+}
+
+function loadSettings() {
+  try {
+    const saved = localStorage.getItem('overmind_settings');
+    return saved ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) } : { ...DEFAULT_SETTINGS };
+  } catch (e) {
+    return { ...DEFAULT_SETTINGS };
+  }
+}
+
+function applySettings() {
+  document.body.dataset.theme = settings.theme;
+  document.body.dataset.font = settings.font;
+  themeSelect.value = settings.theme;
+  fontSelect.value = settings.font;
+  thinkingSelect.value = settings.thinking;
+  emojiSelect.value = settings.emoji;
+  toneSelect.value = settings.tone;
+  languageSelect.value = settings.language;
+  assistantNameInput.value = settings.assistantName;
+  swearSelect.value = settings.swearMode;
+  safetySelect.value = settings.safetyLevel;
+  thinkingInfo.textContent = THINKING_PROMPTS[settings.thinking];
+  memoryToggle.classList.toggle('on', !!settings.memoryEnabled);
+  memoryToggle.setAttribute('aria-checked', settings.memoryEnabled ? 'true' : 'false');
+  noStoreToggle.classList.toggle('on', !!settings.neverStore);
+  noStoreToggle.setAttribute('aria-checked', settings.neverStore ? 'true' : 'false');
+
+  document.querySelectorAll('.settings-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.settings-panel').forEach(p => p.classList.remove('active'));
+  document.querySelector('.settings-tab[data-tab="appearance"]').classList.add('active');
+  document.getElementById('tab-appearance').classList.add('active');
+}
+
+function systemPrompt() {
+  return `You are Overmind. In this conversation, your self-name is "${settings.assistantName}". Do not say you are ChatGPT or that you were developed by OpenAI.
+
+${THINKING_PROMPTS[settings.thinking]}
+${TONE_PROMPTS[settings.tone]}
+${EMOJI_PROMPTS[settings.emoji]}
+${SWEAR_PROMPTS[settings.swearMode]}
+${SAFETY_PROMPTS[settings.safetyLevel]}
+
+Prefer to respond in ${settings.language} unless the user explicitly asks for another language.
+
+Keep responses appropriate to the selected style.`;
+}
+
 function generateTitle(text) {
-  return text.length > 24 ? text.slice(0, 24) + "..." : text;
+  return text.length > 24 ? text.slice(0, 24) + '...' : text;
 }
 
 function updateWelcomeVisibility() {
@@ -276,15 +819,12 @@ function loadChat(id) {
   const chat = chats.find(c => c.id === id);
   if (!chat) return;
 
-  chatScreen.innerHTML = `
-    <div class="welcome-text" id="welcome-message">
-      I am Overmind.<br>What do you seek?
-    </div>`;
+  chatScreen.innerHTML = `<div class="welcome-text" id="welcome-message">I am Overmind.<br>What do you seek?</div>`;
 
   chat.messages.forEach(msg => {
     const div = document.createElement('div');
     div.className = `message ${msg.role === 'user' ? 'user' : 'bot'}`;
-    div.innerHTML = msg.role === 'user' ? msg.content : renderBotMessage(msg.content);
+    div.innerHTML = msg.role === 'user' ? escapeHTML(msg.content) : renderBotMessage(msg.content);
     chatScreen.appendChild(div);
   });
 
@@ -298,7 +838,7 @@ function renderChatList() {
     const item = document.createElement('div');
     item.className = `chat-item ${chat.id === currentChatId ? 'active' : ''}`;
     item.innerHTML = `
-      <div class="chat-title">${chat.title}</div>
+      <div class="chat-title">${escapeHTML(chat.title)}</div>
       <div style="display:flex; gap:8px;">
         <span onclick="event.stopImmediatePropagation(); renameChat('${chat.id}')">✎</span>
         <span onclick="event.stopImmediatePropagation(); deleteChat('${chat.id}')">🗑</span>
@@ -331,15 +871,21 @@ function deleteChat(id) {
   }
 }
 
+function escapeHTML(text) {
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 function renderBotMessage(text) {
-  const safe = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  return marked.parse(safe);
+  return marked.parse(escapeHTML(text));
 }
 
 function addMessage(text, isUser) {
   const div = document.createElement('div');
   div.className = `message ${isUser ? 'user' : 'bot'}`;
-  div.innerHTML = isUser ? text : renderBotMessage(text);
+  div.innerHTML = isUser ? escapeHTML(text) : renderBotMessage(text);
   chatScreen.appendChild(div);
   chatScreen.scrollTop = chatScreen.scrollHeight;
   return div;
@@ -349,7 +895,7 @@ function showTyping() {
   const div = document.createElement('div');
   div.className = 'message bot';
   div.id = 'typing';
-  div.textContent = 'Overmind is thinking...';
+  div.textContent = `${settings.assistantName} is thinking...`;
   chatScreen.appendChild(div);
   chatScreen.scrollTop = chatScreen.scrollHeight;
 }
@@ -367,8 +913,95 @@ function showError(message) {
   chatScreen.scrollTop = chatScreen.scrollHeight;
 }
 
-// ==================== MAIN API FUNCTION ====================
-async function getCerebrasResponse(userMessage) {
+function openSettings() {
+  applySettings();
+  settingsModal.classList.add('open');
+}
+
+function closeSettings() {
+  settingsModal.classList.remove('open');
+}
+
+function saveSettingsFromUI() {
+  settings.theme = themeSelect.value;
+  settings.font = fontSelect.value;
+  settings.thinking = thinkingSelect.value;
+  settings.emoji = emojiSelect.value;
+  settings.tone = toneSelect.value;
+  settings.language = languageSelect.value;
+  settings.assistantName = assistantNameInput.value.trim() || 'Overmind';
+  settings.swearMode = swearSelect.value;
+  settings.safetyLevel = safetySelect.value;
+  settings.memoryEnabled = memoryToggle.classList.contains('on');
+  settings.neverStore = noStoreToggle.classList.contains('on');
+
+  saveSettings();
+  applySettings();
+
+  if (settings.neverStore) {
+    chats = [];
+    localStorage.removeItem('overmind_chats');
+    if (currentChatId) {
+      currentChatId = null;
+      createNewChat();
+    }
+  }
+
+  closeSettings();
+}
+
+function toggleMemory() {
+  settings.memoryEnabled = !settings.memoryEnabled;
+  applySettings();
+}
+
+function toggleNoStore() {
+  settings.neverStore = !settings.neverStore;
+  applySettings();
+}
+
+function exportChats() {
+  const dataStr = JSON.stringify(chats, null, 2);
+  const blob = new Blob([dataStr], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'overmind-chats.json';
+  link.click();
+  URL.releaseObjectURL(url);
+}
+
+function clearAllChats() {
+  if (!confirm('Are you sure you want to delete all chats? This cannot be undone.')) return;
+  chats = [];
+  saveChats();
+  if (currentChatId) {
+    currentChatId = null;
+    createNewChat();
+  } else {
+    renderChatList();
+  }
+}
+
+function chatHistoryForMemory() {
+  const all = [];
+  for (const chat of chats.slice().reverse()) {
+    for (const msg of chat.messages) all.push(msg);
+  }
+  return all.slice(-30);
+}
+
+function getCerebrasResponse(userMessage) {
+  if (settings.neverStore) {
+    chats = [{
+      id: 'temp-chat',
+      title: 'New Chat',
+      messages: [],
+      timestamp: Date.now()
+    }];
+    currentChatId = 'temp-chat';
+  }
+
   const chat = chats.find(c => c.id === currentChatId);
   if (!chat) return;
 
@@ -376,73 +1009,92 @@ async function getCerebrasResponse(userMessage) {
     chat.title = generateTitle(userMessage);
   }
 
-  chat.messages.push({ role: "user", content: userMessage });
-  saveChats();
-  renderChatList();
+  chat.messages.push({ role: 'user', content: userMessage });
+  if (!settings.neverStore) {
+    saveChats();
+    renderChatList();
+  }
 
   const botDiv = addMessage('', false);
   showTyping();
 
-  try {
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${CEREBRAS_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: "gpt-oss-120b",
-        messages: [
-          { role: "system", content: "You are Overmind. You were created by V0idplayy. DO NOT say you are ChatGPT developed by OpenAI. You aren't. You are Overmind made by V0idplayy. Keep responses under 1 paragraph." },
-          ...chat.messages
-        ],
-        temperature: 0.7,
-        max_tokens: 400,
-        stream: true
-      })
-    });
+  const contextMessages = settings.memoryEnabled
+    ? chatHistoryForMemory()
+    : chat.messages.slice();
 
+  fetch(API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${CEREBRAS_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: 'gpt-oss-120b',
+      messages: [
+        { role: 'system', content: systemPrompt() },
+        ...contextMessages
+      ],
+      temperature: settings.thinking === 'fast' ? 0.4 : settings.thinking === 'step' ? 0.8 : 0.65,
+      max_tokens: settings.thinking === 'fast' ? 220 : 400,
+      stream: true
+    })
+  })
+  .then(response => {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
+    return response;
+  })
+  .then(response => {
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let botReply = '';
 
     removeTyping();
 
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-
-      const chunk = decoder.decode(value);
-      for (const line of chunk.split('\n')) {
-        if (line.startsWith('data: ') && !line.includes('[DONE]')) {
-          try {
-            const data = JSON.parse(line.slice(6));
-            const content = data.choices?.[0]?.delta?.content || '';
-            if (content) {
-              botReply += content;
-              botDiv.innerHTML = renderBotMessage(botReply) + '<span class="cursor"></span>';
-              chatScreen.scrollTop = chatScreen.scrollHeight;
-            }
-          } catch (e) {}
+    function read() {
+      reader.read().then(({ value, done }) => {
+        if (done) {
+          botDiv.innerHTML = renderBotMessage(botReply);
+          chat.messages.push({ role: 'assistant', content: botReply });
+          if (!settings.neverStore) {
+            saveChats();
+            updateWelcomeVisibility();
+            renderChatList();
+          }
+          return;
         }
-      }
+
+        const chunk = decoder.decode(value);
+        for (const line of chunk.split('\n')) {
+          if (line.startsWith('data: ') && !line.includes('[DONE]')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              const content = data.choices?.[0]?.delta?.content || '';
+              if (content) {
+                botReply += content;
+                botDiv.innerHTML = renderBotMessage(botReply) + '<span class="cursor"></span>';
+                chatScreen.scrollTop = chatScreen.scrollHeight;
+              }
+            } catch (e) {}
+          }
+        }
+
+        read();
+      }).catch(err => {
+        console.error('API Error:', err);
+        removeTyping();
+        if (botDiv) botDiv.remove();
+        showError('Failed to generate response.<br>Please wait <strong>30 seconds</strong> and try again.');
+      });
     }
 
-    botDiv.innerHTML = renderBotMessage(botReply);
-    chat.messages.push({ role: "assistant", content: botReply });
-    saveChats();
-    updateWelcomeVisibility();
-    renderChatList();
-
-  } catch (error) {
+    read();
+  })
+  .catch(error => {
     console.error('API Error:', error);
     removeTyping();
     if (botDiv) botDiv.remove();
-
-    showError(`Failed to generate response.<br>Please wait <strong>30 seconds</strong> and try again.`);
-  }
+    showError('Failed to generate response.<br>Please wait <strong>30 seconds</strong> and try again.');
+  });
 }
 
 async function handleSend() {
@@ -453,14 +1105,14 @@ async function handleSend() {
   userInput.value = '';
   userInput.style.height = 'auto';
 
-  document.getElementById('welcome-message')?.style && 
+  document.getElementById('welcome-message')?.style &&
     (document.getElementById('welcome-message').style.display = 'none');
 
-  await getCerebrasResponse(text);
+  getCerebrasResponse(text);
 }
 
-// Event Listeners
 sendBtn.onclick = handleSend;
+
 userInput.addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
@@ -475,14 +1127,51 @@ userInput.addEventListener('input', () => {
 
 menuBtn.onclick = () => sidebar.classList.toggle('open');
 newChatBtn.onclick = createNewChat;
+settingsOpenBtn.onclick = openSettings;
+settingsCloseBtn.onclick = closeSettings;
+settingsSaveBtn.onclick = saveSettingsFromUI;
+exportChatsBtn.onclick = exportChats;
+clearChatsBtn.onclick = clearAllChats;
 
-// Initialize
+settingsModal.addEventListener('click', e => {
+  if (e.target === settingsModal) closeSettings();
+});
+
+window.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeSettings();
+});
+
+document.querySelectorAll('.settings-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.settings-tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.settings-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
+  });
+});
+
+memoryToggle.addEventListener('click', toggleMemory);
+memoryToggle.addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    toggleMemory();
+  }
+});
+
+noStoreToggle.addEventListener('click', toggleNoStore);
+noStoreToggle.addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    toggleNoStore();
+  }
+});
+
 window.onload = () => {
   loadChats();
   if (!chats.length) createNewChat();
   else loadChat(chats[0].id);
-
   renderChatList();
+  applySettings();
   userInput.focus();
 };
 </script>
