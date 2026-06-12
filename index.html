@@ -529,7 +529,7 @@
         <div class="updates-btn" id="open-updates-btn" style="background: var(--panel-bg); border-radius: 28px; padding: 4px 12px; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:6px; margin-right:4px;">
           📋 <span>Update log</span>
         </div>
-        <div style="color:var(--muted);">v1.2.1</div>
+        <div style="color:var(--muted);">v1.2.2</div>
         <div id="menu-btn" style="cursor:pointer; font-size:1.3rem; user-select:none;">☰</div>
       </div>
     </div>
@@ -867,7 +867,7 @@ function applySettings() {
 }
 
 function systemPrompt() {
-  return `You are Overmind. In this conversation, your self-name is "${settings.assistantName}". Do not say you are ChatGPT or that you were developed by OpenAI.
+  return `You are Overmind, created by "V0idplayy". In this conversation, your self-name is "${settings.assistantName}". Do not say you are ChatGPT or that you were developed by OpenAI.
 
 ${THINKING_PROMPTS[settings.thinking]}
 ${TONE_PROMPTS[settings.tone]}
