@@ -109,6 +109,21 @@
       margin-top: 10px;
     }
 
+    .chat-search {
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel-bg);
+  color: var(--text);
+  outline: none;
+}
+
+.chat-search::placeholder {
+  color: var(--muted);
+}
+
     .chat-list {
       flex: 1;
       overflow-y: auto;
@@ -511,14 +526,52 @@
         min-width: 80px;
       }
     }
+    .message-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.message-actions {
+  display: flex;
+  gap: 6px;
+  margin-left: 10px;
+}
+
+.action-btn {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 4px;
+}
+
+.action-btn:hover {
+  color: var(--accent);
+}
+
+.action-btn svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
   </style>
 </head>
 <body>
   <div class="sidebar">
     <div class="sidebar-header">
-      <div class="new-chat" id="new-chat-btn">+ New Chat</div>
-      <div class="settings-btn" id="settings-open-btn">Settings</div>
-    </div>
+  <div class="new-chat" id="new-chat-btn">+ New Chat</div>
+  <div class="settings-btn" id="settings-open-btn">Settings</div>
+
+  <input
+    id="chat-search"
+    type="text"
+    placeholder="Search chats..."
+    class="chat-search"
+  >
+</div>
     <div class="chat-list" id="chat-list"></div>
   </div>
 
@@ -529,7 +582,7 @@
         <div class="updates-btn" id="open-updates-btn" style="background: var(--panel-bg); border-radius: 28px; padding: 4px 12px; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:6px; margin-right:4px;">
           📋 <span>Update log</span>
         </div>
-        <div style="color:var(--muted);">v1.2.2</div>
+        <div style="color:var(--muted);">v1.3.0</div>
         <div id="menu-btn" style="cursor:pointer; font-size:1.3rem; user-select:none;">☰</div>
       </div>
     </div>
@@ -575,6 +628,19 @@
               <option value="mono">Mono</option>
             </select>
           </div>
+          <div>
+  <label class="field-label" for="accent-select">Accent colour</label>
+  <select class="select" id="accent-select">
+    <option value="#22c55e">Green</option>
+    <option value="#3b82f6">Blue</option>
+    <option value="#a855f7">Purple</option>
+    <option value="#ef4444">Red</option>
+    <option value="#f59e0b">Orange</option>
+    <option value="#ec4899">Pink</option>
+    <option value="#06b6d4">Cyan</option>
+    <option value="#ffffff">White</option>
+  </select>
+</div>
           <div>
             <label class="field-label" for="emoji-select">Emoji usage</label>
             <select class="select" id="emoji-select">
@@ -706,6 +772,7 @@ const API_URL = 'https://api.cerebras.ai/v1/chat/completions';
 const DEFAULT_SETTINGS = {
   theme: 'dark',
   font: 'system',
+  accentColor: '#22c55e',
   thinking: 'balanced',
   emoji: 'occasional',
   tone: 'neutral',
@@ -751,6 +818,7 @@ const SAFETY_PROMPTS = {
 
 let chats = [];
 let currentChatId = null;
+let chatSearchTerm = '';
 let settings = loadSettings();
 
 const chatScreen = document.getElementById('chat-screen');
@@ -778,9 +846,12 @@ const languageSelect = document.getElementById('language-select');
 const safetySelect = document.getElementById('safety-select');
 const exportChatsBtn = document.getElementById('export-chats-btn');
 const clearChatsBtn = document.getElementById('clear-chats-btn');
+const accentSelect = document.getElementById('accent-select');
+const chatSearch = document.getElementById('chat-search');
 
 const UPDATE_HISTORY = [
-  { version: "v1.2.0", date: "June 12, 2026", changes: ["✨ Added **Update Log** — view recent improvements directly from the top bar.", "⚙ Added settings menu - Change how Overmind behaves and looks."] },
+  { version: "v1.3.0", date: "June 13, 2026", changes: ["🌈 Added Accent Colours — choose your accent colour in the settings!", "🔃 Added **response regeneration** - don't like Overmind's response? No problem! Just regenerate it!", "🔎 Added **Chat Searching** - If you can't find the chat you're looking for, you can now search for it!"] },
+  { version: "v1.2.0", date: "June 12, 2026", changes: ["✨ Added **Update Log** — view recent improvements directly from the top bar.", "⚙ Added Settings Menu - Change how Overmind behaves and looks."] },
 ];
 
 function renderUpdateLog() {
@@ -843,6 +914,7 @@ function loadSettings() {
 }
 
 function applySettings() {
+  accentSelect.value = settings.accentColor;
   document.body.dataset.theme = settings.theme;
   document.body.dataset.font = settings.font;
   themeSelect.value = settings.theme;
@@ -864,6 +936,20 @@ function applySettings() {
   document.querySelectorAll('.settings-panel').forEach(p => p.classList.remove('active'));
   document.querySelector('.settings-tab[data-tab="appearance"]').classList.add('active');
   document.getElementById('tab-appearance').classList.add('active');
+  document.documentElement.style.setProperty(
+  '--accent',
+  settings.accentColor
+);
+
+document.documentElement.style.setProperty(
+  '--user-bg',
+  settings.accentColor
+);
+
+document.documentElement.style.setProperty(
+  '--tab-active-bg',
+  settings.accentColor
+);
 }
 
 function systemPrompt() {
@@ -911,11 +997,12 @@ function loadChat(id) {
 
   chatScreen.innerHTML = `<div class="welcome-text" id="welcome-message">I am Overmind.<br>What do you seek?</div>`;
 
-  chat.messages.forEach(msg => {
-    const div = document.createElement('div');
-    div.className = `message ${msg.role === 'user' ? 'user' : 'bot'}`;
-    div.innerHTML = msg.role === 'user' ? escapeHTML(msg.content) : renderBotMessage(msg.content);
-    chatScreen.appendChild(div);
+  chat.messages.forEach((msg, index) => {
+addMessage(
+  msg.content,
+  msg.role === 'user',
+  msg.role === 'assistant' ? index : null
+);
   });
 
   updateWelcomeVisibility();
@@ -924,7 +1011,28 @@ function loadChat(id) {
 
 function renderChatList() {
   chatList.innerHTML = '';
-  chats.forEach(chat => {
+
+  const filteredChats = chats.filter(chat =>
+    chat.title
+      .toLowerCase()
+      .includes(chatSearchTerm.toLowerCase())
+  );
+
+  if (filteredChats.length === 0) {
+  chatList.innerHTML = `
+    <div style="
+      padding:12px;
+      text-align:center;
+      color:var(--muted);
+      font-size:0.9rem;
+    ">
+      No chats found
+    </div>
+  `;
+  return;
+}
+
+  filteredChats.forEach(chat => {
     const item = document.createElement('div');
     item.className = `chat-item ${chat.id === currentChatId ? 'active' : ''}`;
     item.innerHTML = `
@@ -972,12 +1080,40 @@ function renderBotMessage(text) {
   return marked.parse(escapeHTML(text));
 }
 
-function addMessage(text, isUser) {
+function addMessage(text, isUser, messageIndex = null) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'message-wrapper';
+
   const div = document.createElement('div');
   div.className = `message ${isUser ? 'user' : 'bot'}`;
   div.innerHTML = isUser ? escapeHTML(text) : renderBotMessage(text);
-  chatScreen.appendChild(div);
+
+  wrapper.appendChild(div);
+
+  if (!isUser && messageIndex !== null) {
+    const actions = document.createElement('div');
+    actions.className = 'message-actions';
+
+    actions.innerHTML = `
+<button class="action-btn" title="Regenerate">
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 640 640"
+     fill="currentColor">
+<path d="M500.7 138.7L512 149.4L512 96C512 78.3 526.3 64 544 64C561.7 64 576 78.3 576 96L576 224C576 241.7 561.7 256 544 256L416 256C398.3 256 384 241.7 384 224C384 206.3 398.3 192 416 192L463.9 192L456.3 184.8C456.1 184.6 455.9 184.4 455.7 184.2C380.7 109.2 259.2 109.2 184.2 184.2C109.2 259.2 109.2 380.7 184.2 455.7C259.2 530.7 380.7 530.7 455.7 455.7C463.9 447.5 471.2 438.8 477.6 429.6C487.7 415.1 507.7 411.6 522.2 421.7C536.7 431.8 540.2 451.8 530.1 466.3C521.6 478.5 511.9 490.1 501 501C401 601 238.9 601 139 501C39.1 401 39 239 139 139C238.9 39.1 400.7 39 500.7 138.7z"/>
+</svg>
+</button>
+`;
+
+    actions.querySelector('button').onclick = () => {
+      regenerateResponse(messageIndex);
+    };
+
+    wrapper.appendChild(actions);
+  }
+
+  chatScreen.appendChild(wrapper);
   chatScreen.scrollTop = chatScreen.scrollHeight;
+
   return div;
 }
 
@@ -1013,6 +1149,7 @@ function closeSettings() {
 }
 
 function saveSettingsFromUI() {
+  settings.accentColor = accentSelect.value;
   settings.theme = themeSelect.value;
   settings.font = fontSelect.value;
   settings.thinking = thinkingSelect.value;
@@ -1144,12 +1281,18 @@ function getCerebrasResponse(userMessage) {
       reader.read().then(({ value, done }) => {
         if (done) {
           botDiv.innerHTML = renderBotMessage(botReply);
-          chat.messages.push({ role: 'assistant', content: botReply });
-          if (!settings.neverStore) {
-            saveChats();
-            updateWelcomeVisibility();
-            renderChatList();
-          }
+          chat.messages.push({
+  role: 'assistant',
+  content: botReply
+});
+
+if (!settings.neverStore) {
+  saveChats();
+  updateWelcomeVisibility();
+  renderChatList();
+}
+
+loadChat(currentChatId);
           return;
         }
 
@@ -1187,6 +1330,127 @@ function getCerebrasResponse(userMessage) {
   });
 }
 
+function regenerateResponse(assistantIndex) {
+  const chat = chats.find(c => c.id === currentChatId);
+  if (!chat) return;
+
+  if (chat.messages[assistantIndex]?.role !== 'assistant')
+    return;
+
+const oldResponse =
+  chat.messages[assistantIndex].content;
+
+  chat.messages.splice(assistantIndex, 1);
+
+  saveChats();
+  loadChat(currentChatId);
+
+  const previousUser =
+    [...chat.messages]
+      .reverse()
+      .find(msg => msg.role === 'user');
+
+  if (!previousUser) return;
+
+  generateReplacementResponse(chat, oldResponse);
+}
+
+function generateReplacementResponse(chat, oldResponse) {
+  const botDiv = addMessage('', false);
+
+  showTyping();
+
+  fetch(API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${CEREBRAS_API_KEY}`
+    },
+    body: JSON.stringify({
+  model: 'gpt-oss-120b',
+  messages: [
+  { role: 'system', content: systemPrompt() },
+  {
+    role: 'system',
+    content:
+      `Previous response:
+
+${oldResponse}
+
+Generate a noticeably different response.`
+  },
+    ...chat.messages
+  ],
+      temperature:
+  settings.thinking === 'fast'
+    ? 0.9
+    : settings.thinking === 'step'
+    ? 1.2
+    : 1.0,
+      max_tokens:
+        settings.thinking === 'fast'
+          ? 220
+          : 400,
+      stream: true
+    })
+  })
+  .then(response => {
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+
+    let botReply = '';
+
+    removeTyping();
+
+    function read() {
+      reader.read().then(({ value, done }) => {
+        if (done) {
+
+          chat.messages.push({
+            role: 'assistant',
+            content: botReply
+          });
+
+          saveChats();
+          loadChat(currentChatId);
+
+          return;
+        }
+
+        const chunk = decoder.decode(value);
+
+        for (const line of chunk.split('\n')) {
+          if (line.startsWith('data: ') && !line.includes('[DONE]')) {
+
+            try {
+              const data = JSON.parse(line.slice(6));
+
+              const content =
+                data.choices?.[0]?.delta?.content || '';
+
+              if (content) {
+                botReply += content;
+
+                botDiv.innerHTML =
+                  renderBotMessage(botReply) +
+                  '<span class="cursor"></span>';
+
+                chatScreen.scrollTop =
+                  chatScreen.scrollHeight;
+              }
+
+            } catch {}
+          }
+        }
+
+        read();
+      });
+    }
+
+    read();
+  });
+}
+
 async function handleSend() {
   const text = userInput.value.trim();
   if (!text || !currentChatId) return;
@@ -1221,6 +1485,10 @@ settingsCloseBtn.onclick = closeSettings;
 settingsSaveBtn.onclick = saveSettingsFromUI;
 exportChatsBtn.onclick = exportChats;
 clearChatsBtn.onclick = clearAllChats;
+chatSearch.addEventListener('input', () => {
+  chatSearchTerm = chatSearch.value;
+  renderChatList();
+});
 
 settingsModal.addEventListener('click', e => {
   if (e.target === settingsModal) closeSettings();
