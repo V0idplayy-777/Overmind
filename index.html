@@ -529,7 +529,13 @@
     .message-wrapper {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 4px;
+  position: relative;
+}
+
+.message-wrapper:has(.user) {
+  align-items: flex-end;
 }
 
 .message-actions {
@@ -557,6 +563,33 @@
   display: block;
 }
 
+.command-item {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--panel-bg);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.command-item:hover,
+.command-item.active {
+  background: var(--panel-hover);
+  border-color: var(--accent);
+}
+
+.command-name {
+  font-weight: 600;
+}
+
+.command-desc {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
   </style>
 </head>
 <body>
@@ -582,7 +615,7 @@
         <div class="updates-btn" id="open-updates-btn" style="background: var(--panel-bg); border-radius: 28px; padding: 4px 12px; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:6px; margin-right:4px;">
           📋 <span>Update log</span>
         </div>
-        <div style="color:var(--muted);">v1.3.0</div>
+        <div style="color:var(--muted);">v1.4.0</div>
         <div id="menu-btn" style="cursor:pointer; font-size:1.3rem; user-select:none;">☰</div>
       </div>
     </div>
@@ -765,7 +798,100 @@
     </div>
   </div>
 
+  <div class="modal-backdrop" id="command-palette-modal">
+    <div class="modal" id="command-palette" style="max-width: 560px;">
+      <div class="modal-header">
+        <strong>Command Palette</strong>
+        <button class="close-modal-btn" id="command-palette-close" style="background:transparent; border:none; font-size:1.3rem; cursor:pointer; color:var(--text);">✕</button>
+      </div>
+      <div class="modal-body" style="padding: 16px 18px; display:flex; flex-direction:column; gap:12px;">
+        <input type="text" id="command-palette-input" class="text-input" placeholder="Type a command..." autocomplete="off">
+        <div id="command-palette-list" style="display:flex; flex-direction:column; gap:6px; max-height: 320px; overflow-y:auto;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" id="command-palette-cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
 <script>
+function getCerebrasResponseFromIndex(index) {
+  const chat = chats.find(c => c.id === currentChatId);
+  if (!chat) return;
+
+  const userMsg = chat.messages[index];
+  if (!userMsg || userMsg.role !== 'user') return;
+
+  const botDiv = addMessage('', false, null);
+
+  showTyping();
+
+  const contextMessages = settings.memoryEnabled
+    ? chatHistoryForMemory()
+    : chat.messages.slice(0, index + 1);
+
+  fetch(API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${CEREBRAS_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: 'gpt-oss-120b',
+      messages: [
+        { role: 'system', content: systemPrompt() },
+        ...contextMessages
+      ],
+      temperature: 0.65,
+      max_tokens: 400,
+      stream: true
+    })
+  })
+  .then(res => res.body.getReader())
+  .then(reader => {
+    const decoder = new TextDecoder();
+    let botReply = '';
+
+    removeTyping();
+
+    function read() {
+      reader.read().then(({ value, done }) => {
+        if (done) {
+          chat.messages.push({
+            role: 'assistant',
+            content: botReply
+          });
+
+          saveChats();
+          loadChat(currentChatId);
+          return;
+        }
+
+        const chunk = decoder.decode(value);
+
+        for (const line of chunk.split('\n')) {
+          if (line.startsWith('data: ') && !line.includes('[DONE]')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              const content = data.choices?.[0]?.delta?.content || '';
+              if (content) {
+                botReply += content;
+                botDiv.innerHTML =
+                  renderBotMessage(botReply) +
+                  '<span class="cursor"></span>';
+              }
+            } catch {}
+          }
+        }
+
+        read();
+      });
+    }
+
+    read();
+  });
+}
+
 const CEREBRAS_API_KEY = 'csk-r25mcjper4yncxt4jrm2h5fktmwhj5d53tnr9hkd8xwxx5j2';
 const API_URL = 'https://api.cerebras.ai/v1/chat/completions';
 
@@ -848,8 +974,14 @@ const exportChatsBtn = document.getElementById('export-chats-btn');
 const clearChatsBtn = document.getElementById('clear-chats-btn');
 const accentSelect = document.getElementById('accent-select');
 const chatSearch = document.getElementById('chat-search');
+const commandPaletteModal = document.getElementById('command-palette-modal');
+const commandPaletteInput = document.getElementById('command-palette-input');
+const commandPaletteList = document.getElementById('command-palette-list');
+const commandPaletteClose = document.getElementById('command-palette-close');
+const commandPaletteCancel = document.getElementById('command-palette-cancel');
 
 const UPDATE_HISTORY = [
+  { version: "v1.4.0", date: "June 14, 2026", changes: ["🌐 Added command palette — Quickly perform actions (ctrl+k).", "✏ Added **response Editing** - made a type? No problem! now, you can edit your messages!", "🔎 Improved regenerating responses - Regenerated responses will now be more unique to the original!"] },
   { version: "v1.3.0", date: "June 13, 2026", changes: ["🌈 Added Accent Colours — choose your accent colour in the settings!", "🔃 Added **response regeneration** - don't like Overmind's response? No problem! Just regenerate it!", "🔎 Added **Chat Searching** - If you can't find the chat you're looking for, you can now search for it!"] },
   { version: "v1.2.0", date: "June 12, 2026", changes: ["✨ Added **Update Log** — view recent improvements directly from the top bar.", "⚙ Added Settings Menu - Change how Overmind behaves and looks."] },
 ];
@@ -1001,7 +1133,7 @@ function loadChat(id) {
 addMessage(
   msg.content,
   msg.role === 'user',
-  msg.role === 'assistant' ? index : null
+  index
 );
   });
 
@@ -1090,17 +1222,75 @@ function addMessage(text, isUser, messageIndex = null) {
 
   wrapper.appendChild(div);
 
+  if (messageIndex !== null) {
+
+  const actions = document.createElement('div');
+  actions.className = 'message-actions';
+
+  // USER = EDIT BUTTON
+  if (isUser) {
+    actions.innerHTML = `
+<button class="action-btn" title="Edit">
+  <svg xmlns="http://www.w3.org/2000/svg"
+       viewBox="0 0 16 16"
+       fill="currentColor">
+    <path d="M15.353 2.938L13.06.646a1.5 1.5 0 0 0-2.122 0L1 10.586v4.359h4.413l9.937-9.882a1.5 1.5 0 0 0 .003-2.125m-4.439.562L12 2.414l1.584 1.584l-1.089 1.083zM9.5 4.914l1.577 1.577l-6.49 6.454H3v-1.53l6.5-6.5Z"/>
+  </svg>
+</button>
+`;
+
+    actions.querySelector('button').onclick = () => {
+      editUserMessage(messageIndex);
+    };
+  }
+
+  // BOT = REGENERATE BUTTON
+  else {
+    actions.innerHTML = `
+<button class="action-btn" title="Regenerate">
+  <svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 640 640"
+     fill="currentColor">
+<path d="M500.7 138.7L512 149.4L512 96C512 78.3 526.3 64 544 64C561.7 64 576 78.3 576 96L576 224C576 241.7 561.7 256 544 256L416 256C398.3 256 384 241.7 384 224C384 206.3 398.3 192 416 192L463.9 192L456.3 184.8C456.1 184.6 455.9 184.4 455.7 184.2C380.7 109.2 259.2 109.2 184.2 184.2C109.2 259.2 109.2 380.7 184.2 455.7C259.2 530.7 380.7 530.7 455.7 455.7C463.9 447.5 471.2 438.8 477.6 429.6C487.7 415.1 507.7 411.6 522.2 421.7C536.7 431.8 540.2 451.8 530.1 466.3C521.6 478.5 511.9 490.1 501 501C401 601 238.9 601 139 501C39.1 401 39 239 139 139C238.9 39.1 400.7 39 500.7 138.7z"/>
+</svg>
+</button>
+`;
+
+    actions.querySelector('button').onclick = () => {
+      regenerateResponse(messageIndex);
+    };
+  }
+
+  wrapper.appendChild(actions);
+}
+
+function editUserMessage(index) {
+  const chat = chats.find(c => c.id === currentChatId);
+  if (!chat) return;
+
+  const msg = chat.messages[index];
+  if (!msg || msg.role !== 'user') return;
+
+  const newText = prompt("Edit message:", msg.content);
+  if (!newText || newText.trim() === msg.content) return;
+
+  chat.messages[index].content = newText.trim();
+
+  chat.messages = chat.messages.slice(0, index + 1);
+
+  saveChats();
+  loadChat(currentChatId);
+
+  getCerebrasResponseFromIndex(index);
+}
+
   if (!isUser && messageIndex !== null) {
     const actions = document.createElement('div');
     actions.className = 'message-actions';
 
     actions.innerHTML = `
-<button class="action-btn" title="Regenerate">
-<svg xmlns="http://www.w3.org/2000/svg"
-     viewBox="0 0 640 640"
-     fill="currentColor">
-<path d="M500.7 138.7L512 149.4L512 96C512 78.3 526.3 64 544 64C561.7 64 576 78.3 576 96L576 224C576 241.7 561.7 256 544 256L416 256C398.3 256 384 241.7 384 224C384 206.3 398.3 192 416 192L463.9 192L456.3 184.8C456.1 184.6 455.9 184.4 455.7 184.2C380.7 109.2 259.2 109.2 184.2 184.2C109.2 259.2 109.2 380.7 184.2 455.7C259.2 530.7 380.7 530.7 455.7 455.7C463.9 447.5 471.2 438.8 477.6 429.6C487.7 415.1 507.7 411.6 522.2 421.7C536.7 431.8 540.2 451.8 530.1 466.3C521.6 478.5 511.9 490.1 501 501C401 601 238.9 601 139 501C39.1 401 39 239 139 139C238.9 39.1 400.7 39 500.7 138.7z"/>
-</svg>
+<button class="action-btn" title="Regenerat">
+  
 </button>
 `;
 
@@ -1208,6 +1398,66 @@ function clearAllChats() {
   } else {
     renderChatList();
   }
+}
+
+const COMMANDS = [
+  { name: 'New Chat', desc: 'Start a fresh conversation', action: () => createNewChat() },
+  { name: 'Open Settings', desc: 'Change appearance and behavior', action: () => openSettings() },
+  { name: 'Toggle Sidebar', desc: 'Show or hide the chat list', action: () => sidebar.classList.toggle('open') },
+  { name: 'Open Update Log', desc: 'View recent changes', action: () => { const updatesModal = document.getElementById('updates-modal'); renderUpdateLog(); updatesModal?.classList.add('open'); } },
+  { name: 'Export Chats', desc: 'Download all chats as JSON', action: () => exportChats() },
+  { name: 'Clear All Chats', desc: 'Delete all stored chats', action: () => clearAllChats() },
+  { name: 'Focus Chat Search', desc: 'Jump to the sidebar search box', action: () => { sidebar.classList.add('open'); chatSearch?.focus(); } },
+  { name: 'Close Command Palette', desc: 'Dismiss the palette', action: () => closeCommandPalette() },
+];
+
+let commandPaletteIndex = 0;
+let commandPaletteResults = COMMANDS.slice();
+
+function renderCommandPalette() {
+  const q = commandPaletteInput.value.trim().toLowerCase();
+  commandPaletteResults = COMMANDS.filter(cmd =>
+    cmd.name.toLowerCase().includes(q) || cmd.desc.toLowerCase().includes(q)
+  );
+
+  commandPaletteList.innerHTML = '';
+
+  if (!commandPaletteResults.length) {
+    commandPaletteList.innerHTML = '<div style="color:var(--muted);padding:10px 2px;">No commands found.</div>';
+    return;
+  }
+
+  commandPaletteIndex = Math.max(0, Math.min(commandPaletteIndex, commandPaletteResults.length - 1));
+
+  commandPaletteResults.forEach((cmd, i) => {
+    const item = document.createElement('div');
+    item.className = 'command-item' + (i === commandPaletteIndex ? ' active' : '');
+    item.innerHTML = `
+      <div>
+        <div class="command-name">${cmd.name}</div>
+        <div class="command-desc">${cmd.desc}</div>
+      </div>
+      <div style="color:var(--muted);font-size:0.8rem;">Enter</div>
+    `;
+    item.onclick = () => {
+      closeCommandPalette();
+      cmd.action();
+    };
+    commandPaletteList.appendChild(item);
+  });
+}
+
+function openCommandPalette() {
+  commandPaletteModal.classList.add('open');
+  commandPaletteInput.value = '';
+  commandPaletteResults = COMMANDS.slice();
+  commandPaletteIndex = 0;
+  renderCommandPalette();
+  setTimeout(() => commandPaletteInput.focus(), 0);
+}
+
+function closeCommandPalette() {
+  commandPaletteModal.classList.remove('open');
 }
 
 function chatHistoryForMemory() {
@@ -1530,6 +1780,50 @@ if (openUpdatesBtn) {
     updatesModal.classList.add('open');
   };
 }
+
+window.addEventListener('keydown', (e) => {
+  const isCmdK = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k';
+  if (isCmdK) {
+    e.preventDefault();
+    openCommandPalette();
+    return;
+  }
+
+  if (!commandPaletteModal.classList.contains('open')) return;
+
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    closeCommandPalette();
+  } else if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    commandPaletteIndex = Math.min(commandPaletteIndex + 1, commandPaletteResults.length - 1);
+    renderCommandPalette();
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    commandPaletteIndex = Math.max(commandPaletteIndex - 1, 0);
+    renderCommandPalette();
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    const cmd = commandPaletteResults[commandPaletteIndex];
+    if (cmd) {
+      closeCommandPalette();
+      cmd.action();
+    }
+  }
+});
+
+commandPaletteInput.addEventListener('input', () => {
+  commandPaletteIndex = 0;
+  renderCommandPalette();
+});
+
+commandPaletteModal.addEventListener('click', e => {
+  if (e.target === commandPaletteModal) closeCommandPalette();
+});
+
+commandPaletteClose?.addEventListener('click', closeCommandPalette);
+commandPaletteCancel?.addEventListener('click', closeCommandPalette);
+
 document.getElementById('updates-close-icon')?.addEventListener('click', closeUpdates);
 document.getElementById('updates-close-footer')?.addEventListener('click', closeUpdates);
 updatesModal?.addEventListener('click', (e) => { if (e.target === updatesModal) closeUpdates(); });
