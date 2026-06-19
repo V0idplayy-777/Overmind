@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Overmind Beacons (Beta)</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8f9fa;
+            --bg-card: #ffffff;
+            --text-primary: #1a1a1a;
+            --text-secondary: #4a4a4a;
+            --border-color: #e0e0e0;
+            --accent-color: #10b981;
+            --accent-hover: #059669;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+        
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-primary: #0d0d0d;
+                --bg-secondary: #1a1a1a;
+                --bg-card: #1a1a1a;
+                --text-primary: #f0f0f0;
+                --text-secondary: #a0a0a0;
+                --border-color: #2a2a2a;
+                --accent-color: #34d399;
+                --accent-hover: #10b981;
+                --shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            }
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 60px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 50px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            text-align: center;
+            max-width: 700px;
+        }
+        
+        h1 {
+            font-size: 2.8rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, var(--accent-color), #6ee7b7);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            margin-bottom: 30px;
+        }
+        
+        .description {
+            font-size: 1.05rem;
+            color: var(--text-secondary);
+            line-height: 1.8;
+            margin-bottom: 40px;
+        }
+        
+        .copy-btn {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 18px 40px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+            font-family: inherit;
+        }
+        
+        .copy-btn:hover {
+            background: var(--accent-hover);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+        }
+        
+        .copy-btn:active {
+            transform: translateY(-1px);
+        }
+        
+        .copy-btn.success {
+            background: #059669;
+            box-shadow: 0 4px 15px rgba(5, 150, 105, 0.3);
+        }
+        
+        .icon {
+            width: 24px;
+            height: 24px;
+        }
+        
+        @media (max-width: 768px) {
+            .container { padding: 40px 16px; }
+            .card { padding: 35px 25px; }
+            h1 { font-size: 2.2rem; }
+            .subtitle { font-size: 1.05rem; }
+            .copy-btn { padding: 16px 32px; width: 100%; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>Overmind Beacons (Beta)</h1>
+            <p class="subtitle">Integrate Overmind into your website</p>
+            <p class="description">
+                Paste this code into the HTML of your website to add Overmind directly into it. 
+                The beacon will appear as a floating chat button in the bottom-right corner of your site, 
+                allowing visitors to interact with Overmind seamlessly.
+            </p>
+            
+            <button id="copyBtn" class="copy-btn">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+                Copy Script
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const textToCopy = `<!DOCTYPE html>
+<html>
+<body>
+
+<script type="module">
+import { createClient } from "https://jsdelivr.net";
+
+const supabase = createClient(
+  "https://supabase.co",
+  "sb_publishable_pd8j_QxhCQS1SQNM1SQNM1cn6Aw_NyMLdu8s"
+);
+
+const btn = document.createElement("div");
+btn.textContent = "💬";
+btn.style.cssText = \`
+position:fixed;
+bottom:20px;
+right:20px;
+width:56px;
+height:56px;
+border-radius:50%;
+background:#111;
+color:white;
+display:flex;
+align-items:center;
+justify-content:center;
+cursor:pointer;
+z-index:999999;
+font-size:22px;
+\`;
+
+const panel = document.createElement("div");
+panel.style.cssText = \`
+position:fixed;
+inset:10px;
+background:white;
+border-radius:14px;
+overflow:hidden;
+box-shadow:0 20px 60px rgba(0,0,0,0.4);
+transform:scale(0);
+transform-origin:bottom right;
+transition:0.2s ease;
+z-index:999998;
+\`;
+
+document.body.appendChild(btn);
+document.body.appendChild(panel);
+
+btn.onclick = () => {
+  panel.style.transform =
+    panel.style.transform === "scale(1)" ? "scale(0)" : "scale(1)";
+};
+
+async function load() {
+  try {
+    const { data, error } = await supabase
+      .from("scripts")
+      .select("url")
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      panel.innerHTML = \\\`<pre>Supabase error:\\\\n\\\${JSON.stringify(error, null, 2)}</pre>\\\`;
+      return;
+    }
+
+    if (!data || !data.url) {
+      panel.innerHTML = \\\`<pre>No URL found in Supabase.\\\\n\\\\nReturned:\\\\n\\\${JSON.stringify(data, null, 2)}</pre>\\\`;
+      return;
+    }
+
+    const url = data.url.trim();
+
+    panel.innerHTML = \`
+      <iframe
+        src="\${url}"
+        style="width:100%;height:100%;border:none;"
+      ></iframe>
+    \`;
+
+  } catch (e) {
+    panel.innerHTML = \\\`<pre>Crash:\\\\n\\\${e.message}</pre>\\\`;
+  }
+}
+
+load();
+<\/script>
+
+</body>
+</html>`;
+
+        document.getElementById('copyBtn').addEventListener('click', async () => {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                try {
+                    await navigator.clipboard.writeText(textToCopy);
+                    handleSuccess("Copied via Clipboard API!");
+                    return;
+                } catch (err) {
+                    console.warn("Clipboard API failed, trying fallbacks...");
+                }
+            }
+
+            if (tryTextAreaFallback(textToCopy)) {
+                handleSuccess("Copied via Textarea Fallback!");
+                return;
+            }
+
+            if (tryInputFallback(textToCopy)) {
+                handleSuccess("Copied via Input Fallback!");
+                return;
+            }
+
+            if (tryContentEditableFallback(textToCopy)) {
+                handleSuccess("Copied via ContentEditable Fallback!");
+                return;
+            }
+
+
+            showPromptFallback(textToCopy);
+        });
+
+        function tryTextAreaFallback(text) {
+            try {
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.focus();
+                textarea.select();
+                const success = document.execCommand('copy');
+                document.body.removeChild(textarea);
+                return success;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function tryInputFallback(text) {
+            try {
+                const input = document.createElement('input');
+                input.setAttribute('value', text);
+                input.style.position = 'fixed';
+                input.style.opacity = '0';
+                document.body.appendChild(input);
+                input.select();
+                input.setSelectionRange(0, 99999);
+                const success = document.execCommand('copy');
+                document.body.removeChild(input);
+                return success;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function tryContentEditableFallback(text) {
+            try {
+                const div = document.createElement('div');
+                div.innerText = text;
+                div.contentEditable = 'true';
+                div.style.position = 'fixed';
+                div.style.opacity = '0';
+                document.body.appendChild(div);
+                
+                const range = document.createRange();
+                range.selectNodeContents(div);
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+                
+                const success = document.execCommand('copy');
+                selection.removeAllRanges();
+                document.body.removeChild(div);
+                return success;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function showPromptFallback(text) {
+            window.prompt("Your browser blocked auto-copy. Press Ctrl+C or Cmd+C to copy:", text);
+        }
+
+        function handleSuccess(message) {
+            console.log(message);
+            const btn = document.getElementById('copyBtn');
+            const originalText = btn.textContent;
+            btn.innerHTML = `
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                ✅ Copied!
+            `;
+            btn.classList.add('success');
+            setTimeout(() => {
+                btn.innerHTML = `
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                    Copy Script
+                `;
+                btn.classList.remove('success');
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
