@@ -524,6 +524,11 @@
         <div class="updates-btn" id="open-updates-btn" style="background: var(--panel-bg); border-radius: 28px; padding: 4px 12px; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:6px; margin-right:4px;">
           📋 <span>Update log</span>
         </div>
+
+        <div id="open-beacons-btn" class="updates-btn" style="background: var(--panel-bg); border-radius: 28px; padding: 4px 12px; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 6px; margin-right: 4px;">
+ 🌐 <span>Beacons (Beta)</span>
+</div>
+        
         <div id="summarize-btn" style="background: var(--panel-bg); border-radius: 28px; padding: 4px 12px; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:6px;">
           📝 <span>Summarize Chat</span>
         </div>
@@ -719,6 +724,12 @@
     </div>
   </div>
 
+<script>
+  document.getElementById('open-beacons-btn').onclick = () => {
+    window.location.href = 'beacons.html';
+  };
+</script>
+  
 <script>
 let localStorageAvailable = true;
 try { localStorage.setItem('test', 'test'); localStorage.removeItem('test'); } catch (e) { localStorageAvailable = false; }
