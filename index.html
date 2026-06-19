@@ -532,7 +532,7 @@
         <div id="summarize-btn" style="background: var(--panel-bg); border-radius: 28px; padding: 4px 12px; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:6px;">
           📝 <span>Summarize Chat</span>
         </div>
-        <div style="color:var(--muted);">v1.6.0</div>
+        <div style="color:var(--muted);">v1.7.0</div>
         <div id="menu-btn" style="cursor:pointer; font-size:1.3rem; user-select:none;">☰</div>
       </div>
     </div>
@@ -855,6 +855,7 @@ function renderUpdateLog() {
   const container = document.getElementById('update-log-content');
   if (!container) return;
   const UPDATE_HISTORY = [
+    { version: 'v1.7.0', date: 'June 19, 2026', changes: ['🛠 Added Beacons (Beta).'] },
     { version: 'v1.6.0', date: 'June 17, 2026', changes: ['✅ Added message pinning.'] },
     { version: 'v1.5.0', date: 'June 15, 2026', changes: ['📌 Added message pinning.', '📝 Added chat summarisation.'] },
     { version: 'v1.4.0', date: 'June 14, 2026', changes: ['🌐 Added command palette.', '✏Added response editing.', '🔃 Improved regenerating responses.'] },
