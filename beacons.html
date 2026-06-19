@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Overmind - Beacons</title>
+</head>
+<body>
+
+    <button id="copyBtn" style="padding: 10px 20px; font-size: 16px; cursor: pointer;">
+        Copy
+    </button>
+
+    <template id="codeToCopy"><!DOCTYPE html>
+<html>
+<body>
+
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+const supabase = createClient(
+  "https://eskafzlbaaqkqqbmgpft.supabase.co",
+  "sb_publishable_pd8j_QxhCQS1SQNM1cn6Aw_NyMLdu8s"
+);
+
+const btn = document.createElement("div");
+btn.textContent = "💬";
+btn.style.cssText = `
+position:fixed;
+bottom:20px;
+right:20px;
+width:56px;
+height:56px;
+border-radius:50%;
+background:#111;
+color:white;
+display:flex;
+align-items:center;
+justify-content:center;
+cursor:pointer;
+z-index:999999;
+font-size:22px;
+`;
+
+const panel = document.createElement("div");
+panel.style.cssText = `
+position:fixed;
+inset:10px;
+background:white;
+border-radius:14px;
+overflow:hidden;
+box-shadow:0 20px 60px rgba(0,0,0,0.4);
+transform:scale(0);
+transform-origin:bottom right;
+transition:0.2s ease;
+z-index:999998;
+`;
+
+document.body.appendChild(btn);
+document.body.appendChild(panel);
+
+btn.onclick = () => {
+  panel.style.transform =
+    panel.style.transform === "scale(1)" ? "scale(0)" : "scale(1)";
+};
+
+async function load() {
+  try {
+    const { data, error } = await supabase
+      .from("scripts")
+      .select("url")
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      panel.innerHTML = `<pre>Supabase error:\n${JSON.stringify(error, null, 2)}</pre>`;
+      return;
+    }
+
+    if (!data || !data.url) {
+      panel.innerHTML = `<pre>No URL found in Supabase.\n\nReturned:\n${JSON.stringify(data, null, 2)}</pre>`;
+      return;
+    }
+
+    const url = data.url.trim();
+
+    panel.innerHTML = `
+      <iframe
+        src="${url}"
+        style="width:100%;height:100%;border:none;"
+      ></iframe>
+    `;
+
+  } catch (e) {
+    panel.innerHTML = `<pre>Crash:\n${e.message}</pre>`;
+  }
+}
+
+load();
+</script>
+
+</body>
+</html></template>
+
+    <script>
+        document.getElementById('copyBtn').addEventListener('click', async () => {
+            const textToCopy = document.getElementById('codeToCopy').innerHTML;
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                try {
+                    await navigator.clipboard.writeText(textToCopy);
+                    handleSuccess();
+                    return;
+                } catch (err) {
+                    console.warn("Clipboard API failed, trying fallbacks...");
+                }
+            }
+
+            if (tryTextAreaFallback(textToCopy)) {
+                handleSuccess();
+                return;
+            }
+
+            if (tryInputFallback(textToCopy)) {
+                handleSuccess();
+                return;
+            }
+
+            if (tryContentEditableFallback(textToCopy)) {
+                handleSuccess();
+                return;
+            }
+
+            showPromptFallback(textToCopy);
+        });
+
+        function tryTextAreaFallback(text) {
+            try {
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                textarea.style.position = 'fixed'; 
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.focus();
+                textarea.select();
+                const success = document.execCommand('copy');
+                document.body.removeChild(textarea);
+                return success;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function tryInputFallback(text) {
+            try {
+                const input = document.createElement('input');
+                input.setAttribute('value', text);
+                input.style.position = 'fixed';
+                input.style.opacity = '0';
+                document.body.appendChild(input);
+                input.select();
+                input.setSelectionRange(0, 99999); 
+                const success = document.execCommand('copy');
+                document.body.removeChild(input);
+                return success;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function tryContentEditableFallback(text) {
+            try {
+                const div = document.createElement('div');
+                div.innerText = text;
+                div.contentEditable = 'true';
+                div.style.position = 'fixed';
+                div.style.opacity = '0';
+                document.body.appendChild(div);
+                
+                const range = document.createRange();
+                range.selectNodeContents(div);
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+                
+                const success = document.execCommand('copy');
+                selection.removeAllRanges();
+                document.body.removeChild(div);
+                return success;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function showPromptFallback(text) {
+            window.prompt("Your browser blocked auto-copy. Press Ctrl+C or Cmd+C to copy:", text);
+        }
+
+        function handleSuccess() {
+            const btn = document.getElementById('copyBtn');
+            const originalText = btn.textContent;
+            btn.textContent = "✅ Copied!";
+            btn.style.background = "#d4edda";
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.style.background = "";
+            }, 2000);
+        }
+    </script>
+  <p>honestly got lazy withe the UI, sorry. just click the button to copy the code, and paste it in the body of your website to seamlessly integrate Overmind into the site. Still in beta</p>
+
+</body>
+</html>
