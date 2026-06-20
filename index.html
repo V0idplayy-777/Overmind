@@ -532,7 +532,7 @@
         <div id="summarize-btn" style="background: var(--panel-bg); border-radius: 28px; padding: 4px 12px; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:6px;">
           📝 <span>Summarize Chat</span>
         </div>
-        <div style="color:var(--muted);">v1.7.1</div>
+        <div style="color:var(--muted);">v1.7.4</div>
         <div id="menu-btn" style="cursor:pointer; font-size:1.3rem; user-select:none;">☰</div>
       </div>
     </div>
@@ -753,7 +753,12 @@ function safeLocalStorageRemove(key) {
 }
 
 const CEREBRAS_API_KEY = 'csk-r25mcjper4yncxt4jrm2h5fktmwhj5d53tnr9hkd8xwxx5j2';
+const COMPRESSION_API_KEY = 'csk-r5jcn4y36yw4w6y44dmcf6tktfy966ffw5tmkvepxkn6myrm';
 const API_URL = 'https://api.cerebras.ai/v1/chat/completions';
+
+const COMPRESSION_THRESHOLD = 6500;
+const MAX_RECENT_MESSAGES = 12;
+const SUMMARY_MAX_TOKENS = 800;
 
 const DEFAULT_SETTINGS = {
   theme: 'dark',
@@ -855,6 +860,7 @@ function renderUpdateLog() {
   const container = document.getElementById('update-log-content');
   if (!container) return;
   const UPDATE_HISTORY = [
+    { version: 'v1.7.0 pt. II', date: 'June 20, 2026', changes: ['🧠 Added smart context compression', '📥 Added chat exporting.'] },
     { version: 'v1.7.0', date: 'June 19, 2026', changes: ['🛠 Added Beacons (Beta).'] },
     { version: 'v1.6.0', date: 'June 17, 2026', changes: ['✅ Added message pinning.'] },
     { version: 'v1.5.0', date: 'June 15, 2026', changes: ['📌 Added message pinning.', '📝 Added chat summarisation.'] },
@@ -1046,11 +1052,19 @@ function renderChatList() {
   });
 }
 
-function loadChat(id) {
+async function loadChat(id) {
   currentChatId = id;
   const chat = chats.find(c => c.id === id);
   if (!chat) return;
+
   chatScreen.innerHTML = `<div class="welcome-text" id="welcome-message">I am Overmind.<br>What do you seek?</div>`;
+
+  if (!settings.memoryEnabled && roughTokenCount(JSON.stringify(chat.messages)) > COMPRESSION_THRESHOLD) {
+    const compressed = await compressChatHistory(chat);
+    chat.messages = compressed;
+    saveChats();
+  }
+
   chat.messages.forEach((msg, index) => addMessage(msg, msg.role === 'user', index));
   updateWelcomeVisibility();
   renderChatList();
@@ -1105,6 +1119,54 @@ function parseChecklistFromText(text) {
   return { role: 'assistant', type: 'checklist', items: items.map(t => ({ text: t, checked: false })) };
 }
 
+function roughTokenCount(text) {
+  if (!text) return 0;
+  return Math.ceil(text.length / 4) + (text.split('\n').length * 2);
+}
+
+function compressChatHistory(chat) {
+  if (!chat || chat.messages.length <= MAX_RECENT_MESSAGES + 8) {
+    return Promise.resolve(chat.messages.slice());
+  }
+
+  const recent = chat.messages.slice(-MAX_RECENT_MESSAGES);
+  const toSummarize = chat.messages.slice(0, -MAX_RECENT_MESSAGES);
+
+  let historyText = toSummarize.map(msg => {
+    const role = msg.role === 'user' ? 'User' : 'Overmind';
+    if (msg.type === 'checklist') {
+      return role + ": Checklist - " + msg.items.map(i => i.text).join('; ');
+    }
+    return role + ": " + msg.content;
+  }).join('\n\n');
+
+  const compressionPrompt = "You are an expert at summarizing conversations while preserving critical information.\n\nCreate a concise but comprehensive summary of the conversation below. Include:\n- Key facts, decisions, and user preferences\n- Important context and ongoing topics\n- Any specific requests or goals mentioned\n- Checklist outcomes if any\n\nBe detailed enough for continuing the conversation naturally.\n\nConversation to summarize:\n" + historyText;
+
+  return fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${COMPRESSION_API_KEY}` },
+    body: JSON.stringify({
+      model: 'gpt-oss-120b',
+      messages: [
+        { role: 'system', content: 'You are a precise summarization assistant.' },
+        { role: 'user', content: compressionPrompt }
+      ],
+      temperature: 0.3,
+      max_tokens: 700,
+      stream: false
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    const summary = data.choices?.[0]?.message?.content || "Previous conversation summary unavailable.";
+    return [
+      { role: 'system', content: "=== CONVERSATION SUMMARY ===\n" + summary + "\n\n=== RECENT MESSAGES ===" },
+      ...recent
+    ];
+  })
+  .catch(() => recent);
+}
+
 function chatHistoryForMemory() {
   const all = [];
   for (const chat of chats.slice().reverse()) {
@@ -1135,9 +1197,10 @@ CHECKLIST:
 - Item three`;
 }
 
-function getCerebrasResponse(userMessage) {
+async function getCerebrasResponse(userMessage) {
   const chat = chats.find(c => c.id === currentChatId);
   if (!chat) return;
+
   if (chat.messages.length === 0) chat.title = generateTitle(userMessage);
   chat.messages.push({ role: 'user', content: userMessage });
   saveChats();
@@ -1146,7 +1209,13 @@ function getCerebrasResponse(userMessage) {
   const botDiv = addMessage('', false);
   showTyping();
 
-  const contextMessages = settings.memoryEnabled ? chatHistoryForMemory() : chat.messages.slice();
+  let contextMessages;
+  if (settings.memoryEnabled) {
+    contextMessages = chatHistoryForMemory();
+  } else {
+    contextMessages = await compressChatHistory(chat);
+  }
+
   fetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CEREBRAS_API_KEY}` },
@@ -1207,14 +1276,21 @@ function getCerebrasResponse(userMessage) {
   });
 }
 
-function getCerebrasResponseFromIndex(index) {
+async function getCerebrasResponseFromIndex(index) {
   const chat = chats.find(c => c.id === currentChatId);
   if (!chat) return;
   const userMsg = chat.messages[index];
   if (!userMsg || userMsg.role !== 'user') return;
-  const botDiv = addMessage('', false, null);
+
+  const botDiv = addMessage('', false);
   showTyping();
-  const contextMessages = settings.memoryEnabled ? chatHistoryForMemory() : chat.messages.slice(0, index + 1);
+
+  let contextMessages;
+  if (settings.memoryEnabled) {
+    contextMessages = chatHistoryForMemory();
+  } else {
+    contextMessages = await compressChatHistory(chat);
+  }
 
   fetch(API_URL, {
     method: 'POST',
@@ -1533,10 +1609,13 @@ const COMMANDS = [
   { name: 'Toggle Sidebar', desc: 'Show or hide the chat list', action: () => sidebar.classList.toggle('open') },
   { name: 'Open Update Log', desc: 'View recent changes', action: () => { renderUpdateLog(); updatesModal.classList.add('open'); } },
   { name: 'Export Chats', desc: 'Download all chats as JSON', action: () => exportChats() },
+  { name: 'Export All Chats', desc: 'Download all chats as JSON backup', action: () => exportChats() },
+  { name: 'Export Current Chat', desc: 'Download this chat as Markdown', action: () => exportCurrentChat() },
   { name: 'Clear All Chats', desc: 'Delete all stored chats', action: () => clearAllChats() },
   { name: 'Focus Chat Search', desc: 'Jump to the sidebar search box', action: () => { sidebar.classList.add('open'); chatSearch?.focus(); } },
   { name: 'Create Checklist', desc: 'Add a checklist to the current chat', action: () => parseChecklistInput() },
-  { name: 'Close Command Palette', desc: 'Dismiss the palette', action: () => closeCommandPalette() }
+  { name: 'Close Command Palette', desc: 'Dismiss the palette', action: () => closeCommandPalette() },
+  { name: 'Useless Command', desc: 'Literally does nothing', action: () => closeCommandPalette() }
 ];
 
 function renderCommandPalette() {
@@ -1843,13 +1922,48 @@ function saveSettingsFromUI() {
 }
 function toggleMemory() { settings.memoryEnabled = !settings.memoryEnabled; applySettings(); }
 function toggleNoStore() { settings.neverStore = !settings.neverStore; applySettings(); }
+
 function exportChats() {
   const dataStr = JSON.stringify(chats, null, 2);
   const blob = new Blob([dataStr], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = 'overmind-chats.json';
+  link.download = 'overmind-all-chats.json';
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportCurrentChat() {
+  const chat = chats.find(c => c.id === currentChatId);
+  if (!chat || chat.messages.length === 0) {
+    alert("No messages in this chat to export.");
+    return;
+  }
+
+  let md = `# ${chat.title}\n\n`;
+  md += `**Exported on:** ${new Date().toLocaleString()}\n\n`;
+  md += `---\n\n`;
+
+  chat.messages.forEach(msg => {
+    if (msg.role === 'user') {
+      md += `**You:** ${msg.content}\n\n`;
+    } else if (msg.type === 'checklist') {
+      md += `**Overmind:** Checklist\n`;
+      msg.items.forEach(item => {
+        md += `- ${item.checked ? '[x]' : '[ ]'} ${item.text}\n`;
+      });
+      md += `\n`;
+    } else {
+      md += `**Overmind:** ${msg.content}\n\n`;
+    }
+  });
+
+  const blob = new Blob([md], { type: 'text/markdown' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${chat.title.replace(/[^a-z0-9]/gi, '_')}.md`;
   link.click();
   URL.revokeObjectURL(url);
 }
@@ -1975,6 +2089,11 @@ window.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     e.preventDefault();
     openCommandPalette();
+    return;
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'j') {
+    e.preventDefault();
+    exportCurrentChat();
     return;
   }
   if (!commandPaletteModal.classList.contains('open')) return;
