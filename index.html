@@ -532,7 +532,7 @@
         <div id="summarize-btn" style="background: var(--panel-bg); border-radius: 28px; padding: 4px 12px; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:6px;">
           📝 <span>Summarize Chat</span>
         </div>
-        <div style="color:var(--muted);">v1.7.4</div>
+        <div style="color:var(--muted);">v1.8.0</div>
         <div id="menu-btn" style="cursor:pointer; font-size:1.3rem; user-select:none;">☰</div>
       </div>
     </div>
@@ -558,6 +558,7 @@
           <button class="settings-tab" data-tab="behavior">Behavior</button>
           <button class="settings-tab" data-tab="identity">Identity</button>
           <button class="settings-tab" data-tab="language">Language</button>
+          <button class="settings-tab" data-tab="plugins">Plugins</button>
           <button class="settings-tab" data-tab="privacy">Privacy</button>
         </div>
 
@@ -686,6 +687,9 @@
             <button class="btn" id="export-chats-btn">Export chats</button>
             <button class="btn danger" id="clear-chats-btn">Clear all chats</button>
           </div>
+        </div>
+                <div class="settings-panel" id="tab-plugins">
+          <div id="plugins-list" style="display:flex;flex-direction:column;gap:12px;"></div>
         </div>
       </div>
       <div class="modal-footer">
@@ -860,6 +864,7 @@ function renderUpdateLog() {
   const container = document.getElementById('update-log-content');
   if (!container) return;
   const UPDATE_HISTORY = [
+    { version: 'v1.8.0', date: 'June 21, 2026', changes: ['🔌 Added plugins'] },
     { version: 'v1.7.0 pt. II', date: 'June 20, 2026', changes: ['🧠 Added smart context compression', '📥 Added chat exporting.'] },
     { version: 'v1.7.0', date: 'June 19, 2026', changes: ['🛠 Added Beacons (Beta).'] },
     { version: 'v1.6.0', date: 'June 17, 2026', changes: ['✅ Added message pinning.'] },
@@ -1066,8 +1071,11 @@ async function loadChat(id) {
   }
 
   chat.messages.forEach((msg, index) => addMessage(msg, msg.role === 'user', index));
-  updateWelcomeVisibility();
-  renderChatList();
+updateWelcomeVisibility();
+renderChatList();
+
+const chatArea = document.getElementById('chat-screen');
+pluginManager.renderWidgets(chatArea);
 }
 
 function renameChat(id) {
@@ -1183,8 +1191,9 @@ function chatHistoryForMemory() {
 }
 
 function systemPrompt() {
-  return `You are Overmind, created by "V0idplayy". In this conversation, your self-name is "${settings.assistantName}". Do not say you are ChatGPT or that you were developed by OpenAI.
-${THINKING_PROMPTS[settings.thinking]}
+  let base = `You are Overmind, created by "V0idplayy". In this conversation, your self-name is "${settings.assistantName}". Do not say you are ChatGPT or that you were developed by OpenAI.`;
+  base += pluginManager.getSystemPromptAdditions();
+  base += `\n${THINKING_PROMPTS[settings.thinking]}
 ${TONE_PROMPTS[settings.tone]}
 ${EMOJI_PROMPTS[settings.emoji]}
 ${SWEAR_PROMPTS[settings.swearMode]}
@@ -1195,6 +1204,7 @@ CHECKLIST:
 - Item one
 - Item two
 - Item three`;
+  return base;
 }
 
 async function getCerebrasResponse(userMessage) {
@@ -1617,6 +1627,223 @@ const COMMANDS = [
   { name: 'Close Command Palette', desc: 'Dismiss the palette', action: () => closeCommandPalette() },
   { name: 'Useless Command', desc: 'Literally does nothing', action: () => closeCommandPalette() }
 ];
+
+const plugins = [];
+
+class PluginManager {
+  constructor() {
+    this.hooks = {
+      modifySystemPrompt: [],
+      provideTools: [],
+      renderWidgets: []
+    };
+  }
+
+  register(plugin) {
+    plugins.push(plugin);
+  }
+
+  refreshActivePlugins() {
+    this.hooks.modifySystemPrompt = [];
+    this.hooks.provideTools = [];
+    this.hooks.renderWidgets = [];
+
+    plugins.forEach(plugin => {
+      if (plugin.enabled) {
+        if (plugin.modifySystemPrompt) this.hooks.modifySystemPrompt.push(plugin.modifySystemPrompt);
+        if (plugin.provideTools) this.hooks.provideTools.push(plugin.provideTools);
+        if (plugin.renderWidgets) this.hooks.renderWidgets.push(plugin.renderWidgets);
+        
+        if (plugin.init && !plugin.initialized) {
+          plugin.init();
+          plugin.initialized = true;
+        }
+      }
+    });
+  }
+
+  getSystemPromptAdditions() {
+    let additions = '';
+    this.hooks.modifySystemPrompt.forEach(fn => {
+      try { additions += '\n' + fn(); } catch(e) {}
+    });
+    return additions.trim();
+  }
+
+  getAllTools() {
+    let allTools = [];
+    this.hooks.provideTools.forEach(fn => {
+      try {
+        const tools = fn();
+        if (tools) allTools = allTools.concat(tools);
+      } catch(e) {}
+    });
+    return allTools;
+  }
+
+  renderWidgets(container) {
+    this.hooks.renderWidgets.forEach(fn => {
+      try { fn(container); } catch(e) {}
+    });
+  }
+}
+
+const pluginManager = new PluginManager();
+
+const responseEnhancer = {
+  name: "Response Enhancer",
+  enabled: false,
+  modifySystemPrompt: () => {
+    const styleMap = {
+      friendly: "Be warm, encouraging, and personable.",
+      formal: "Be professional and clear.",
+      quirky: "Be playful and slightly humorous.",
+      concise: "Be very direct and brief."
+    };
+    return styleMap[settings.tone] || "Be helpful and natural.";
+  }
+};
+
+const smartCalculator = {
+  name: "Smart Calculator",
+  enabled: false,
+  provideTools: () => [{
+    type: "function",
+    function: {
+      name: "calculate",
+      description: "Use this for accurate math, percentages, unit conversions, or complex calculations",
+      parameters: {
+        type: "object",
+        properties: {
+          expression: {
+            type: "string",
+            description: "The math expression to calculate"
+          }
+        },
+        required: ["expression"]
+      }
+    }
+  }],
+  init: () => {
+    if (document.getElementById('calculator-widget')) return;
+
+    const widget = document.createElement('div');
+    widget.id = 'calculator-widget';
+    widget.style.cssText = `position: fixed; bottom: 90px; right: 20px; background: var(--panel-bg); border: 1px solid var(--border); border-radius: 12px; padding: 12px; width: 220px; display: none; z-index: 100; box-shadow: 0 10px 30px var(--shadow);`;
+    widget.innerHTML = `
+      <div style="margin-bottom:8px;font-weight:600;">Quick Calculator</div>
+      <input id="calc-input" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--main-bg);color:var(--text);" placeholder="2+2 or 15% of 80">
+      <div id="calc-result" style="margin-top:8px;min-height:20px;color:var(--accent);font-weight:500;"></div>
+    `;
+    document.body.appendChild(widget);
+
+    const calcBtn = document.createElement('div');
+    calcBtn.textContent = '🔢';
+    calcBtn.style.cssText = 'cursor:pointer;font-size:1.4rem;padding:8px;';
+    calcBtn.onclick = () => {
+      const w = document.getElementById('calculator-widget');
+      w.style.display = w.style.display === 'block' ? 'none' : 'block';
+    };
+    document.querySelector('.input-container').appendChild(calcBtn);
+
+    document.getElementById('calc-input').addEventListener('keypress', e => {
+      if (e.key === 'Enter') {
+        const expr = e.target.value.trim();
+        if (!expr) return;
+        try {
+          const result = Function('"use strict";return (' + expr + ')')();
+          document.getElementById('calc-result').textContent = `= ${result}`;
+        } catch {
+          document.getElementById('calc-result').textContent = 'Invalid expression';
+        }
+      }
+    });
+  }
+};
+
+const todaysInfo = {
+  name: "Today's Info",
+  enabled: false,
+  provideTools: () => [{
+    type: "function",
+    function: {
+      name: "get_today_info",
+      description: "Get current date and time information",
+      parameters: {
+        type: "object",
+        properties: {
+          location: { type: "string", description: "Optional city name" }
+        }
+      }
+    }
+  }],
+  renderWidgets: (container) => {
+    if (document.getElementById('today-info-panel')) return;
+
+    const infoPanel = document.createElement('div');
+    infoPanel.id = 'today-info-panel';
+    infoPanel.style.cssText = `position: absolute; top: 20px; right: 20px; background: var(--panel-bg); border: 1px solid var(--border); border-radius: 12px; padding: 14px; width: 200px; font-size: 0.9rem; z-index: 50;`;
+    infoPanel.innerHTML = `<strong>Today</strong><br><span id="current-date"></span><br><br><span id="current-time" style="font-size:1.1rem;"></span>`;
+    container.appendChild(infoPanel);
+
+    const updateTime = () => {
+      const now = new Date();
+      document.getElementById('current-date').textContent = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+      document.getElementById('current-time').textContent = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    };
+    updateTime();
+    setInterval(updateTime, 30000);
+  }
+};
+
+const businessSchoolMode = {
+  name: "Business / School Mode",
+  enabled: false,
+  modifySystemPrompt: () => {
+    return `You are in Business/School Mode. 
+Adopt a professional, calm, clear, and focused tone. 
+Avoid all energetic language, emojis, slang, exclamation points, and casual expressions. 
+Prioritize clarity, efficiency, and usefulness for work or academic purposes. 
+Never swear or use any profane language under any circumstances. 
+Stay strictly professional at all times.`;
+  }
+};
+
+pluginManager.register(responseEnhancer);
+pluginManager.register(smartCalculator);
+pluginManager.register(todaysInfo);
+pluginManager.register(businessSchoolMode);
+
+async function executeTool(toolCall) {
+  const { name, arguments: argsString } = toolCall;
+  let args;
+  try {
+    args = JSON.parse(argsString);
+  } catch {
+    args = {};
+  }
+
+  if (name === "calculate") {
+    try {
+      const expr = args.expression || '';
+      const result = Function('"use strict";return (' + expr + ')')();
+      return { result: String(result) };
+    } catch (e) {
+      return { error: "Invalid math expression" };
+    }
+  }
+
+  if (name === "get_today_info") {
+    const now = new Date();
+    return {
+      current_time: now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+      current_date: now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }),
+      message: "Current date and time retrieved."
+    };
+  }
+
+  return { error: "Unknown tool" };
+}
 
 function renderCommandPalette() {
   const q = commandPaletteInput.value.trim().toLowerCase();
@@ -2056,6 +2283,7 @@ document.querySelectorAll('.settings-tab').forEach(tab => {
     document.querySelectorAll('.settings-panel').forEach(p => p.classList.remove('active'));
     tab.classList.add('active');
     document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
+    if (tab.dataset.tab === "plugins") renderPluginsList();
   });
 });
 
@@ -2137,7 +2365,33 @@ renderCommandPalette = function() {
   });
 };
 
+function renderPluginsList() {
+  const container = document.getElementById('plugins-list');
+  container.innerHTML = '';
+  plugins.forEach(plugin => {
+    const div = document.createElement('div');
+    div.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--panel-bg);border-radius:10px;';
+    div.innerHTML = `
+      <div>
+        <strong>${plugin.name}</strong>
+      </div>
+      <div class="toggle ${plugin.enabled ? 'on' : ''}" data-plugin="${plugin.name}"></div>
+    `;
+
+    const toggleEl = div.querySelector('.toggle');
+    toggleEl.addEventListener('click', () => {
+      plugin.enabled = !plugin.enabled;
+      toggleEl.classList.toggle('on');
+      pluginManager.refreshActivePlugins();
+      saveSettings();
+    });
+
+    container.appendChild(div);
+  });
+}
+
 applySettings();
+pluginManager.refreshActivePlugins();
 </script>
 </body>
 </html>
