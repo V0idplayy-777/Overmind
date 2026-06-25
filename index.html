@@ -505,6 +505,34 @@
       text-decoration: line-through;
       opacity: 0.7;
     }
+
+  .suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 240px;
+  margin-bottom: 60px;
+  padding: 0 20px;
+}
+
+.suggestion-chip {
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 11px 20px;
+  border-radius: 9999px;
+  font-size: 0.96rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 15px var(--shadow);
+}
+
+.suggestion-chip:hover {
+  background: var(--panel-hover);
+  border-color: var(--accent);
+  transform: translateY(-3px);
+}
   </style>
 </head>
 <body>
@@ -532,13 +560,15 @@
         <div id="summarize-btn" style="background: var(--panel-bg); border-radius: 28px; padding: 4px 12px; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:6px;">
           📝 <span>Summarize Chat</span>
         </div>
-        <div style="color:var(--muted);">v1.8.0</div>
+        <div style="color:var(--muted);">v1.9.0</div>
         <div id="menu-btn" style="cursor:pointer; font-size:1.3rem; user-select:none;">☰</div>
       </div>
     </div>
 
     <div class="chat-area" id="chat-screen">
       <div class="welcome-text" id="welcome-message">I am Overmind.<br>What do you seek?</div>
+      <div id="suggestions" class="suggestions">
+</div>
     </div>
 
     <div class="input-area">
@@ -636,6 +666,15 @@
               <option value="Korean">Korean</option>
             </select>
             <div class="help-text">The bot will prefer this language unless you say otherwise.</div>
+          </div>
+                    <div>
+            <label class="field-label" for="anti-hallucination-select">Anti-Hallucination Mode</label>
+            <select class="select" id="anti-hallucination-select">
+              <option value="off">Off (Normal)</option>
+              <option value="moderate">Moderate</option>
+              <option value="strict">Strict (Strongest)</option>
+            </select>
+            <div class="help-text">Makes the AI much more careful with facts, reduces hallucinations, and encourages saying "I don't know" when uncertain.</div>
           </div>
         </div>
 
@@ -776,7 +815,8 @@ const DEFAULT_SETTINGS = {
   swearMode: 'natural_only_when_allowed',
   safetyLevel: 'moderate',
   memoryEnabled: true,
-  neverStore: false
+  neverStore: false,
+  antiHallucination: 'moderate'
 };
 
 const THINKING_PROMPTS = {
@@ -805,6 +845,12 @@ const SAFETY_PROMPTS = {
   strict: 'Be very conservative with risky topics. Refuse or soften potentially harmful content.',
   moderate: 'Use balanced moderation for risky topics. Refuse clearly when needed.',
   permissive: 'Be lenient with risky topics. Only refuse overtly harmful content.'
+};
+
+const ANTI_HALLUCINATION_PROMPTS = {
+  off: '',
+  moderate: 'Be careful with facts. If you are not highly confident, say you are unsure or that you don\'t have enough information. Avoid making up details.',
+  strict: 'ANTI-HALLUCINATION MODE: You must be extremely accurate. Never guess or make up information. If you are not completely certain, respond with "I don\'t know" or "I\'m not sure." Prioritize truth and honesty over sounding confident.'
 };
 
 let chats = [];
@@ -839,6 +885,7 @@ const toneSelect = document.getElementById('tone-select');
 const languageSelect = document.getElementById('language-select');
 const safetySelect = document.getElementById('safety-select');
 const exportChatsBtn = document.getElementById('export-chats-btn');
+const antiHallucinationSelect = document.getElementById('anti-hallucination-select');
 const clearChatsBtn = document.getElementById('clear-chats-btn');
 const accentSelect = document.getElementById('accent-select');
 const chatSearch = document.getElementById('chat-search');
@@ -864,6 +911,7 @@ function renderUpdateLog() {
   const container = document.getElementById('update-log-content');
   if (!container) return;
   const UPDATE_HISTORY = [
+    { version: 'v1.7.0 pt. II', date: 'June 20, 2026', changes: ['❗ Added "AI-generated" disclaimer', '❓ Added suggested prompts', '👁 Added anti-hallucination mode'] },
     { version: 'v1.8.0', date: 'June 21, 2026', changes: ['🔌 Added plugins'] },
     { version: 'v1.7.0 pt. II', date: 'June 20, 2026', changes: ['🧠 Added smart context compression', '📥 Added chat exporting.'] },
     { version: 'v1.7.0', date: 'June 19, 2026', changes: ['🛠 Added Beacons (Beta).'] },
@@ -911,6 +959,8 @@ function applySettings() {
   document.documentElement.style.setProperty('--accent', settings.accentColor);
   document.documentElement.style.setProperty('--user-bg', settings.accentColor);
   document.documentElement.style.setProperty('--tab-active-bg', settings.accentColor);
+  const antiHallucinationSelect = document.getElementById('anti-hallucination-select');
+  antiHallucinationSelect.value = settings.antiHallucination || 'moderate';
 }
 
 function escapeHTML(text) {
@@ -924,9 +974,13 @@ function renderBotMessage(text) { return marked.parse(escapeHTML(text)); }
 function generateTitle(text) { return text.length > 24 ? text.slice(0, 24) + '...' : text; }
 function updateWelcomeVisibility() {
   const welcome = document.getElementById('welcome-message');
-  if (!welcome) return;
+  const suggestions = document.getElementById('suggestions');
   const chat = chats.find(c => c.id === currentChatId);
-  welcome.style.display = (chat && chat.messages.length > 0) ? 'none' : 'block';
+  
+  const isEmpty = !chat || chat.messages.length === 0;
+  
+  if (welcome) welcome.style.display = isEmpty ? 'block' : 'none';
+  if (suggestions) suggestions.style.display = isEmpty ? 'flex' : 'none';
 }
 function isMessagePinned(chatId, msgIndex) {
   return pinnedMessages.some(p => p.chatId === chatId && p.messageIndex === msgIndex);
@@ -989,12 +1043,27 @@ function addMessage(textOrMsg, isUser, messageIndex = null) {
   const msg = typeof textOrMsg === 'object' && textOrMsg !== null ? textOrMsg : null;
   const text = msg ? (msg.content || '') : String(textOrMsg || '');
   const type = msg?.type || 'text';
-  const role = msg?.role || (isUser ? 'user' : 'assistant');
-  const pinned = (messageIndex !== null && currentChatId && isMessagePinned(currentChatId, messageIndex));
+const role = msg?.role || (isUser ? 'user' : 'assistant');
+const pinned = (messageIndex !== null && currentChatId && isMessagePinned(currentChatId, messageIndex));
 
-  div.className = `message ${isUser ? 'user' : 'bot'}${pinned ? ' pinned' : ''}`;
-  if (type === 'checklist' && !isUser) renderChecklistMessage(msg, div, currentChatId, messageIndex);
-  else div.innerHTML = isUser ? escapeHTML(text) : renderBotMessage(text);
+div.className = `message ${isUser ? 'user' : 'bot'}${pinned ? ' pinned' : ''}`;
+
+if (type === 'checklist' && !isUser) {
+  renderChecklistMessage(msg, div, currentChatId, messageIndex);
+} else if (isUser) {
+  div.innerHTML = escapeHTML(text);
+} else {
+  // Bot message only
+  let content = renderBotMessage(text);
+  
+  content += `
+    <div style="margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--border); 
+                font-size: 0.77rem; color: var(--muted); opacity: 0.9; font-style: italic;">
+      ✦ This response was generated by AI
+    </div>`;
+  
+  div.innerHTML = content;
+}
 
   wrapper.appendChild(div);
 
@@ -1062,7 +1131,10 @@ async function loadChat(id) {
   const chat = chats.find(c => c.id === id);
   if (!chat) return;
 
-  chatScreen.innerHTML = `<div class="welcome-text" id="welcome-message">I am Overmind.<br>What do you seek?</div>`;
+  chatScreen.innerHTML = `
+    <div class="welcome-text" id="welcome-message">I am Overmind.<br>What do you seek?</div>
+    <div id="suggestions" class="suggestions"></div>
+  `;
 
   if (!settings.memoryEnabled && roughTokenCount(JSON.stringify(chat.messages)) > COMPRESSION_THRESHOLD) {
     const compressed = await compressChatHistory(chat);
@@ -1071,11 +1143,13 @@ async function loadChat(id) {
   }
 
   chat.messages.forEach((msg, index) => addMessage(msg, msg.role === 'user', index));
-updateWelcomeVisibility();
-renderChatList();
 
-const chatArea = document.getElementById('chat-screen');
-pluginManager.renderWidgets(chatArea);
+  renderSuggestions();           // ← Important: Re-render chips
+  updateWelcomeVisibility();
+  renderChatList();
+
+  const chatArea = document.getElementById('chat-screen');
+  pluginManager.renderWidgets(chatArea);
 }
 
 function renameChat(id) {
@@ -1193,8 +1267,9 @@ function chatHistoryForMemory() {
 function systemPrompt() {
   let base = `You are Overmind, created by "V0idplayy". In this conversation, your self-name is "${settings.assistantName}". Do not say you are ChatGPT or that you were developed by OpenAI.`;
   base += pluginManager.getSystemPromptAdditions();
-  base += `\n${THINKING_PROMPTS[settings.thinking]}
-${TONE_PROMPTS[settings.tone]}
+  base += `\n${THINKING_PROMPTS[settings.thinking]}`;
+  base += `\n${ANTI_HALLUCINATION_PROMPTS[settings.antiHallucination || 'moderate']}`;
+  base += `\n${TONE_PROMPTS[settings.tone]}
 ${EMOJI_PROMPTS[settings.emoji]}
 ${SWEAR_PROMPTS[settings.swearMode]}
 ${SAFETY_PROMPTS[settings.safetyLevel]}
@@ -1204,8 +1279,12 @@ CHECKLIST:
 - Item one
 - Item two
 - Item three`;
+
+
   return base;
+  settings.antiHallucination = antiHallucinationSelect.value;
 }
+
 
 async function getCerebrasResponse(userMessage) {
   const chat = chats.find(c => c.id === currentChatId);
@@ -1529,17 +1608,6 @@ function summarizeChat() {
   });
 }
 
-function handleSend() {
-  const text = userInput.value.trim();
-  if (!text || !currentChatId) return;
-  addMessage(text, true);
-  userInput.value = '';
-  userInput.style.height = 'auto';
-  const welcome = document.getElementById('welcome-message');
-  if (welcome) welcome.style.display = 'none';
-  getCerebrasResponse(text);
-}
-
 function addChecklist(items) {
   const chat = chats.find(c => c.id === currentChatId);
   if (!chat) return;
@@ -1573,17 +1641,18 @@ function saveSettingsFromUI() {
   settings.assistantName = assistantNameInput.value.trim() || 'Overmind';
   settings.swearMode = swearSelect.value;
   settings.safetyLevel = safetySelect.value;
+  settings.antiHallucination = antiHallucinationSelect.value;   // ← Added
   settings.memoryEnabled = memoryToggle.classList.contains('on');
   settings.neverStore = noStoreToggle.classList.contains('on');
+  
   saveSettings();
   applySettings();
+  
   if (settings.neverStore) {
     chats = [];
     safeLocalStorageRemove('overmind_chats');
-    if (currentChatId) {
-      currentChatId = null;
-      createNewChat();
-    }
+    currentChatId = null;
+    createNewChat();
   }
   closeSettings();
 }
@@ -2114,11 +2183,15 @@ function summarizeChat() {
 function handleSend() {
   const text = userInput.value.trim();
   if (!text || !currentChatId) return;
+  
   addMessage(text, true);
   userInput.value = '';
   userInput.style.height = 'auto';
+  
+  hideSuggestions();                    // ← Added
   const welcome = document.getElementById('welcome-message');
   if (welcome) welcome.style.display = 'none';
+  
   getCerebrasResponse(text);
 }
 
@@ -2135,10 +2208,13 @@ function saveSettingsFromUI() {
   settings.assistantName = assistantNameInput.value.trim() || 'Overmind';
   settings.swearMode = swearSelect.value;
   settings.safetyLevel = safetySelect.value;
+  settings.antiHallucination = antiHallucinationSelect.value;   // ← Added
   settings.memoryEnabled = memoryToggle.classList.contains('on');
   settings.neverStore = noStoreToggle.classList.contains('on');
+  
   saveSettings();
   applySettings();
+  
   if (settings.neverStore) {
     chats = [];
     safeLocalStorageRemove('overmind_chats');
@@ -2214,6 +2290,48 @@ function openCommandPalette() {
 }
 function closeCommandPalette() { commandPaletteModal.classList.remove('open'); }
 
+const SUGGESTED_PROMPTS = [
+  "Tell me about yourself",
+  "What can you help me with?",
+  "Give me 5 productivity tips",
+  "Explain something interesting",
+  "Help me plan a trip",
+  "Write a short motivational quote"
+];
+
+function renderSuggestions() {
+  const container = document.getElementById('suggestions');
+  if (!container) return;
+  
+  container.innerHTML = '';
+  SUGGESTED_PROMPTS.forEach(prompt => {
+    const chip = document.createElement('div');
+    chip.className = 'suggestion-chip';
+    chip.textContent = prompt;
+    chip.onclick = () => {
+      userInput.value = prompt;
+      handleSend();
+    };
+    container.appendChild(chip);
+  });
+}
+
+function hideSuggestions() {
+  const el = document.getElementById('suggestions');
+  if (el) el.style.display = 'none';
+}
+
+function updateWelcomeVisibility() {
+  const welcome = document.getElementById('welcome-message');
+  const suggestions = document.getElementById('suggestions');
+  const chat = chats.find(c => c.id === currentChatId);
+  
+  const isEmpty = !chat || chat.messages.length === 0;
+  
+  if (welcome) welcome.style.display = isEmpty ? 'block' : 'none';
+  if (suggestions) suggestions.style.display = isEmpty ? 'flex' : 'none';
+}
+
 window.onload = () => {
   loadChats();
   loadPins();
@@ -2221,6 +2339,7 @@ window.onload = () => {
   else loadChat(chats[0].id);
   renderChatList();
   applySettings();
+  renderSuggestions();
   userInput.focus();
   if (!localStorageAvailable) {
     const warning = document.createElement('div');
