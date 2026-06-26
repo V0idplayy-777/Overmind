@@ -76,14 +76,15 @@
       transition: background .2s ease, color .2s ease;
     }
     .sidebar {
-      width: 260px;
-      background: var(--sidebar-bg);
-      border-right: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      transition: 0.25s ease;
-      box-shadow: 0 0 24px var(--shadow);
-    }
+  width: 280px;
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  transition: 0.25s ease;
+  box-shadow: 0 0 24px var(--shadow);
+  min-width:280px;
+}
     .sidebar-header { padding: 16px; border-bottom: 1px solid var(--border); }
     .new-chat, .settings-btn {
       padding: 10px 14px;
@@ -125,7 +126,14 @@
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    .main { flex: 1; display: flex; flex-direction: column; background: var(--main-bg); }
+    .main { 
+  flex: 1; 
+  display: flex; 
+  flex-direction: column; 
+  background: var(--main-bg); 
+  min-width: 0;
+  overflow: hidden;
+}
     .top-bar {
       padding: 14px 20px;
       display: flex;
@@ -135,14 +143,16 @@
       background: var(--topbar-bg);
     }
     .chat-area {
-      flex: 1;
-      padding: 20px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      position: relative;
-    }
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
     .welcome-text {
       font-size: 1.6rem;
       font-weight: 600;
@@ -178,14 +188,25 @@
       z-index: 10;
     }
     .message {
-      max-width: 75%;
-      padding: 14px 20px;
-      border-radius: 12px;
-      line-height: 1.6;
-      word-wrap: break-word;
-      box-shadow: 0 8px 24px var(--shadow);
-      transition: all 0.2s ease;
-    }
+  max-width: 75%;
+  padding: 14px 20px;
+  border-radius: 12px;
+  line-height: 1.6;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  box-shadow: 0 8px 24px var(--shadow);
+  transition: all 0.2s ease;
+}
+
+.message p {
+  margin: 0 0 12px 0;
+}
+
+.message p:last-child {
+  margin-bottom: 0;
+}
+
     .user { align-self: flex-end; background: var(--user-bg); color: var(--user-text); }
     .bot { align-self: flex-start; background: var(--bot-bg); color: var(--text); border: 1px solid var(--border); }
     .error-message {
@@ -506,23 +527,96 @@
       opacity: 0.7;
     }
 
+.artifact-panel{
+    width:0;
+    overflow:hidden;
+    background:var(--sidebar-bg);
+    border-left:1px solid var(--border);
+    display:flex;
+    flex-direction:column;
+    transition:width .25s ease;
+    box-shadow:-4px 0 20px var(--shadow);
+}
+
+.artifact-panel.open{
+    width:48%;
+}
+
+.artifact-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:12px 16px;
+    border-bottom:1px solid var(--border);
+    background:var(--panel-bg);
+}
+
+.artifact-header button{
+    padding:6px 14px;
+    margin-left:6px;
+    border-radius:8px;
+    border:1px solid var(--border);
+    background:var(--panel-bg);
+    color:var(--text);
+    cursor:pointer;
+    font-size:0.9rem;
+}
+
+.artifact-header button:hover{
+    background:var(--panel-hover);
+}
+
+#artifact-close{
+    background:#991b1b;
+    color:white;
+    border:none;
+    width:32px;
+    height:32px;
+    font-size:1.1rem;
+    padding:0;
+}
+
+#artifact-content{
+    flex:1;
+    overflow:auto;
+    padding:16px;
+    background:var(--main-bg);
+}
+
+#artifact-content iframe{
+    width:100%;
+    height:100%;
+    border:none;
+    background:white;
+}
+
+#artifact-content pre{
+    margin:0;
+    padding:16px;
+    background:#111113;
+    border-radius:8px;
+    overflow:auto;
+    white-space:pre-wrap;
+    word-break:break-all;
+}
+
   .suggestions {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
   justify-content: center;
-  margin-top: 240px;
-  margin-bottom: 60px;
-  padding: 0 20px;
+  margin-top: 355px;
+  margin-bottom: 1px;
+  padding: 0 32px;
 }
 
 .suggestion-chip {
   background: var(--panel-bg);
   border: 1px solid var(--border);
   color: var(--text);
-  padding: 11px 20px;
+  padding: 11px 15px;
   border-radius: 9999px;
-  font-size: 0.96rem;
+  font-size: 0.86rem;
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 4px 15px var(--shadow);
@@ -532,6 +626,69 @@
   background: var(--panel-hover);
   border-color: var(--accent);
   transform: translateY(-3px);
+}
+
+.message pre,
+.message code {
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-wrap: break-word;
+}
+
+.bot, .user {
+  max-width: 78%;
+}
+
+.message pre {
+  background: #111113;
+  border-radius: 10px;
+  padding: 16px;
+  margin: 12px 0;
+  overflow-x: auto;
+  border: 1px solid #27272a;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+  position: relative;
+}
+
+.message pre::before {
+  content: attr(data-language);
+  position: absolute;
+  top: 11px;
+  right: 12px;
+  background: var(--accent);
+  color: #000;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.message code {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  background: #1f2023;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.message pre code {
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+}
+
+.message pre::-webkit-scrollbar {
+  height: 8px;
+}
+.message pre::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+  border-radius: 4px;
 }
   </style>
 </head>
@@ -560,7 +717,7 @@
         <div id="summarize-btn" style="background: var(--panel-bg); border-radius: 28px; padding: 4px 12px; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:6px;">
           📝 <span>Summarize Chat</span>
         </div>
-        <div style="color:var(--muted);">v1.9.0</div>
+        <div style="color:var(--muted);">v1.10.0</div>
         <div id="menu-btn" style="cursor:pointer; font-size:1.3rem; user-select:none;">☰</div>
       </div>
     </div>
@@ -773,6 +930,36 @@
   };
 </script>
   
+<div id="artifact-panel" class="artifact-panel">
+
+    <div class="artifact-header">
+
+        <span id="artifact-title">
+            Artifact
+        </span>
+
+        <div>
+
+            <button id="artifact-preview-btn">
+                Preview
+            </button>
+
+            <button id="artifact-code-btn">
+                Code
+            </button>
+
+            <button id="artifact-close">
+                ✕
+            </button>
+
+        </div>
+
+    </div>
+
+    <div id="artifact-content"></div>
+
+</div>
+
 <script>
 let localStorageAvailable = true;
 try { localStorage.setItem('test', 'test'); localStorage.removeItem('test'); } catch (e) { localStorageAvailable = false; }
@@ -801,7 +988,7 @@ const API_URL = 'https://api.cerebras.ai/v1/chat/completions';
 
 const COMPRESSION_THRESHOLD = 6500;
 const MAX_RECENT_MESSAGES = 12;
-const SUMMARY_MAX_TOKENS = 800;
+const SUMMARY_MAX_TOKENS = 50000;
 
 const DEFAULT_SETTINGS = {
   theme: 'dark',
@@ -860,6 +1047,7 @@ let settings = loadSettings();
 let pinnedMessages = [];
 let commandPaletteIndex = 0;
 let commandPaletteResults = [];
+let currentArtifact = null;
 
 const chatScreen = document.getElementById('chat-screen');
 const userInput = document.getElementById('user-input');
@@ -897,6 +1085,13 @@ const commandPaletteCancel = document.getElementById('command-palette-cancel');
 const updatesModal = document.getElementById('updates-modal');
 const openUpdatesBtn = document.getElementById('open-updates-btn');
 const summarizeBtn = document.getElementById('summarize-btn');
+const artifactPanel =
+document.getElementById("artifact-panel");
+const artifactContent = document.getElementById("artifact-content");
+const artifactTitle = document.getElementById("artifact-title");
+const artifactClose = document.getElementById("artifact-close");
+const artifactPreviewBtn = document.getElementById("artifact-preview-btn");
+const artifactCodeBtn = document.getElementById("artifact-code-btn");
 
 function loadSettings() {
   return safeLocalStorageGet('overmind_settings', { ...DEFAULT_SETTINGS });
@@ -911,7 +1106,8 @@ function renderUpdateLog() {
   const container = document.getElementById('update-log-content');
   if (!container) return;
   const UPDATE_HISTORY = [
-    { version: 'v1.7.0 pt. II', date: 'June 20, 2026', changes: ['❗ Added "AI-generated" disclaimer', '❓ Added suggested prompts', '👁 Added anti-hallucination mode'] },
+    { version: 'v1.10.0', date: 'June 26, 2026', changes: ['🕖 Added coding artifacts', '🎨 Improved code blocks design'] },
+    { version: 'v1.9.0', date: 'June 24, 2026', changes: ['❗ Added "AI-generated" disclaimer', '❓ Added suggested prompts', '👁 Added anti-hallucination mode'] },
     { version: 'v1.8.0', date: 'June 21, 2026', changes: ['🔌 Added plugins'] },
     { version: 'v1.7.0 pt. II', date: 'June 20, 2026', changes: ['🧠 Added smart context compression', '📥 Added chat exporting.'] },
     { version: 'v1.7.0', date: 'June 19, 2026', changes: ['🛠 Added Beacons (Beta).'] },
@@ -963,13 +1159,115 @@ function applySettings() {
   antiHallucinationSelect.value = settings.antiHallucination || 'moderate';
 }
 
+function detectArtifact(text){
+  if(!text) return;
+  const regex = /```(\w+)?\s*([\s\S]*?)```/gi;
+  let match;
+  const files = [];
+  
+  while((match = regex.exec(text)) !== null){
+    let lang = (match[1] || "plaintext").trim().toLowerCase();
+    let code = match[2].trim();
+    if(code.length > 30){
+      if(!lang || lang === "text") lang = "plaintext";
+      files.push({language: lang, code: code});
+    }
+  }
+  
+  if(files.length > 0){
+    openArtifactMulti(files);
+  }
+}
+
 function escapeHTML(text) {
   return String(text)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 }
-function renderBotMessage(text) { return marked.parse(escapeHTML(text)); }
+
+function openArtifactMulti(files){
+  currentArtifact = { files: files };
+  artifactTitle.textContent = "PROJECT";
+  artifactPanel.classList.add("open");
+  renderArtifactPreview();
+}
+
+function renderArtifactPreview(){
+  if(!currentArtifact || !currentArtifact.files) return;
+  
+  const htmlFile = currentArtifact.files.find(f => f.language === "html" || f.language === "htm");
+  if(!htmlFile){
+    renderArtifactCode();
+    return;
+  }
+  
+  let fullHTML = htmlFile.code;
+
+  // Inject CSS
+  const cssFiles = currentArtifact.files.filter(f => f.language === "css");
+  if(cssFiles.length > 0){
+    let cssInject = "\n<style>\n" + cssFiles.map(f => f.code).join("\n") + "\n</style>\n";
+    fullHTML = fullHTML.replace(/<\/head>/i, cssInject + "</head>");
+    if(!/<\/head>/i.test(fullHTML)) {
+      fullHTML = fullHTML.replace(/<body/i, cssInject + "<body");
+    }
+  }
+
+  // Inject JS safely
+  const jsFiles = currentArtifact.files.filter(f => f.language === "js" || f.language === "javascript");
+  if(jsFiles.length > 0){
+    let jsInject = "\n<script>\n" + jsFiles.map(f => f.code).join("\n") + "\n<\/script>\n";
+    fullHTML = fullHTML.replace(/<\/body>/i, jsInject + "</body>");
+    if(!/<\/body>/i.test(fullHTML)) {
+      fullHTML += jsInject;
+    }
+  }
+
+  fullHTML = fullHTML.replace(/<a\s/gi, '<a target="_blank" rel="noopener noreferrer" onclick="return showMultiPageMessage(event)" ');
+
+  const messageScript = `
+    <script>
+      function showMultiPageMessage(e) {
+        e.preventDefault();
+        const msg = document.createElement('div');
+        msg.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:#1a1b1e; color:#e2e8f0; padding:24px 32px; border-radius:12px; border:2px solid #22c55e; z-index:99999; font-family:system-ui; text-align:center; box-shadow:0 20px 40px rgba(0,0,0,0.6); max-width:380px;';
+        msg.innerHTML = '<strong>Multi-page navigation not supported yet</strong><br><small style="opacity:0.8">Only single-file HTML + CSS + JS previews work properly in the artifact panel.</small>';
+        document.body.appendChild(msg);
+        setTimeout(() => msg.remove(), 4500);
+        return false;
+      }
+    <\/script>`;
+
+  fullHTML = fullHTML.replace(/<\/body>/i, messageScript + "\n</body>");
+  if (!/<\/body>/i.test(fullHTML)) fullHTML += messageScript;
+
+  artifactContent.innerHTML = `<iframe id="artifact-frame" style="width:100%;height:100%;border:none;background:white;"></iframe>`;
+  const frame = document.getElementById("artifact-frame");
+  if(frame) frame.srcdoc = fullHTML;
+}
+
+function renderArtifactCode(){
+  if(!currentArtifact || !currentArtifact.files) return;
+  let combined = "";
+  currentArtifact.files.forEach(f => {
+    combined += `// === ${f.language.toUpperCase()} FILE ===\n\n`;
+    combined += f.code + "\n\n\n";
+  });
+  artifactContent.innerHTML = `<pre><code>${escapeHTML(combined)}</code></pre>`;
+}
+
+function renderBotMessage(text) {
+  let html = marked.parse(escapeHTML(text));
+  
+  html = html.replace(/<pre><code class="language-(\w+)">/g, (match, lang) => {
+    return `<pre data-language="${lang}"><code class="language-${lang}">`;
+  });
+  
+  html = html.replace(/<pre><code>/g, '<pre data-language="code"><code>');
+  
+  return html;
+}
 
 function generateTitle(text) { return text.length > 24 ? text.slice(0, 24) + '...' : text; }
 function updateWelcomeVisibility() {
@@ -1053,16 +1351,14 @@ if (type === 'checklist' && !isUser) {
 } else if (isUser) {
   div.innerHTML = escapeHTML(text);
 } else {
-  // Bot message only
   let content = renderBotMessage(text);
-  
   content += `
     <div style="margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--border); 
                 font-size: 0.77rem; color: var(--muted); opacity: 0.9; font-style: italic;">
       ✦ This response was generated by AI
     </div>`;
-  
   div.innerHTML = content;
+  detectArtifact(text);
 }
 
   wrapper.appendChild(div);
@@ -1142,9 +1438,14 @@ async function loadChat(id) {
     saveChats();
   }
 
-  chat.messages.forEach((msg, index) => addMessage(msg, msg.role === 'user', index));
+  chat.messages.forEach((msg, index) => {
+  addMessage(msg, msg.role === 'user', index);
+  if(msg.role === 'assistant' && typeof msg.content === 'string'){
+    detectArtifact(msg.content);
+  }
+});
 
-  renderSuggestions();           // ← Important: Re-render chips
+  renderSuggestions();
   updateWelcomeVisibility();
   renderChatList();
 
@@ -1234,7 +1535,7 @@ function compressChatHistory(chat) {
         { role: 'user', content: compressionPrompt }
       ],
       temperature: 0.3,
-      max_tokens: 700,
+      max_tokens: 45000,
       stream: false
     })
   })
@@ -1312,7 +1613,7 @@ async function getCerebrasResponse(userMessage) {
       model: 'gpt-oss-120b',
       messages: [{ role: 'system', content: systemPrompt() }, ...contextMessages],
       temperature: settings.thinking === 'fast' ? 0.4 : settings.thinking === 'step' ? 0.8 : 0.65,
-      max_tokens: settings.thinking === 'fast' ? 400 : 900,
+      max_tokens: settings.thinking === 'fast' ? 45000 : 50000,
       stream: true
     })
   })
@@ -1329,10 +1630,21 @@ async function getCerebrasResponse(userMessage) {
       reader.read().then(({ value, done }) => {
         if (done) {
           const checklistMsg = parseChecklistFromText(botReply);
-          chat.messages.push(checklistMsg || { role: 'assistant', content: botReply });
-          saveChats();
-          loadChat(currentChatId);
-          return;
+          chat.messages.push(
+    checklistMsg ||
+    {
+        role:"assistant",
+        content:botReply
+    }
+);
+
+detectArtifact(botReply);
+
+saveChats();
+
+loadChat(currentChatId);
+
+return;
         }
         const chunk = decoder.decode(value);
         for (const line of chunk.split('\n')) {
@@ -1388,7 +1700,7 @@ async function getCerebrasResponseFromIndex(index) {
       model: 'gpt-oss-120b',
       messages: [{ role: 'system', content: systemPrompt() }, ...contextMessages],
       temperature: 0.65,
-      max_tokens: 1001,
+      max_tokens: 50000,
       stream: true
     })
   })
@@ -1405,10 +1717,21 @@ async function getCerebrasResponseFromIndex(index) {
       reader.read().then(({ value, done }) => {
         if (done) {
           const checklistMsg = parseChecklistFromText(botReply);
-          chat.messages.push(checklistMsg || { role: 'assistant', content: botReply });
-          saveChats();
-          loadChat(currentChatId);
-          return;
+          chat.messages.push(
+    checklistMsg ||
+    {
+        role:"assistant",
+        content:botReply
+    }
+);
+
+detectArtifact(botReply);
+
+saveChats();
+
+loadChat(currentChatId);
+
+return;
         }
         const chunk = decoder.decode(value);
         for (const line of chunk.split('\n')) {
@@ -1468,7 +1791,7 @@ function generateReplacementResponse(chat, oldResponse) {
         ...chat.messages
       ],
       temperature: 1.0,
-      max_tokens: 400,
+      max_tokens: 50000,
       stream: true
     })
   })
@@ -1484,10 +1807,21 @@ function generateReplacementResponse(chat, oldResponse) {
       reader.read().then(({ value, done }) => {
         if (done) {
           const checklistMsg = parseChecklistFromText(botReply);
-          chat.messages.push(checklistMsg || { role: 'assistant', content: botReply });
-          saveChats();
-          loadChat(currentChatId);
-          return;
+          chat.messages.push(
+    checklistMsg ||
+    {
+        role:"assistant",
+        content:botReply
+    }
+);
+
+detectArtifact(botReply);
+
+saveChats();
+
+loadChat(currentChatId);
+
+return;
         }
         const chunk = decoder.decode(value);
         for (const line of chunk.split('\n')) {
@@ -1558,7 +1892,7 @@ function summarizeChat() {
         { role: 'user', content: `${summaryPrompt}\n\n---\n\nConversation:\n${conversationText}` }
       ],
       temperature: 0.5,
-      max_tokens: 300,
+      max_tokens: 50000,
       stream: true
     })
   })
@@ -1975,7 +2309,7 @@ function getCerebrasResponse(userMessage) {
       model: 'gpt-oss-120b',
       messages: [{ role: 'system', content: systemPrompt() }, ...contextMessages],
       temperature: settings.thinking === 'fast' ? 0.4 : settings.thinking === 'step' ? 0.8 : 0.65,
-      max_tokens: settings.thinking === 'fast' ? 400 : 900,
+      max_tokens: settings.thinking === 'fast' ? 45000 : 50000,
       stream: true
     })
   })
@@ -2041,7 +2375,7 @@ function generateReplacementResponse(chat, oldResponse) {
         ...chat.messages
       ],
       temperature: 1.0,
-      max_tokens: 400,
+      max_tokens: 50000,
       stream: true
     })
   })
@@ -2057,10 +2391,21 @@ function generateReplacementResponse(chat, oldResponse) {
       reader.read().then(({ value, done }) => {
         if (done) {
           const checklistMsg = parseChecklistFromText(botReply);
-          chat.messages.push(checklistMsg || { role: 'assistant', content: botReply });
-          saveChats();
-          loadChat(currentChatId);
-          return;
+          chat.messages.push(
+    checklistMsg ||
+    {
+        role:"assistant",
+        content:botReply
+    }
+);
+
+detectArtifact(botReply);
+
+saveChats();
+
+loadChat(currentChatId);
+
+return;
         }
         const chunk = decoder.decode(value);
         for (const line of chunk.split('\n')) {
@@ -2130,7 +2475,7 @@ function summarizeChat() {
         { role: 'user', content: `${summaryPrompt}\n\n---\n\nConversation:\n${conversationText}` }
       ],
       temperature: 0.5,
-      max_tokens: 300,
+      max_tokens: 50000,
       stream: true
     })
   })
@@ -2188,7 +2533,7 @@ function handleSend() {
   userInput.value = '';
   userInput.style.height = 'auto';
   
-  hideSuggestions();                    // ← Added
+  hideSuggestions();
   const welcome = document.getElementById('welcome-message');
   if (welcome) welcome.style.display = 'none';
   
@@ -2208,7 +2553,7 @@ function saveSettingsFromUI() {
   settings.assistantName = assistantNameInput.value.trim() || 'Overmind';
   settings.swearMode = swearSelect.value;
   settings.safetyLevel = safetySelect.value;
-  settings.antiHallucination = antiHallucinationSelect.value;   // ← Added
+  settings.antiHallucination = antiHallucinationSelect.value;
   settings.memoryEnabled = memoryToggle.classList.contains('on');
   settings.neverStore = noStoreToggle.classList.contains('on');
   
@@ -2293,9 +2638,7 @@ function closeCommandPalette() { commandPaletteModal.classList.remove('open'); }
 const SUGGESTED_PROMPTS = [
   "Tell me about yourself",
   "What can you help me with?",
-  "Give me 5 productivity tips",
   "Explain something interesting",
-  "Help me plan a trip",
   "Write a short motivational quote"
 ];
 
@@ -2368,6 +2711,9 @@ clearChatsBtn.onclick = clearAllChats;
 menuBtn.onclick = () => sidebar.classList.toggle('open');
 openUpdatesBtn.onclick = () => { renderUpdateLog(); updatesModal.classList.add('open'); };
 summarizeBtn.onclick = summarizeChat;
+artifactClose.onclick = () => { artifactPanel.classList.remove("open"); };
+artifactPreviewBtn.onclick = () => { renderArtifactPreview(); };
+artifactCodeBtn.onclick = () => { renderArtifactCode(); };
 
 userInput.addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) {
