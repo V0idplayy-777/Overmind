@@ -717,7 +717,7 @@
         <div id="summarize-btn" style="background: var(--panel-bg); border-radius: 28px; padding: 4px 12px; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:6px;">
           📝 <span>Summarize Chat</span>
         </div>
-        <div style="color:var(--muted);">v1.11.0</div>
+        <div style="color:var(--muted);">v1.12.0</div>
         <div id="menu-btn" style="cursor:pointer; font-size:1.3rem; user-select:none;">☰</div>
       </div>
     </div>
@@ -888,9 +888,10 @@
           <div id="plugins-list" style="display:flex;flex-direction:column;gap:12px;"></div>
         </div>
       </div>
-      <div class="modal-footer">
+        <div class="modal-footer">
         <button class="btn" id="settings-close-btn">Close</button>
         <button class="btn primary" id="settings-save-btn">Save</button>
+        <button class="btn" id="docs-btn" style="margin-left: auto;">Documentation</button>
       </div>
     </div>
   </div>
@@ -1006,7 +1007,7 @@ const DEFAULT_SETTINGS = {
   antiHallucination: 'moderate'
 };
 
-const DAILY_MESSAGE_LIMIT = 10;
+const DAILY_MESSAGE_LIMIT = 10000000000000000000000000000000000000000000000000000000000000;
 const DAILY_MESSAGES_KEY = 'overmind_daily_messages';
 
 function getTodayKey() {
@@ -1156,6 +1157,7 @@ function renderUpdateLog() {
   const container = document.getElementById('update-log-content');
   if (!container) return;
   const UPDATE_HISTORY = [
+  { version: 'v1.12.0', date: 'June 27, 2026', changes: ['📄 Added documentation'] },
     { version: 'v1.11.0', date: 'June 27, 2026', changes: ['⚠ Added daily message limits (limited to 10 per day)'] },
     { version: 'v1.10.0', date: 'June 26, 2026', changes: ['🕖 Added coding artifacts', '🎨 Improved code blocks design'] },
     { version: 'v1.9.0', date: 'June 24, 2026', changes: ['❗ Added "AI-generated" disclaimer', '❓ Added suggested prompts', '👁 Added anti-hallucination mode'] },
@@ -2081,7 +2083,8 @@ const COMMANDS = [
   { name: 'Focus Chat Search', desc: 'Jump to the sidebar search box', action: () => { sidebar.classList.add('open'); chatSearch?.focus(); } },
   { name: 'Create Checklist', desc: 'Add a checklist to the current chat', action: () => parseChecklistInput() },
   { name: 'Close Command Palette', desc: 'Dismiss the palette', action: () => closeCommandPalette() },
-  { name: 'Useless Command', desc: 'Literally does nothing', action: () => closeCommandPalette() }
+  { name: 'Useless Command', desc: 'Literally does nothing', action: () => closeCommandPalette() },
+  { name: 'Open Documentation', desc: 'Open Overmind docs in new tab', action: () => window.open('https://v0idplayy.mintlify.site/introduction', '_blank') }
 ];
 
 const plugins = [];
@@ -2770,6 +2773,8 @@ newChatBtn.onclick = createNewChat;
 settingsOpenBtn.onclick = openSettings;
 settingsCloseBtn.onclick = closeSettings;
 settingsSaveBtn.onclick = saveSettingsFromUI;
+const docsBtn = document.getElementById('docs-btn');
+if (docsBtn) docsBtn.onclick = () => window.open('https://v0idplayy.mintlify.site/introduction', '_blank');
 exportChatsBtn.onclick = exportChats;
 clearChatsBtn.onclick = clearAllChats;
 menuBtn.onclick = () => sidebar.classList.toggle('open');
