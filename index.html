@@ -717,7 +717,7 @@
         <div id="summarize-btn" style="background: var(--panel-bg); border-radius: 28px; padding: 4px 12px; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:6px;">
           📝 <span>Summarize Chat</span>
         </div>
-        <div style="color:var(--muted);">v1.10.1</div>
+        <div style="color:var(--muted);">v1.11.0</div>
         <div id="menu-btn" style="cursor:pointer; font-size:1.3rem; user-select:none;">☰</div>
       </div>
     </div>
@@ -1006,6 +1006,56 @@ const DEFAULT_SETTINGS = {
   antiHallucination: 'moderate'
 };
 
+const DAILY_MESSAGE_LIMIT = 10;
+const DAILY_MESSAGES_KEY = 'overmind_daily_messages';
+
+function getTodayKey() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+}
+
+function getDailyCount() {
+  const today = getTodayKey();
+  const data = safeLocalStorageGet(DAILY_MESSAGES_KEY, {});
+  if (data.date !== today) {
+    safeLocalStorageSet(DAILY_MESSAGES_KEY, { date: today, count: 0 });
+    return 0;
+  }
+  return data.count || 0;
+}
+
+function incrementDailyCount() {
+  const today = getTodayKey();
+  let data = safeLocalStorageGet(DAILY_MESSAGES_KEY, { date: today, count: 0 });
+  if (data.date !== today) data = { date: today, count: 0 };
+  data.count = (data.count || 0) + 1;
+  safeLocalStorageSet(DAILY_MESSAGES_KEY, data);
+  return data.count;
+}
+
+function updateMessageLimitUI() {
+  const count = getDailyCount();
+  const remaining = Math.max(0, DAILY_MESSAGE_LIMIT - count);
+  let statusEl = document.getElementById('daily-limit-status');
+  if (!statusEl) {
+    statusEl = document.createElement('div');
+    statusEl.id = 'daily-limit-status';
+    statusEl.style.cssText = 'text-align:center; font-size:0.8rem; color:var(--muted); margin-top:4px;';
+    document.querySelector('.input-area').appendChild(statusEl);
+  }
+  if (remaining <= 0) {
+    statusEl.innerHTML = `<span style="color:#f87171;">You've reached your daily limit of ${DAILY_MESSAGE_LIMIT} messages.</span>`;
+    userInput.disabled = true;
+    sendBtn.style.pointerEvents = 'none';
+    sendBtn.style.opacity = '0.5';
+  } else {
+    statusEl.textContent = `${remaining} messages remaining today`;
+    userInput.disabled = false;
+    sendBtn.style.pointerEvents = 'auto';
+    sendBtn.style.opacity = '1';
+  }
+}
+
 const THINKING_PROMPTS = {
   fast: 'Respond concisely and directly. Keep answers short.',
   balanced: 'Respond clearly with a helpful amount of detail.',
@@ -1106,6 +1156,7 @@ function renderUpdateLog() {
   const container = document.getElementById('update-log-content');
   if (!container) return;
   const UPDATE_HISTORY = [
+    { version: 'v1.11.0', date: 'June 27, 2026', changes: ['⚠ Added daily message limits (limited to 10 per day)'] },
     { version: 'v1.10.0', date: 'June 26, 2026', changes: ['🕖 Added coding artifacts', '🎨 Improved code blocks design'] },
     { version: 'v1.9.0', date: 'June 24, 2026', changes: ['❗ Added "AI-generated" disclaimer', '❓ Added suggested prompts', '👁 Added anti-hallucination mode'] },
     { version: 'v1.8.0', date: 'June 21, 2026', changes: ['🔌 Added plugins'] },
@@ -1982,6 +2033,7 @@ function saveSettingsFromUI() {
   
   saveSettings();
   applySettings();
+  updateMessageLimitUI();
   
   if (settings.neverStore) {
     chats = [];
@@ -2529,7 +2581,16 @@ function summarizeChat() {
 function handleSend() {
   const text = userInput.value.trim();
   if (!text || !currentChatId) return;
-  
+
+  const currentCount = getDailyCount();
+  if (currentCount >= DAILY_MESSAGE_LIMIT) {
+    showError(`You've reached your daily limit of ${DAILY_MESSAGE_LIMIT} messages.<br>Come back tomorrow!`);
+    return;
+  }
+
+  incrementDailyCount();
+  updateMessageLimitUI();
+
   addMessage(text, true);
   userInput.value = '';
   userInput.style.height = 'auto';
@@ -2560,6 +2621,7 @@ function saveSettingsFromUI() {
   
   saveSettings();
   applySettings();
+  updateMessageLimitUI();
   
   if (settings.neverStore) {
     chats = [];
@@ -2700,6 +2762,7 @@ window.onload = () => {
     warning.textContent = '⚠️ Storage unavailable — chats won’t save after refresh';
     document.body.appendChild(warning);
   }
+  updateMessageLimitUI();
 };
 
 sendBtn.onclick = handleSend;
