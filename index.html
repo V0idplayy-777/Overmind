@@ -1050,7 +1050,7 @@ function updateMessageLimitUI() {
     sendBtn.style.pointerEvents = 'none';
     sendBtn.style.opacity = '0.5';
   } else {
-    statusEl.textContent = `${remaining} messages remaining today`;
+    statusEl.textContent = `${remaining} messages remaining today (1000 messages every Saturday)`;
     userInput.disabled = false;
     sendBtn.style.pointerEvents = 'auto';
     sendBtn.style.opacity = '1';
