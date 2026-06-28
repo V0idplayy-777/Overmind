@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Overmind</title>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link rel="icon" href="./favicon.ico" type="image/x-icon" />
   <style>
     :root {
@@ -693,6 +694,29 @@
   </style>
 </head>
 <body>
+  <div class="modal-backdrop" id="auth-modal" style="z-index:200;">
+    <div class="modal" style="width:380px;">
+      <div class="modal-header">
+        <strong id="auth-title">Welcome to Overmind</strong>
+        
+      </div>
+      <div class="modal-body" style="padding:24px 20px;display:flex;flex-direction:column;gap:16px;">
+        <div id="login-form">
+  <input type="text" id="login-username" class="text-input" placeholder="Username" style="margin-bottom:12px;">
+  <input type="password" id="login-password" class="text-input" placeholder="Password">
+  <button onclick="handleLogin()" class="btn primary" style="width:100%;margin-top:16px;">Login</button>
+  <div style="text-align:center;margin-top:12px;color:var(--muted);cursor:pointer;" onclick="switchToRegister()">Need an account? Register</div>
+</div>
+
+<div id="register-form" style="display:none;">
+  <input type="text" id="reg-username" class="text-input" placeholder="Username" style="margin-bottom:12px;">
+  <input type="password" id="reg-password" class="text-input" placeholder="Password">
+  <button onclick="handleRegister()" class="btn primary" style="width:100%;margin-top:16px;">Create Account</button>
+  <div style="text-align:center;margin-top:12px;color:var(--muted);cursor:pointer;" onclick="switchToLogin()">Already have an account? Login</div>
+</div>
+      </div>
+    </div>
+  </div>
   <div class="sidebar">
     <div class="sidebar-header">
       <div class="new-chat" id="new-chat-btn">+ New Chat</div>
@@ -717,7 +741,7 @@
         <div id="summarize-btn" style="background: var(--panel-bg); border-radius: 28px; padding: 4px 12px; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:6px;">
           📝 <span>Summarize Chat</span>
         </div>
-        <div style="color:var(--muted);">v1.12.1</div>
+        <div style="color:var(--muted);">v1.13.0</div>
         <div id="menu-btn" style="cursor:pointer; font-size:1.3rem; user-select:none;">☰</div>
       </div>
     </div>
@@ -882,6 +906,7 @@
           <div style="display:flex; gap:10px; flex-wrap:wrap;">
             <button class="btn" id="export-chats-btn">Export chats</button>
             <button class="btn danger" id="clear-chats-btn">Clear all chats</button>
+            <button class="btn danger" id="logout-btn">Log out</button>
           </div>
         </div>
                 <div class="settings-panel" id="tab-plugins">
@@ -1007,7 +1032,7 @@ const DEFAULT_SETTINGS = {
   antiHallucination: 'moderate'
 };
 
-const DAILY_MESSAGE_LIMIT = 15;
+const DAILY_MESSAGE_LIMIT = 12;
 const DAILY_MESSAGES_KEY = 'overmind_daily_messages';
 
 function getTodayKey() {
@@ -1136,6 +1161,7 @@ const commandPaletteCancel = document.getElementById('command-palette-cancel');
 const updatesModal = document.getElementById('updates-modal');
 const openUpdatesBtn = document.getElementById('open-updates-btn');
 const summarizeBtn = document.getElementById('summarize-btn');
+document.getElementById('logout-btn').onclick = handleLogout;
 const artifactPanel =
 document.getElementById("artifact-panel");
 const artifactContent = document.getElementById("artifact-content");
@@ -1147,9 +1173,28 @@ const artifactCodeBtn = document.getElementById("artifact-code-btn");
 function loadSettings() {
   return safeLocalStorageGet('overmind_settings', { ...DEFAULT_SETTINGS });
 }
+
 function saveSettings() { safeLocalStorageSet('overmind_settings', settings); }
-function loadChats() { chats = settings.neverStore ? [] : safeLocalStorageGet('overmind_chats', []); }
-function saveChats() { if (!settings.neverStore) safeLocalStorageSet('overmind_chats', chats); }
+async function loadChats() {
+  if (!currentUser) { chats = []; return; }
+  const { data, error } = await supabaseClient
+    .from('chats')
+    .select('*')
+    .eq('username', currentUser.username)
+    .order('timestamp', { ascending: false });
+  if (error) { chats = []; return; }
+  chats = data || [];
+}
+
+async function saveChats() {
+  if (!currentUser || settings.neverStore) return;
+  const chat = chats.find(c => c.id === currentChatId);
+  if (!chat) return;
+  await supabaseClient
+    .from('chats')
+    .upsert({ ...chat, username: currentUser.username }, { onConflict: 'id,username' });
+}
+
 function loadPins() { pinnedMessages = safeLocalStorageGet('overmind_pins', []); }
 function savePins() { safeLocalStorageSet('overmind_pins', pinnedMessages); }
 
@@ -1157,7 +1202,8 @@ function renderUpdateLog() {
   const container = document.getElementById('update-log-content');
   if (!container) return;
   const UPDATE_HISTORY = [
-  { version: 'v1.12.0', date: 'June 27, 2026', changes: ['📄 Added documentation'] },
+    { version: 'v1.13.0', date: 'June 28, 2026', changes: ['🥸 Added authentication'] },
+    { version: 'v1.12.0', date: 'June 27, 2026', changes: ['📄 Added documentation'] },
     { version: 'v1.11.0', date: 'June 27, 2026', changes: ['⚠ Added daily message limits (limited to 10 per day)'] },
     { version: 'v1.10.0', date: 'June 26, 2026', changes: ['🕖 Added coding artifacts', '🎨 Improved code blocks design'] },
     { version: 'v1.9.0', date: 'June 24, 2026', changes: ['❗ Added "AI-generated" disclaimer', '❓ Added suggested prompts', '👁 Added anti-hallucination mode'] },
@@ -1257,7 +1303,6 @@ function renderArtifactPreview(){
   
   let fullHTML = htmlFile.code;
 
-  // Inject CSS
   const cssFiles = currentArtifact.files.filter(f => f.language === "css");
   if(cssFiles.length > 0){
     let cssInject = "\n<style>\n" + cssFiles.map(f => f.code).join("\n") + "\n</style>\n";
@@ -1267,7 +1312,6 @@ function renderArtifactPreview(){
     }
   }
 
-  // Inject JS safely
   const jsFiles = currentArtifact.files.filter(f => f.language === "js" || f.language === "javascript");
   if(jsFiles.length > 0){
     let jsInject = "\n<script>\n" + jsFiles.map(f => f.code).join("\n") + "\n<\/script>\n";
@@ -1352,10 +1396,13 @@ function togglePin(chatId, msgIndex, content, role) {
 }
 function refreshCurrentChatPins() { if (currentChatId) loadChat(currentChatId); }
 
-function createNewChat() {
+async function createNewChat() {
   const newChat = { id: 'chat-' + Date.now(), title: 'New Chat', messages: [], timestamp: Date.now() };
   chats.unshift(newChat);
-  saveChats();
+  if (currentUser) {
+    await supabaseClient.from('chats')
+      .insert({ ...newChat, username: currentUser.username });
+  }
   loadChat(newChat.id);
 }
 
@@ -1517,11 +1564,14 @@ function renameChat(id) {
   }
 }
 
-function deleteChat(id) {
+async function deleteChat(id) {
   pinnedMessages = pinnedMessages.filter(p => p.chatId !== id);
   savePins();
+  if (currentUser) {
+    await supabaseClient.from('chats')
+      .delete().eq('id', id).eq('username', currentUser.username);
+  }
   chats = chats.filter(c => c.id !== id);
-  saveChats();
   if (currentChatId === id) {
     if (chats.length) loadChat(chats[0].id);
     else createNewChat();
@@ -2029,7 +2079,7 @@ function saveSettingsFromUI() {
   settings.assistantName = assistantNameInput.value.trim() || 'Overmind';
   settings.swearMode = swearSelect.value;
   settings.safetyLevel = safetySelect.value;
-  settings.antiHallucination = antiHallucinationSelect.value;   // ← Added
+  settings.antiHallucination = antiHallucinationSelect.value;
   settings.memoryEnabled = memoryToggle.classList.contains('on');
   settings.neverStore = noStoreToggle.classList.contains('on');
   
@@ -2057,18 +2107,18 @@ function exportChats() {
   link.click();
   URL.revokeObjectURL(url);
 }
-function clearAllChats() {
+
+async function clearAllChats() {
   if (!confirm('Are you sure you want to delete all chats? This cannot be undone.')) return;
+  if (currentUser) {
+    await supabaseClient.from('chats')
+      .delete().eq('username', currentUser.username);
+  }
   chats = [];
   pinnedMessages = [];
   savePins();
-  saveChats();
-  if (currentChatId) {
-    currentChatId = null;
-    createNewChat();
-  } else {
-    renderChatList();
-  }
+  currentChatId = null;
+  createNewChat();
 }
 
 const COMMANDS = [
@@ -2681,12 +2731,15 @@ function exportCurrentChat() {
   link.click();
   URL.revokeObjectURL(url);
 }
-function clearAllChats() {
+async function clearAllChats() {
   if (!confirm('Are you sure you want to delete all chats? This cannot be undone.')) return;
+  if (currentUser) {
+    await supabaseClient.from('chats')
+      .delete().eq('user_id', currentUser.id);
+  }
   chats = [];
   pinnedMessages = [];
   savePins();
-  saveChats();
   currentChatId = null;
   createNewChat();
 }
@@ -2741,31 +2794,14 @@ function updateWelcomeVisibility() {
   if (suggestions) suggestions.style.display = isEmpty ? 'flex' : 'none';
 }
 
-window.onload = () => {
-  loadChats();
+window.onload = async () => {
+  initSupabase();
   loadPins();
-  if (!chats.length) createNewChat();
-  else loadChat(chats[0].id);
-  renderChatList();
   applySettings();
   renderSuggestions();
-  userInput.focus();
-  if (!localStorageAvailable) {
-    const warning = document.createElement('div');
-    warning.style.position = 'fixed';
-    warning.style.bottom = '10px';
-    warning.style.left = '50%';
-    warning.style.transform = 'translateX(-50%)';
-    warning.style.background = '#991b1b';
-    warning.style.color = '#fecaca';
-    warning.style.padding = '8px 16px';
-    warning.style.borderRadius = '8px';
-    warning.style.fontSize = '0.85rem';
-    warning.style.zIndex = '1000';
-    warning.textContent = '⚠️ Storage unavailable — chats won’t save after refresh';
-    document.body.appendChild(warning);
-  }
   updateMessageLimitUI();
+  userInput.focus();
+  await checkAuth();
 };
 
 sendBtn.onclick = handleSend;
@@ -2922,6 +2958,124 @@ function renderPluginsList() {
 
     container.appendChild(div);
   });
+}
+
+let supabaseClient = null;
+let currentUser = null;
+
+function initSupabase() {
+  supabaseClient = window.supabase.createClient(
+    'https://llmsljlcjugdpkhfklph.supabase.co', 
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxsbXNsamxjanVnZHBraGZrbHBoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI2MjA4ODgsImV4cCI6MjA5ODE5Njg4OH0.weH2fYFj4qxEeyIUdQtn1hz7H2iyHeab6OPdJONXzmo'
+  );
+}
+
+function usernameToEmail(username) {
+  return `${username.toLowerCase().trim()}@gmail.com`;
+}
+
+async function handleRegister() {
+  const username = document.getElementById('reg-username').value.trim();
+  const password = document.getElementById('reg-password').value;
+  if (!username || !password) return alert('Username and password required');
+  if (username.length < 3) return alert('Username must be at least 3 characters');
+  if (password.length < 6) return alert('Password must be at least 6 characters');
+
+  const hash = await hashPassword(password);
+
+  const { error } = await supabaseClient
+    .from('users')
+    .insert({ username, password_hash: hash });
+
+  if (error) {
+    if (error.code === '23505') alert('Username already taken.');
+    else alert('Registration failed: ' + error.message);
+    return;
+  }
+
+  currentUser = { username };
+  localStorage.setItem('overmind_user', JSON.stringify({ username }));
+  closeAuthModal();
+  await loadChats();
+  if (!chats.length) createNewChat();
+  else loadChat(chats[0].id);
+  renderChatList();
+}
+
+async function hashPassword(password) {
+  const buf = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(password)
+  );
+  return Array.from(new Uint8Array(buf))
+    .map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function handleLogin() {
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+  if (!username || !password) return alert('Username and password required');
+
+  const hash = await hashPassword(password);
+
+  const { data, error } = await supabaseClient
+    .from('users')
+    .select('username')
+    .eq('username', username)
+    .eq('password_hash', hash)
+    .single();
+
+  if (error || !data) {
+    alert('Incorrect username or password.');
+    return;
+  }
+
+  currentUser = { username: data.username };
+  localStorage.setItem('overmind_user', JSON.stringify(currentUser));
+  closeAuthModal();
+  await loadChats();
+  if (!chats.length) createNewChat();
+  else loadChat(chats[0].id);
+  renderChatList();
+}
+
+function switchToRegister() {
+  document.getElementById('login-form').style.display = 'none';
+  document.getElementById('register-form').style.display = 'block';
+  document.getElementById('auth-title').textContent = 'Create Account';
+}
+
+function switchToLogin() {
+  document.getElementById('register-form').style.display = 'none';
+  document.getElementById('login-form').style.display = 'block';
+  document.getElementById('auth-title').textContent = 'Login to Overmind';
+}
+
+function closeAuthModal() {
+  document.getElementById('auth-modal').style.display = 'none';
+}
+
+async function checkAuth() {
+  const saved = localStorage.getItem('overmind_user');
+  if (saved) {
+    currentUser = JSON.parse(saved);
+    closeAuthModal();
+    await loadChats();
+    if (!chats.length) createNewChat();
+    else loadChat(chats[0].id);
+    renderChatList();
+  } else {
+    document.getElementById('auth-modal').style.display = 'flex';
+  }
+}
+
+async function handleLogout() {
+  currentUser = null;
+  localStorage.removeItem('overmind_user');
+  chats = [];
+  document.getElementById('auth-modal').style.display = 'flex';
+  switchToLogin();
+  closeSettings();
 }
 
 applySettings();
