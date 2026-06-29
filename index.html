@@ -744,7 +744,7 @@
         <div id="summarize-btn" style="background: var(--panel-bg); border-radius: 28px; padding: 4px 12px; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:6px;">
           📝 <span>Summarize Chat</span>
         </div>
-        <div style="color:var(--muted);">v1.13.1</div>
+        <div style="color:var(--muted);">v1.13.2</div>
         <div id="menu-btn" style="cursor:pointer; font-size:1.3rem; user-select:none;">☰</div>
       </div>
     </div>
@@ -1035,6 +1035,42 @@ const DEFAULT_SETTINGS = {
   antiHallucination: 'moderate'
 };
 
+async function loadUpdateLog() {
+  const { data } = await supabaseClient
+    .from('config')
+    .select('value')
+    .eq('key', 'update_log')
+    .single();
+  if (data && data.value) {
+    try {
+      return JSON.parse(data.value);
+    } catch (e) {
+      return [];
+    }
+  }
+  return [
+    { version: 'v1.13.0', date: 'June 28, 2026', changes: ['🥸 Added authentication'] },
+    { version: 'v1.12.0', date: 'June 27, 2026', changes: ['📄 Added documentation'] },
+    { version: 'v1.11.0', date: 'June 27, 2026', changes: ['⚠ Added daily message limits (limited to 10 per day)'] },
+    { version: 'v1.10.0', date: 'June 26, 2026', changes: ['🕖 Added coding artifacts', '🎨 Improved code blocks design'] },
+    { version: 'v1.9.0', date: 'June 24, 2026', changes: ['❗ Added "AI-generated" disclaimer', '❓ Added suggested prompts', '👁 Added anti-hallucination mode'] },
+    { version: 'v1.8.0', date: 'June 21, 2026', changes: ['🔌 Added plugins'] },
+    { version: 'v1.7.0 pt. II', date: 'June 20, 2026', changes: ['🧠 Added smart context compression', '📥 Added chat exporting.'] },
+    { version: 'v1.7.0', date: 'June 19, 2026', changes: ['🛠 Added Beacons (Beta).'] },
+    { version: 'v1.6.0', date: 'June 17, 2026', changes: ['✅ Added message pinning.'] },
+    { version: 'v1.5.0', date: 'June 15, 2026', changes: ['📌 Added message pinning.', '📝 Added chat summarisation.'] },
+    { version: 'v1.4.0', date: 'June 14, 2026', changes: ['🌐 Added command palette.', '✏Added response editing.', '🔃 Improved regenerating responses.'] },
+    { version: 'v1.3.0', date: 'June 13, 2026', changes: ['🌈 Added accent colours.', '🔃 Added response regeneration.', '🔎 Added chat searching.'] },
+    { version: 'v1.2.0', date: 'June 12, 2026', changes: ['✨ Added Update Log.', '⚙ Added Settings Menu.'] }
+  ];
+}
+
+async function saveUpdateLogToSupabase(log) {
+  await supabaseClient
+    .from('config')
+    .upsert({ key: 'update_log', value: JSON.stringify(log) }, { onConflict: 'key' });
+}
+
 const DAILY_MESSAGE_LIMIT = 12;
 const DAILY_MESSAGES_KEY = 'overmind_daily_messages';
 
@@ -1203,32 +1239,18 @@ async function saveChats() {
 function loadPins() { pinnedMessages = safeLocalStorageGet('overmind_pins', []); }
 function savePins() { safeLocalStorageSet('overmind_pins', pinnedMessages); }
 
-function renderUpdateLog() {
+async function renderUpdateLog() {
   const container = document.getElementById('update-log-content');
   if (!container) return;
-  const UPDATE_HISTORY = [
-    { version: 'v1.13.0', date: 'June 28, 2026', changes: ['🥸 Added authentication'] },
-    { version: 'v1.12.0', date: 'June 27, 2026', changes: ['📄 Added documentation'] },
-    { version: 'v1.11.0', date: 'June 27, 2026', changes: ['⚠ Added daily message limits (limited to 10 per day)'] },
-    { version: 'v1.10.0', date: 'June 26, 2026', changes: ['🕖 Added coding artifacts', '🎨 Improved code blocks design'] },
-    { version: 'v1.9.0', date: 'June 24, 2026', changes: ['❗ Added "AI-generated" disclaimer', '❓ Added suggested prompts', '👁 Added anti-hallucination mode'] },
-    { version: 'v1.8.0', date: 'June 21, 2026', changes: ['🔌 Added plugins'] },
-    { version: 'v1.7.0 pt. II', date: 'June 20, 2026', changes: ['🧠 Added smart context compression', '📥 Added chat exporting.'] },
-    { version: 'v1.7.0', date: 'June 19, 2026', changes: ['🛠 Added Beacons (Beta).'] },
-    { version: 'v1.6.0', date: 'June 17, 2026', changes: ['✅ Added message pinning.'] },
-    { version: 'v1.5.0', date: 'June 15, 2026', changes: ['📌 Added message pinning.', '📝 Added chat summarisation.'] },
-    { version: 'v1.4.0', date: 'June 14, 2026', changes: ['🌐 Added command palette.', '✏Added response editing.', '🔃 Improved regenerating responses.'] },
-    { version: 'v1.3.0', date: 'June 13, 2026', changes: ['🌈 Added accent colours.', '🔃 Added response regeneration.', '🔎 Added chat searching.'] },
-    { version: 'v1.2.0', date: 'June 12, 2026', changes: ['✨ Added Update Log.', '⚙ Added Settings Menu.'] }
-  ];
+  updateLog = await loadUpdateLog();
   container.innerHTML = '';
-  UPDATE_HISTORY.forEach(update => {
+  updateLog.forEach(update => {
     const entry = document.createElement('div');
     entry.className = 'update-entry';
     entry.innerHTML = `
       <div class="update-version">
-        <strong style="font-size:1.2rem;">${update.version}</strong>
-        <span class="update-date">${update.date}</span>
+        <strong style="font-size:1.2rem;">${escapeHTML(update.version)}</strong>
+        <span class="update-date">${escapeHTML(update.date)}</span>
       </div>
       <ul class="update-list">
         ${update.changes.map(c => `<li>${marked.parseInline(c)}</li>`).join('')}
@@ -3240,6 +3262,7 @@ async function openAdminPanel() {
     toggle.dataset.state = maintenanceOn ? 'true' : 'false';
   }
 
+  renderUpdateLogEditor();
   document.getElementById('admin-modal').classList.add('open');
 }
 
@@ -3401,11 +3424,86 @@ function dismissAnnouncement(id) {
   document.getElementById('announcement-banner')?.remove();
 }
 
+let updateLog = [];
+
+function renderUpdateLogEditor() {
+  const container = document.getElementById('update-log-editor');
+  if (!container) return;
+  container.innerHTML = '';
+  updateLog.forEach((entry, index) => {
+    const div = document.createElement('div');
+    div.style.cssText = 'background:var(--panel-bg);padding:14px;border-radius:10px;border:1px solid var(--border);';
+    
+    const versionInput = document.createElement('input');
+    versionInput.type = 'text';
+    versionInput.value = entry.version || '';
+    versionInput.style.cssText = 'width:100%;margin-bottom:6px;padding:8px;border-radius:8px;background:var(--main-bg);border:1px solid var(--border);color:var(--text);';
+    versionInput.onchange = () => { updateLog[index].version = versionInput.value; };
+
+    const dateInput = document.createElement('input');
+    dateInput.type = 'text';
+    dateInput.value = entry.date || '';
+    dateInput.style.cssText = 'width:100%;margin-bottom:8px;padding:8px;border-radius:8px;background:var(--main-bg);border:1px solid var(--border);color:var(--text);';
+    dateInput.onchange = () => { updateLog[index].date = dateInput.value; };
+
+    const changesTextarea = document.createElement('textarea');
+    changesTextarea.value = (entry.changes || []).join('\n');
+    changesTextarea.style.cssText = 'width:100%;min-height:80px;padding:8px;border-radius:8px;background:var(--main-bg);border:1px solid var(--border);color:var(--text);resize:vertical;';
+    changesTextarea.onchange = () => { 
+      updateLog[index].changes = changesTextarea.value.split('\n').filter(Boolean); 
+    };
+
+    const controls = document.createElement('div');
+    controls.style.cssText = 'display:flex;gap:6px;margin-top:8px;';
+    controls.innerHTML = `
+      <button onclick="moveUpdateEntry(${index}, -1)" class="btn" style="padding:4px 8px;font-size:0.85rem;">↑</button>
+      <button onclick="moveUpdateEntry(${index}, 1)" class="btn" style="padding:4px 8px;font-size:0.85rem;">↓</button>
+      <button onclick="deleteUpdateEntry(${index})" class="btn danger" style="padding:4px 8px;font-size:0.85rem;">🗑</button>
+    `;
+
+    div.appendChild(versionInput);
+    div.appendChild(dateInput);
+    div.appendChild(changesTextarea);
+    div.appendChild(controls);
+    container.appendChild(div);
+  });
+}
+
+function addNewUpdateEntry() {
+  updateLog.unshift({
+    version: 'v1.14.0',
+    date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+    changes: ['New feature added']
+  });
+  renderUpdateLogEditor();
+}
+
+function deleteUpdateEntry(index) {
+  if (confirm('Delete this update entry?')) {
+    updateLog.splice(index, 1);
+    renderUpdateLogEditor();
+  }
+}
+
+function moveUpdateEntry(index, direction) {
+  const newIndex = index + direction;
+  if (newIndex < 0 || newIndex >= updateLog.length) return;
+  [updateLog[index], updateLog[newIndex]] = [updateLog[newIndex], updateLog[index]];
+  renderUpdateLogEditor();
+}
+
+function saveUpdateLogAndRefresh() {
+  saveUpdateLogToSupabase(updateLog);
+  renderUpdateLog();
+  alert('Update log saved to Supabase!');
+}
+
 applySettings();
 pluginManager.refreshActivePlugins();
 </script>
 
 <div class="modal-backdrop" id="admin-modal">
+        <hr style="border-color:var(--border);">
   <div class="modal" style="max-width:620px;">
     <div class="modal-header">
       <strong>🛡️ Admin Panel!</strong>
@@ -3447,6 +3545,17 @@ pluginManager.refreshActivePlugins();
       <div>
         <div class="field-label" style="font-size:1rem;font-weight:600;color:var(--text);margin-bottom:10px;">👥 Users</div>
         <div id="admin-users-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+      </div>
+
+            <hr style="border-color:var(--border);">
+
+      <div>
+        <div class="field-label" style="font-size:1rem;font-weight:600;color:var(--text);margin-bottom:12px;">📋 Update Log Editor</div>
+        <div id="update-log-editor" style="display:flex;flex-direction:column;gap:12px;max-height:400px;overflow-y:auto;padding-right:8px;"></div>
+        <div style="margin-top:16px;display:flex;gap:8px;">
+          <button class="btn primary" onclick="addNewUpdateEntry()">+ New Update Entry</button>
+          <button class="btn" onclick="saveUpdateLogAndRefresh()">Save to Supabase</button>
+        </div>
       </div>
 
     </div>
