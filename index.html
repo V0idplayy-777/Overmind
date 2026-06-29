@@ -730,6 +730,9 @@
     <div class="top-bar">
       <div style="font-weight:600; font-size:1.1rem;">Overmind</div>
       <div style="display:flex; gap:10px; align-items:center;">
+        <div id="admin-btn" style="display:none; background: var(--panel-bg); border-radius: 28px; padding: 4px 12px; font-size:0.85rem; cursor:pointer; align-items:center; gap:6px;">
+  🛡️ <span>Admin</span>
+</div>
         <div class="updates-btn" id="open-updates-btn" style="background: var(--panel-bg); border-radius: 28px; padding: 4px 12px; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:6px; margin-right:4px;">
           📋 <span>Update log</span>
         </div>
@@ -741,7 +744,7 @@
         <div id="summarize-btn" style="background: var(--panel-bg); border-radius: 28px; padding: 4px 12px; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:6px;">
           📝 <span>Summarize Chat</span>
         </div>
-        <div style="color:var(--muted);">v1.13.0</div>
+        <div style="color:var(--muted);">v1.13.1</div>
         <div id="menu-btn" style="cursor:pointer; font-size:1.3rem; user-select:none;">☰</div>
       </div>
     </div>
@@ -1061,7 +1064,8 @@ function incrementDailyCount() {
 
 function updateMessageLimitUI() {
   const count = getDailyCount();
-  const remaining = Math.max(0, DAILY_MESSAGE_LIMIT - count);
+  const limit = currentUser?.messageLimit ?? DAILY_MESSAGE_LIMIT;
+  const remaining = Math.max(0, limit - count);
   let statusEl = document.getElementById('daily-limit-status');
   if (!statusEl) {
     statusEl = document.createElement('div');
@@ -1070,12 +1074,12 @@ function updateMessageLimitUI() {
     document.querySelector('.input-area').appendChild(statusEl);
   }
   if (remaining <= 0) {
-    statusEl.innerHTML = `<span style="color:#f87171;">You've reached your daily limit of ${DAILY_MESSAGE_LIMIT} messages.</span>`;
+    statusEl.innerHTML = `<span style="color:#f87171;">You've reached your daily limit of ${limit} messages.</span>`;
     userInput.disabled = true;
     sendBtn.style.pointerEvents = 'none';
     sendBtn.style.opacity = '0.5';
   } else {
-    statusEl.textContent = `${remaining} messages remaining today (1000 messages every Saturday)`;
+    statusEl.textContent = `${remaining} messages remaining today`;
     userInput.disabled = false;
     sendBtn.style.pointerEvents = 'auto';
     sendBtn.style.opacity = '1';
@@ -1162,6 +1166,7 @@ const updatesModal = document.getElementById('updates-modal');
 const openUpdatesBtn = document.getElementById('open-updates-btn');
 const summarizeBtn = document.getElementById('summarize-btn');
 document.getElementById('logout-btn').onclick = handleLogout;
+document.getElementById('admin-btn').onclick = openAdminPanel;
 const artifactPanel =
 document.getElementById("artifact-panel");
 const artifactContent = document.getElementById("artifact-content");
@@ -2635,9 +2640,11 @@ function handleSend() {
   const text = userInput.value.trim();
   if (!text || !currentChatId) return;
 
+  const limit = currentUser?.messageLimit ?? DAILY_MESSAGE_LIMIT;
+
   const currentCount = getDailyCount();
-  if (currentCount >= DAILY_MESSAGE_LIMIT) {
-    showError(`You've reached your daily limit of ${DAILY_MESSAGE_LIMIT} messages.<br>Come back tomorrow!`);
+  if (currentCount >= limit) {
+    showError(`You've reached your daily limit of ${limit} messages.<br>Come back tomorrow!`);
     return;
   }
 
@@ -2647,11 +2654,11 @@ function handleSend() {
   addMessage(text, true);
   userInput.value = '';
   userInput.style.height = 'auto';
-  
+
   hideSuggestions();
   const welcome = document.getElementById('welcome-message');
   if (welcome) welcome.style.display = 'none';
-  
+
   getCerebrasResponse(text);
 }
 
@@ -2802,6 +2809,7 @@ window.onload = async () => {
   updateMessageLimitUI();
   userInput.focus();
   await checkAuth();
+  await checkAnnouncements();
 };
 
 sendBtn.onclick = handleSend;
@@ -2993,13 +3001,14 @@ async function handleRegister() {
     return;
   }
 
-  currentUser = { username };
-  localStorage.setItem('overmind_user', JSON.stringify({ username }));
+  currentUser = { username, isAdmin: false };
+localStorage.setItem('overmind_user', JSON.stringify({ username, isAdmin: false }));
   closeAuthModal();
   await loadChats();
   if (!chats.length) createNewChat();
   else loadChat(chats[0].id);
   renderChatList();
+  updateAdminUI();
 }
 
 async function hashPassword(password) {
@@ -3020,23 +3029,29 @@ async function handleLogin() {
 
   const { data, error } = await supabaseClient
     .from('users')
-    .select('username')
+    .select('username, is_admin, is_banned, message_limit')
     .eq('username', username)
     .eq('password_hash', hash)
     .single();
 
-  if (error || !data) {
-    alert('Incorrect username or password.');
-    return;
-  }
+  if (error || !data) { alert('Incorrect username or password.'); return; }
+  if (data.is_banned) { alert('Your account has been banned.'); return; }
 
-  currentUser = { username: data.username };
+  currentUser = {
+    username: data.username,
+    isAdmin: data.is_admin,
+    isBanned: data.is_banned,
+    messageLimit: data.message_limit
+  };
   localStorage.setItem('overmind_user', JSON.stringify(currentUser));
   closeAuthModal();
   await loadChats();
   if (!chats.length) createNewChat();
   else loadChat(chats[0].id);
   renderChatList();
+  updateAdminUI();
+  updateMessageLimitUI();
+  checkAnnouncements();
 }
 
 function switchToRegister() {
@@ -3056,14 +3071,60 @@ function closeAuthModal() {
 }
 
 async function checkAuth() {
+  const { data: configData } = await supabaseClient
+    .from('config')
+    .select('value')
+    .eq('key', 'maintenance_mode')
+    .single();
+
   const saved = localStorage.getItem('overmind_user');
+
+  if (configData?.value === 'true') {
+    if (saved) {
+      currentUser = JSON.parse(saved);
+      if (!currentUser.isAdmin) {
+        showMaintenanceScreen();
+        return;
+      }
+    } else {
+      showMaintenanceScreen();
+      return;
+    }
+  }
+
   if (saved) {
     currentUser = JSON.parse(saved);
+
+    const { data: userData } = await supabaseClient
+      .from('users')
+      .select('username, is_admin, is_banned, message_limit')
+      .eq('username', currentUser.username)
+      .single();
+
+    if (!userData || userData.is_banned) {
+      localStorage.removeItem('overmind_user');
+      currentUser = null;
+      document.getElementById('auth-modal').style.display = 'flex';
+      if (userData?.is_banned) alert('Your account has been banned.');
+      return;
+    }
+
+    currentUser = {
+      username: userData.username,
+      isAdmin: userData.is_admin,
+      isBanned: userData.is_banned,
+      messageLimit: userData.message_limit
+    };
+    localStorage.setItem('overmind_user', JSON.stringify(currentUser));
+
     closeAuthModal();
-    await loadChats();
-    if (!chats.length) createNewChat();
-    else loadChat(chats[0].id);
-    renderChatList();
+  await loadChats();
+  if (!chats.length) createNewChat();
+  else loadChat(chats[0].id);
+  renderChatList();
+  updateAdminUI();
+  updateMessageLimitUI();
+  checkAnnouncements();
   } else {
     document.getElementById('auth-modal').style.display = 'flex';
   }
@@ -3078,8 +3139,319 @@ async function handleLogout() {
   closeSettings();
 }
 
+function updateAdminUI() {
+  const btn = document.getElementById('admin-btn');
+  if (currentUser?.isAdmin) {
+    btn.style.display = 'flex';
+  } else {
+    btn.style.display = 'none';
+  }
+}
+
+async function openAdminPanel() {
+  if (!currentUser?.isAdmin) return;
+
+  const { data: users } = await supabaseClient
+    .from('users')
+    .select('username, is_admin, is_banned, message_limit, created_at')
+    .order('created_at', { ascending: false });
+
+  const { data: configData } = await supabaseClient
+    .from('config')
+    .select('value')
+    .eq('key', 'maintenance_mode')
+    .single();
+
+  const maintenanceOn = configData?.value === 'true';
+
+  const { data: announcements } = await supabaseClient
+    .from('announcements')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  const list = document.getElementById('admin-users-list');
+  list.innerHTML = '';
+
+  if (!users) {
+    list.innerHTML = '<div style="color:var(--muted);">Failed to load users.</div>';
+  } else {
+    users.forEach(user => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--panel-bg);border-radius:10px;gap:8px;flex-wrap:wrap;';
+      row.innerHTML = `
+        <div>
+          <strong>${user.username}</strong>
+          ${user.is_admin ? '<span style="color:var(--accent);font-size:0.75rem;margin-left:6px;">Admin</span>' : ''}
+          ${user.is_banned ? '<span style="color:#f87171;font-size:0.75rem;margin-left:6px;">Banned</span>' : ''}
+          <div style="font-size:0.8rem;color:var(--muted);">Joined: ${new Date(user.created_at).toLocaleDateString()}</div>
+          <div style="font-size:0.8rem;color:var(--muted);">Msg limit: ${user.message_limit ?? 'Default ('+DAILY_MESSAGE_LIMIT+')'}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          ${!user.is_admin ? `
+            <button class="btn" style="padding:6px 10px;font-size:0.8rem;" onclick="toggleBanUser('${user.username}', ${user.is_banned})">
+              ${user.is_banned ? 'Unban' : 'Ban'}
+            </button>
+            <button class="btn" style="padding:6px 10px;font-size:0.8rem;" onclick="toggleAdminUser('${user.username}', ${user.is_admin})">
+              Promote
+            </button>
+          ` : (user.username !== currentUser.username ? `
+            <button class="btn" style="padding:6px 10px;font-size:0.8rem;" onclick="toggleAdminUser('${user.username}', ${user.is_admin})">
+              Demote
+            </button>
+          ` : '<span style="font-size:0.8rem;color:var(--muted);">You</span>')}
+          <button class="btn" style="padding:6px 10px;font-size:0.8rem;" onclick="setUserLimit('${user.username}', ${user.message_limit})">
+            Set Limit
+          </button>
+          ${user.username !== currentUser.username ? `
+            <button class="btn danger" style="padding:6px 10px;font-size:0.8rem;" onclick="deleteUser('${user.username}')">
+              Delete
+            </button>
+          ` : ''}
+        </div>
+      `;
+      list.appendChild(row);
+    });
+  }
+
+  const annSection = document.getElementById('admin-announcements');
+  if (annSection) {
+    annSection.innerHTML = '';
+    if (announcements?.length) {
+      announcements.forEach(ann => {
+        const el = document.createElement('div');
+        el.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--panel-bg);border-radius:10px;gap:8px;margin-bottom:6px;';
+        el.innerHTML = `
+          <div>
+            <div>${ann.message}</div>
+            <div style="font-size:0.75rem;color:var(--muted);">Expires: ${ann.expires_at ? new Date(ann.expires_at).toLocaleString() : 'Never'}</div>
+          </div>
+          <button class="btn danger" style="padding:6px 10px;font-size:0.8rem;" onclick="deleteAnnouncement('${ann.id}')">Delete</button>
+        `;
+        annSection.appendChild(el);
+      });
+    } else {
+      annSection.innerHTML = '<div style="color:var(--muted);font-size:0.9rem;">No active announcements.</div>';
+    }
+  }
+
+  const toggle = document.getElementById('maintenance-toggle');
+  if (toggle) {
+    toggle.classList.toggle('on', maintenanceOn);
+    toggle.dataset.state = maintenanceOn ? 'true' : 'false';
+  }
+
+  document.getElementById('admin-modal').classList.add('open');
+}
+
+async function toggleBanUser(username, currentlyBanned) {
+  if (!currentUser?.isAdmin) return;
+  await supabaseClient.from('users').update({ is_banned: !currentlyBanned }).eq('username', username);
+  openAdminPanel();
+}
+
+async function toggleAdminUser(username, currentlyAdmin) {
+  if (!currentUser?.isAdmin) return;
+  if (!confirm(`${currentlyAdmin ? 'Demote' : 'Promote'} ${username}?`)) return;
+  await supabaseClient.from('users').update({ is_admin: !currentlyAdmin }).eq('username', username);
+  openAdminPanel();
+}
+
+async function setUserLimit(username, currentLimit) {
+  const input = prompt(
+    `Set daily message limit for "${username}".\nEnter a number, or leave blank to use the default (${DAILY_MESSAGE_LIMIT}):`,
+    currentLimit !== null && currentLimit !== undefined ? String(currentLimit) : ''
+  );
+  if (input === null) return;
+
+  let limit = null;
+  if (input.trim() !== '') {
+    limit = parseInt(input.trim(), 10);
+    if (isNaN(limit) || limit < 1) {
+      alert('Please enter a valid number greater than 0.');
+      return;
+    }
+  }
+
+  const { error } = await supabaseClient
+    .from('users')
+    .update({ message_limit: limit })
+    .eq('username', username);
+
+  if (error) {
+    alert('Failed to update limit: ' + error.message);
+    return;
+  }
+
+  alert(limit === null
+    ? `${username}'s limit reset to default.`
+    : `${username}'s limit set to ${limit} messages/day.`
+  );
+  openAdminPanel();
+}
+
+async function postAnnouncement() {
+  const msg = document.getElementById('announcement-text').value.trim();
+  if (!msg) return alert('Please enter an announcement message.');
+
+  const duration = document.getElementById('announcement-duration').value;
+  let expiresAt = null;
+
+  const durations = {
+    '5s':  5 * 1000,
+    '1m':  60 * 1000,
+    '1h':  60 * 60 * 1000,
+    '1d':  24 * 60 * 60 * 1000,
+    '3d':  3 * 24 * 60 * 60 * 1000,
+    '7d':  7 * 24 * 60 * 60 * 1000
+  };
+
+  if (duration !== 'never' && durations[duration]) {
+    expiresAt = new Date(Date.now() + durations[duration]).toISOString();
+  }
+
+  const { error } = await supabaseClient
+    .from('announcements')
+    .insert({ message: msg, expires_at: expiresAt });
+
+  if (error) { alert('Failed to post: ' + error.message); return; }
+
+  document.getElementById('announcement-text').value = '';
+  await openAdminPanel();
+  await checkAnnouncements();
+}
+
+async function deleteAnnouncement(id) {
+  await supabaseClient.from('announcements').delete().eq('id', id);
+  openAdminPanel();
+}
+
+async function toggleMaintenance() {
+  const toggle = document.getElementById('maintenance-toggle');
+  const newState = toggle.dataset.state !== 'true';
+  await supabaseClient.from('config').update({ value: String(newState) }).eq('key', 'maintenance_mode');
+  toggle.classList.toggle('on', newState);
+  toggle.dataset.state = String(newState);
+}
+
+async function deleteUser(username) {
+  if (!currentUser?.isAdmin) return;
+  if (!confirm(`Delete user "${username}" and all their chats?`)) return;
+
+  await supabaseClient.from('chats').delete().eq('username', username);
+  await supabaseClient.from('users').delete().eq('username', username);
+
+  openAdminPanel();
+}
+
+function showMaintenanceScreen() {
+  document.body.innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#0a0a0a;color:#e2e8f0;font-family:system-ui;text-align:center;gap:16px;">
+      <div style="font-size:3rem;">🔧</div>
+      <h1 style="font-size:2rem;font-weight:700;">Down for Maintenance</h1>
+      <p style="color:#a1a1aa;max-width:400px;">Overmind is currently undergoing maintenance. Please check back soon.</p>
+    </div>
+  `;
+}
+
+async function checkAnnouncements() {
+  const now = new Date().toISOString();
+  await supabaseClient
+    .from('announcements')
+    .delete()
+    .lt('expires_at', now)
+    .not('expires_at', 'is', null);
+
+  const { data } = await supabaseClient
+    .from('announcements')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(1);
+
+  document.getElementById('announcement-banner')?.remove();
+
+  if (!data || !data.length) return;
+  const ann = data[0];
+
+  const dismissed = JSON.parse(localStorage.getItem('dismissed_announcements') || '[]');
+  if (dismissed.includes(ann.id)) return;
+
+  const banner = document.createElement('div');
+  banner.id = 'announcement-banner';
+  banner.style.cssText = `position:fixed;top:0;left:0;right:0;background:var(--accent);color:#000;padding:10px 20px;display:flex;justify-content:space-between;align-items:center;z-index:9999;font-weight:500;box-shadow:0 2px 12px rgba(0,0,0,0.3);`;
+  banner.innerHTML = `
+    <span>📢 ${ann.message}</span>
+    <button onclick="dismissAnnouncement('${ann.id}')" style="background:rgba(0,0,0,0.2);border:none;color:#000;padding:4px 10px;border-radius:6px;cursor:pointer;font-weight:600;margin-left:12px;">✕</button>
+  `;
+  document.body.prepend(banner);
+
+  if (ann.expires_at) {
+    const msLeft = new Date(ann.expires_at).getTime() - Date.now();
+    if (msLeft > 0) {
+      setTimeout(() => {
+        document.getElementById('announcement-banner')?.remove();
+      }, msLeft);
+    }
+  }
+}
+
+function dismissAnnouncement(id) {
+  const dismissed = JSON.parse(localStorage.getItem('dismissed_announcements') || '[]');
+  dismissed.push(id);
+  localStorage.setItem('dismissed_announcements', JSON.stringify(dismissed));
+  document.getElementById('announcement-banner')?.remove();
+}
+
 applySettings();
 pluginManager.refreshActivePlugins();
 </script>
+
+<div class="modal-backdrop" id="admin-modal">
+  <div class="modal" style="max-width:620px;">
+    <div class="modal-header">
+      <strong>🛡️ Admin Panel!</strong>
+      <div class="help-text">Congrats, u now have admin!</div>
+      <button onclick="document.getElementById('admin-modal').classList.remove('open')" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--text);">✕</button>
+    </div>
+    <div class="modal-body" style="padding:16px 18px;display:flex;flex-direction:column;gap:20px;overflow-y:auto;max-height:70vh;">
+
+      <div>
+        <div class="field-label" style="font-size:1rem;font-weight:600;color:var(--text);margin-bottom:10px;">🔧 Maintenance Mode</div>
+        <div class="toggle-row">
+          <div class="help-text">When on, non-admin users see a maintenance screen instead of the app.</div>
+          <div class="toggle" id="maintenance-toggle" data-state="false" onclick="toggleMaintenance()"></div>
+        </div>
+      </div>
+
+      <hr style="border-color:var(--border);">
+
+      <div>
+        <div class="field-label" style="font-size:1rem;font-weight:600;color:var(--text);margin-bottom:10px;">📢 Announcements</div>
+        <textarea id="announcement-text" class="text-input" placeholder="Write an announcement..." style="resize:vertical;min-height:60px;margin-bottom:8px;"></textarea>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
+          <select id="announcement-duration" class="select" style="flex:1;">
+            <option value="5s">Hide after 5 seconds</option>
+            <option value="1m">Hide after 1 minute</option>
+            <option value="1h">Hide after 1 hour</option>
+            <option value="1d">Hide after 1 day</option>
+            <option value="3d" selected>Hide after 3 days</option>
+            <option value="7d">Hide after 7 days</option>
+            <option value="never">Never hide</option>
+          </select>
+          <button class="btn primary" onclick="postAnnouncement()">Post</button>
+        </div>
+        <div id="admin-announcements"></div>
+      </div>
+
+      <hr style="border-color:var(--border);">
+
+      <div>
+        <div class="field-label" style="font-size:1rem;font-weight:600;color:var(--text);margin-bottom:10px;">👥 Users</div>
+        <div id="admin-users-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
