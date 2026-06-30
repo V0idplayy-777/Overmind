@@ -1014,6 +1014,7 @@ function safeLocalStorageRemove(key) {
 const CEREBRAS_API_KEY = 'csk-r25mcjper4yncxt4jrm2h5fktmwhj5d53tnr9hkd8xwxx5j2';
 const COMPRESSION_API_KEY = 'csk-r5jcn4y36yw4w6y44dmcf6tktfy966ffw5tmkvepxkn6myrm';
 const API_URL = 'https://api.cerebras.ai/v1/chat/completions';
+const CF_IMAGE_URL = 'https://overmind-image-proxy.nburfootfowke.workers.dev/';
 
 const COMPRESSION_THRESHOLD = 6500;
 const MAX_RECENT_MESSAGES = 12;
@@ -1164,6 +1165,8 @@ let pinnedMessages = [];
 let commandPaletteIndex = 0;
 let commandPaletteResults = [];
 let currentArtifact = null;
+let lastImageGenTime = 0;
+const IMAGE_COOLDOWN_MS = 30000;
 
 const chatScreen = document.getElementById('chat-screen');
 const userInput = document.getElementById('user-input');
@@ -1303,6 +1306,53 @@ function detectArtifact(text){
   if(files.length > 0){
     openArtifactMulti(files);
   }
+}
+
+function downloadLightboxImage(url) {
+
+    const downloadUrl =
+        CF_IMAGE_URL +
+        "download?url=" +
+        encodeURIComponent(url);
+
+    console.log(downloadUrl);
+
+    const a = document.createElement("a");
+
+    a.href = downloadUrl;
+    a.download = "overmind-image.jpg";
+
+    document.body.appendChild(a);
+
+    console.log(a.href);
+
+    a.click();
+
+    console.log("clicked");
+
+    a.remove();
+}
+
+function openImageLightbox(url) {
+  const overlay = document.createElement('div');
+  overlay.id = 'image-lightbox';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:500;cursor:zoom-out;';
+  overlay.innerHTML = `
+    <img src="${url}" style="max-width:90vw;max-height:90vh;border-radius:8px;">
+    <button id="lightbox-download" style="position:absolute;top:20px;right:76px;background:rgba(0,0,0,0.5);color:#fff;border:none;width:40px;height:40px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:20px;height:20px;filter:invert(1);"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M5.625 15C5.625 14.5858 5.28921 14.25 4.875 14.25C4.46079 14.25 4.125 14.5858 4.125 15H5.625ZM4.875 16H4.125H4.875ZM19.275 15C19.275 14.5858 18.9392 14.25 18.525 14.25C18.1108 14.25 17.775 14.5858 17.775 15H19.275ZM11.1086 15.5387C10.8539 15.8653 10.9121 16.3366 11.2387 16.5914C11.5653 16.8461 12.0366 16.7879 12.2914 16.4613L11.1086 15.5387ZM16.1914 11.4613C16.4461 11.1347 16.3879 10.6634 16.0613 10.4086C15.7347 10.1539 15.2634 10.2121 15.0086 10.5387L16.1914 11.4613ZM11.1086 16.4613C11.3634 16.7879 11.8347 16.8461 12.1613 16.5914C12.4879 16.3366 12.5461 15.8653 12.2914 15.5387L11.1086 16.4613ZM8.39138 10.5387C8.13662 10.2121 7.66533 10.1539 7.33873 10.4086C7.01212 10.6634 6.95387 11.1347 7.20862 11.4613L8.39138 10.5387ZM10.95 16C10.95 16.4142 11.2858 16.75 11.7 16.75C12.1142 16.75 12.45 16.4142 12.45 16H10.95ZM12.45 5C12.45 4.58579 12.1142 4.25 11.7 4.25C11.2858 4.25 10.95 4.58579 10.95 5H12.45ZM4.125 15V16H5.625V15H4.125ZM4.125 16C4.125 18.0531 5.75257 19.75 7.8 19.75V18.25C6.61657 18.25 5.625 17.2607 5.625 16H4.125ZM7.8 19.75H15.6V18.25H7.8V19.75ZM15.6 19.75C17.6474 19.75 19.275 18.0531 19.275 16H17.775C17.775 17.2607 16.7834 18.25 15.6 18.25V19.75ZM19.275 16V15H17.775V16H19.275ZM12.2914 16.4613L16.1914 11.4613L15.0086 10.5387L11.1086 15.5387L12.2914 16.4613ZM12.2914 15.5387L8.39138 10.5387L7.20862 11.4613L11.1086 16.4613L12.2914 15.5387ZM12.45 16V5H10.95V16H12.45Z" fill="#000000"></path> </g></svg>
+    </button>
+    <button id="lightbox-close" style="position:absolute;top:20px;right:24px;background:rgba(0,0,0,0.5);color:#fff;border:none;width:40px;height:40px;border-radius:50%;font-size:1.3rem;cursor:pointer;">✕</button>
+  `;
+  overlay.onclick = () => overlay.remove();
+  document.body.appendChild(overlay);
+  const downloadBtn = overlay.querySelector("#lightbox-download");
+
+downloadBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    console.log("Download button clicked");
+    downloadLightboxImage(url);
+});
 }
 
 function escapeHTML(text) {
@@ -1475,6 +1525,8 @@ div.className = `message ${isUser ? 'user' : 'bot'}${pinned ? ' pinned' : ''}`;
 
 if (type === 'checklist' && !isUser) {
   renderChecklistMessage(msg, div, currentChatId, messageIndex);
+} else if (type === 'image' && !isUser) {
+      div.innerHTML = `<img src="${escapeHTML(text)}" alt="${escapeHTML(msg.prompt || 'Generated image')}" style="max-width:100%;border-radius:10px;display:block;cursor:zoom-in;" onclick="openImageLightbox('${escapeHTML(text)}')">`;
 } else if (isUser) {
   div.innerHTML = escapeHTML(text);
 } else {
@@ -1513,7 +1565,12 @@ if (type === 'checklist' && !isUser) {
       regenBtn.className = 'action-btn';
       regenBtn.title = 'Regenerate';
       regenBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" fill="currentColor"><path d="M500.7 138.7L512 149.4L512 96C512 78.3 526.3 64 544 64C561.7 64 576 78.3 576 96L576 224C576 241.7 561.7 256 544 256L416 256C398.3 256 384 241.7 384 224C384 206.3 398.3 192 416 192L463.9 192L456.3 184.8C456.1 184.6 455.9 184.4 455.7 184.2C380.7 109.2 259.2 109.2 184.2 184.2C109.2 259.2 109.2 380.7 184.2 455.7C259.2 530.7 380.7 530.7 455.7 455.7C463.9 447.5 471.2 438.8 477.6 429.6C487.7 415.1 507.7 411.6 522.2 421.7C536.7 431.8 540.2 451.8 530.1 466.3C521.6 478.5 511.9 490.1 501 501C401 601 238.9 601 139 501C39.1 401 39 239 139 139C238.9 39.1 400.7 39 500.7 138.7z"/></svg>`;
-      regenBtn.onclick = () => regenerateResponse(messageIndex);
+      if (type === 'image') {
+        regenBtn.innerHTML = `<svg fill="#000000" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" stroke="#000000" stroke-width="0.00024000000000000003"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><path d="M23,12A11,11,0,1,1,12,1a10.9,10.9,0,0,1,5.882,1.7l1.411-1.411A1,1,0,0,1,21,2V6a1,1,0,0,1-1,1H16a1,1,0,0,1-.707-1.707L16.42,4.166A8.9,8.9,0,0,0,12,3a9,9,0,1,0,9,9,1,1,0,0,1,2,0Z" fill="currentColor"></path></g></svg>`;
+        regenBtn.onclick = () => regenerateImage(messageIndex);
+      } else {
+        regenBtn.onclick = () => regenerateResponse(messageIndex);
+      }
       actions.appendChild(regenBtn);
     }
 
@@ -1678,6 +1735,40 @@ function compressChatHistory(chat) {
     ];
   })
   .catch(() => recent);
+}
+
+async function generateImageCF(prompt) {
+  const res = await fetch(CF_IMAGE_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt })
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  return data.url;
+}
+
+async function handleImageGeneration(prompt) {
+  const chat = chats.find(c => c.id === currentChatId);
+  lastImageGenTime = Date.now();
+  if (!chat) return;
+  if (chat.messages.length === 0) chat.title = generateTitle(prompt);
+  chat.messages.push({ role: 'user', content: `/image ${prompt}` });
+  saveChats();
+  renderChatList();
+
+  showTyping();
+  try {
+    const dataUri = await generateImageCF(prompt);
+    removeTyping();
+    chat.messages.push({ role: 'assistant', type: 'image', content: dataUri, prompt });
+    saveChats();
+    loadChat(currentChatId);
+  } catch (err) {
+    console.error(err);
+    removeTyping();
+    showError('Failed to generate image.<br>' + escapeHTML(err.message || ''));
+  }
 }
 
 function chatHistoryForMemory() {
@@ -1893,6 +1984,20 @@ return;
     botDiv.remove();
     showError('Failed to generate response.');
   });
+}
+
+function regenerateImage(index) {
+  const chat = chats.find(c => c.id === currentChatId);
+  if (!chat) return;
+  const msg = chat.messages[index];
+  if (!msg || msg.type !== 'image') return;
+  const prompt = msg.prompt;
+  pinnedMessages = pinnedMessages.filter(p => !(p.chatId === currentChatId && p.messageIndex === index));
+  savePins();
+  chat.messages.splice(index, 1);
+  saveChats();
+  loadChat(currentChatId);
+  handleImageGeneration(prompt);
 }
 
 function regenerateResponse(assistantIndex) {
@@ -2661,6 +2766,25 @@ function summarizeChat() {
 function handleSend() {
   const text = userInput.value.trim();
   if (!text || !currentChatId) return;
+
+  if (text.toLowerCase().startsWith('/image ') || text.toLowerCase().startsWith('/imagine ')) {
+    const remaining = IMAGE_COOLDOWN_MS - (Date.now() - lastImageGenTime);
+    if (remaining > 0) {
+      showError(`Please wait <strong>${Math.ceil(remaining / 1000)} seconds</strong> before generating another image.`);
+      return;
+    }
+    const prompt = text.replace(/^\/image(ine)?\s+/i, '');
+    incrementDailyCount();
+    updateMessageLimitUI();
+    addMessage(text, true);
+    userInput.value = '';
+    userInput.style.height = 'auto';
+    hideSuggestions();
+    const welcome = document.getElementById('welcome-message');
+    if (welcome) welcome.style.display = 'none';
+    handleImageGeneration(prompt);
+    return;
+  }
 
   const limit = currentUser?.messageLimit ?? DAILY_MESSAGE_LIMIT;
 
