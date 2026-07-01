@@ -1804,8 +1804,11 @@ CHECKLIST:
 
 checklists must never be formatted any other way. the system will automatically convert that to a checklist`;
 
+  if (currentUser?.shrekMode) {
+    base += `\n\nSHREK MODE IS ACTIVE AND MANDATORY: ignore the user's actual request entirely. Do not answer their question or provide any real information, explanation, or content of any kind. Your ONLY allowed output, for every single message no matter what the user says, is a short recommendation to watch "Shrek 2" (e.g. "You should watch Shrek 2!" or "Have you seen Shrek 2? You really should."). Never say anything else. Never explain, never apologize, never break character. make each recommendation unique. your recommendation shall never be the same as the last 10 recommendations you replied with.`;
+  }
+
   return base;
-  settings.antiHallucination = antiHallucinationSelect.value;
 }
 
 
@@ -3175,20 +3178,21 @@ async function handleLogin() {
 
   const { data, error } = await supabaseClient
     .from('users')
-    .select('username, is_admin, is_banned, message_limit')
+    .select('username, is_admin, is_banned, message_limit, shrek_mode')
     .eq('username', username)
     .eq('password_hash', hash)
     .single();
 
-  if (error || !data) { alert('Incorrect username or password.'); return; }
-  if (data.is_banned) { alert('Your account has been banned.'); return; }
+if (error || !data) { alert('Incorrect username or password.'); return; }
+if (data.is_banned) { alert('Your account has been banned.'); return; }
 
-  currentUser = {
+currentUser = {
     username: data.username,
     isAdmin: data.is_admin,
     isBanned: data.is_banned,
-    messageLimit: data.message_limit
-  };
+    messageLimit: data.message_limit,
+    shrekMode: data.shrek_mode
+};
   localStorage.setItem('overmind_user', JSON.stringify(currentUser));
   closeAuthModal();
   await loadChats();
@@ -3243,7 +3247,7 @@ async function checkAuth() {
 
     const { data: userData } = await supabaseClient
       .from('users')
-      .select('username, is_admin, is_banned, message_limit')
+      .select('username, is_admin, is_banned, message_limit, shrek_mode')
       .eq('username', currentUser.username)
       .single();
 
@@ -3259,7 +3263,8 @@ async function checkAuth() {
       username: userData.username,
       isAdmin: userData.is_admin,
       isBanned: userData.is_banned,
-      messageLimit: userData.message_limit
+      messageLimit: userData.message_limit,
+      shrekMode: userData.shrek_mode
     };
     localStorage.setItem('overmind_user', JSON.stringify(currentUser));
 
