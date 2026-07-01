@@ -1797,7 +1797,7 @@ async function handleImageGeneration(prompt) {
   lastImageGenTime = Date.now();
   if (!chat) return;
   if (chat.messages.length === 0) chat.title = generateTitle(prompt);
-  chat.messages.push({ role: 'user', content: `/image ${prompt}` });
+  chat.messages.push({ role: 'user', content: `/imagea ${prompt}` });
   saveChats();
   renderChatList();
 
@@ -2834,13 +2834,13 @@ function handleSend() {
   const text = userInput.value.trim();
   if (!text || !currentChatId) return;
 
-  if (text.toLowerCase().startsWith('/image ') || text.toLowerCase().startsWith('/imagine ')) {
+  if (text.toLowerCase().startsWith('/imagea ') || text.toLowerCase().startsWith('/imagine ')) {
     const remaining = IMAGE_COOLDOWN_MS - (Date.now() - lastImageGenTime);
     if (remaining > 0) {
       showError(`Please wait <strong>${Math.ceil(remaining / 1000)} seconds</strong> before generating another image.`);
       return;
     }
-    const prompt = text.replace(/^\/image(ine)?\s+/i, '');
+    const prompt = text.replace(/^\/imagea!(ine)?\s+/i, '');
     incrementDailyCount();
     updateMessageLimitUI();
     addMessage(text, true);
