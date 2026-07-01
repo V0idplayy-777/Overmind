@@ -744,7 +744,7 @@
         <div id="summarize-btn" style="background: var(--panel-bg); border-radius: 28px; padding: 4px 12px; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:6px;">
           📝 <span>Summarize Chat</span>
         </div>
-        <div style="color:var(--muted);">v1.14.1</div>
+        <div style="color:var(--muted);">v1.15.0</div>
         <div id="menu-btn" style="cursor:pointer; font-size:1.3rem; user-select:none;">☰</div>
       </div>
     </div>
@@ -868,6 +868,11 @@
             <input class="text-input" id="assistant-name-input" type="text" maxlength="32" placeholder="Overmind" />
             <div class="help-text">This only changes what the model calls itself. The UI name stays Overmind.</div>
           </div>
+          <div>
+  <label class="field-label" for="model-select">Model</label>
+  <select class="select" id="model-select"></select>
+  <div class="help-text" id="model-description"></div>
+</div>
         </div>
 
         <div class="settings-panel" id="tab-language">
@@ -1033,7 +1038,27 @@ const DEFAULT_SETTINGS = {
   safetyLevel: 'moderate',
   memoryEnabled: true,
   neverStore: false,
-  antiHallucination: 'moderate'
+  antiHallucination: 'moderate',
+  model: 'aero'
+};
+
+const MODELS = {
+  aero: {
+    name: 'Aero',
+    description: 'The current default Overmind model.',
+    systemPromptAddition: '',
+    maxTokens: null,
+    temperature: null,
+    forceThinking: null
+  },
+  nova: {
+    name: 'Nova',
+    description: 'Optimized for speed. Shorter generations and no step-by-step reasoning, so replies finish much faster.',
+    systemPromptAddition: 'Speed is the top priority. Give the shortest possible correct answer. No preamble, no restating the question, no closing summary, minimal formatting. One or two sentences unless the user explicitly asks for more detail.',
+    maxTokens: 400,
+    temperature: 0.3,
+    forceThinking: 'fast'
+  }
 };
 
 async function loadUpdateLog() {
@@ -1206,6 +1231,8 @@ const openUpdatesBtn = document.getElementById('open-updates-btn');
 const summarizeBtn = document.getElementById('summarize-btn');
 document.getElementById('logout-btn').onclick = handleLogout;
 document.getElementById('admin-btn').onclick = openAdminPanel;
+const modelSelect = document.getElementById('model-select');
+const modelDescription = document.getElementById('model-description');
 const artifactPanel =
 document.getElementById("artifact-panel");
 const artifactContent = document.getElementById("artifact-content");
@@ -1263,6 +1290,20 @@ async function renderUpdateLog() {
   });
 }
 
+function populateModelSelect() {
+  modelSelect.innerHTML = '';
+  Object.keys(MODELS).forEach(key => {
+    const opt = document.createElement('option');
+    opt.value = key;
+    opt.textContent = MODELS[key].name;
+    modelSelect.appendChild(opt);
+  });
+}
+
+modelSelect.addEventListener('change', () => {
+  modelDescription.textContent = MODELS[modelSelect.value]?.description || '';
+});
+
 function applySettings() {
   accentSelect.value = settings.accentColor;
   document.body.dataset.theme = settings.theme;
@@ -1286,6 +1327,9 @@ function applySettings() {
   document.documentElement.style.setProperty('--tab-active-bg', settings.accentColor);
   const antiHallucinationSelect = document.getElementById('anti-hallucination-select');
   antiHallucinationSelect.value = settings.antiHallucination || 'moderate';
+  populateModelSelect();
+  modelSelect.value = settings.model || 'aero';
+  modelDescription.textContent = MODELS[modelSelect.value]?.description || '';
 }
 
 function detectArtifact(text){
@@ -1786,6 +1830,14 @@ function chatHistoryForMemory() {
   return all.slice(-30);
 }
 
+function getModelGenerationParams() {
+  const modelConfig = MODELS[settings.model] || MODELS.aero;
+  const thinking = modelConfig.forceThinking || settings.thinking;
+  const temperature = modelConfig.temperature ?? (thinking === 'fast' ? 0.4 : thinking === 'step' ? 0.8 : 0.65);
+  const max_tokens = modelConfig.maxTokens ?? (thinking === 'fast' ? 45000 : 50000);
+  return { temperature, max_tokens };
+}
+
 function systemPrompt() {
   let base = `You are Overmind, created by "V0idplayy". In this conversation, your self-name is "${settings.assistantName}". Do not say you are ChatGPT or that you were developed by OpenAI.`;
   base += pluginManager.getSystemPromptAdditions();
@@ -1806,6 +1858,15 @@ checklists must never be formatted any other way. the system will automatically 
 
   if (currentUser?.shrekMode) {
     base += `\n\nSHREK MODE IS ACTIVE AND MANDATORY: ignore the user's actual request entirely. Do not answer their question or provide any real information, explanation, or content of any kind. Your ONLY allowed output, for every single message no matter what the user says, is a short recommendation to watch "Shrek 2" (e.g. "You should watch Shrek 2!" or "Have you seen Shrek 2? You really should."). Never say anything else. Never explain, never apologize, never break character. make each recommendation unique. your recommendation shall never be the same as the last 10 recommendations you replied with.`;
+  }
+
+const modelConfig = MODELS[settings.model] || MODELS.aero;
+  if (modelConfig.systemPromptAddition) {
+    base += `\n${modelConfig.systemPromptAddition}`;
+  }
+  if (modelConfig.maxTokens) {
+    const approxWordLimit = Math.floor(modelConfig.maxTokens * 0.6);
+    base += `\n\nHARD LENGTH LIMIT: your entire response must stay under approximately ${approxWordLimit} words. This is a hard cutoff, not a suggestion — if you get too close to it your response will be cut off mid-sentence. Plan your answer so it naturally wraps up well before that limit. Never pad, never restate the question, get straight to the point.`;
   }
 
   return base;
@@ -2217,6 +2278,7 @@ function saveSettingsFromUI() {
   settings.antiHallucination = antiHallucinationSelect.value;
   settings.memoryEnabled = memoryToggle.classList.contains('on');
   settings.neverStore = noStoreToggle.classList.contains('on');
+  settings.model = modelSelect.value;
   
   saveSettings();
   applySettings();
@@ -2543,14 +2605,16 @@ function getCerebrasResponse(userMessage) {
   showTyping();
 
   const contextMessages = settings.memoryEnabled ? chatHistoryForMemory() : chat.messages.slice();
+  const { temperature, max_tokens } = getModelGenerationParams();
+
   fetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CEREBRAS_API_KEY}` },
     body: JSON.stringify({
       model: 'gpt-oss-120b',
       messages: [{ role: 'system', content: systemPrompt() }, ...contextMessages],
-      temperature: settings.thinking === 'fast' ? 0.4 : settings.thinking === 'step' ? 0.8 : 0.65,
-      max_tokens: settings.thinking === 'fast' ? 45000 : 50000,
+      temperature: temperature,
+      max_tokens: max_tokens,
       stream: true
     })
   })
@@ -2810,38 +2874,6 @@ function handleSend() {
 
   getCerebrasResponse(text);
 }
-
-function openSettings() { applySettings(); settingsModal.classList.add('open'); }
-function closeSettings() { settingsModal.classList.remove('open'); }
-function saveSettingsFromUI() {
-  settings.accentColor = accentSelect.value;
-  settings.theme = themeSelect.value;
-  settings.font = fontSelect.value;
-  settings.thinking = thinkingSelect.value;
-  settings.emoji = emojiSelect.value;
-  settings.tone = toneSelect.value;
-  settings.language = languageSelect.value;
-  settings.assistantName = assistantNameInput.value.trim() || 'Overmind';
-  settings.swearMode = swearSelect.value;
-  settings.safetyLevel = safetySelect.value;
-  settings.antiHallucination = antiHallucinationSelect.value;
-  settings.memoryEnabled = memoryToggle.classList.contains('on');
-  settings.neverStore = noStoreToggle.classList.contains('on');
-  
-  saveSettings();
-  applySettings();
-  updateMessageLimitUI();
-  
-  if (settings.neverStore) {
-    chats = [];
-    safeLocalStorageRemove('overmind_chats');
-    currentChatId = null;
-    createNewChat();
-  }
-  closeSettings();
-}
-function toggleMemory() { settings.memoryEnabled = !settings.memoryEnabled; applySettings(); }
-function toggleNoStore() { settings.neverStore = !settings.neverStore; applySettings(); }
 
 function exportChats() {
   const dataStr = JSON.stringify(chats, null, 2);
@@ -3600,7 +3632,7 @@ function renderUpdateLogEditor() {
 
 function addNewUpdateEntry() {
   updateLog.unshift({
-    version: 'v1.14.0',
+    version: 'vx.x.x',
     date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
     changes: ['New feature added']
   });
