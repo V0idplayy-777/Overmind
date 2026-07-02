@@ -757,7 +757,7 @@
         <div id="summarize-btn" style="background: var(--panel-bg); border-radius: 28px; padding: 4px 12px; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:6px;">
           📝 <span>Summarize Chat</span>
         </div>
-        <div style="color:var(--muted);">v1.16.0</div>
+        <div style="color:var(--muted);">v1.16.1</div>
         <div id="menu-btn" style="cursor:pointer; font-size:1.3rem; user-select:none;">☰</div>
       </div>
     </div>
@@ -3226,7 +3226,7 @@ async function enableAdminChatNotifications() {
     return;
   }
   try {
-    const registration = await navigator.serviceWorker.register('/sw.js');
+    const registration = await navigator.serviceWorker.register('./sw.js');
     const result = await Notification.requestPermission();
     updateNotifButtonVisibility();
     if (result !== 'granted') {
@@ -3919,7 +3919,7 @@ pluginManager.refreshActivePlugins();
     <div class="modal-header">
   <strong>💬 Admin Chat</strong>
   <div style="display:flex; align-items:center; gap:8px;">
-    <button id="admin-chat-enable-notif-btn" class="btn" style="padding:6px 10px; font-size:0.8rem; display:none;">don't click, broken</button>
+    <button id="admin-chat-enable-notif-btn" class="btn" style="padding:6px 10px; font-size:0.8rem; display:none;">🔔 Enable notifications</button>
     <button id="admin-chat-close-icon" style="background:transparent; border:none; font-size:1.3rem; cursor:pointer; color:var(--text);">✕</button>
   </div>
 </div>
