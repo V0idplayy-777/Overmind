@@ -757,7 +757,7 @@
         <div id="summarize-btn" style="background: var(--panel-bg); border-radius: 28px; padding: 4px 12px; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:6px;">
           📝 <span>Summarize Chat</span>
         </div>
-        <div style="color:var(--muted);">v1.16.1</div>
+        <div style="color:var(--muted);">v1.16.2</div>
         <div id="menu-btn" style="cursor:pointer; font-size:1.3rem; user-select:none;">☰</div>
       </div>
     </div>
@@ -3549,7 +3549,7 @@ async function openAdminPanel() {
   } else {
     users.forEach(user => {
       const row = document.createElement('div');
-      row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--panel-bg);border-radius:10px;gap:8px;flex-wrap:wrap;';
+row.style.cssText = `display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--panel-bg);border-radius:10px;gap:8px;flex-wrap:wrap; ${user.is_admin ? 'border: 2px solid #facc15; box-shadow: 0 0 10px rgba(250, 204, 21, 0.4);' : ''}`;
       row.innerHTML = `
         <div>
           <strong>${user.username}</strong>
