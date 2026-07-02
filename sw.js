@@ -3,8 +3,8 @@ self.addEventListener('push', event => {
   event.waitUntil(
     self.registration.showNotification(data.title || 'Admin Chat', {
       body: data.body || '',
-      icon: '/favicon.ico',
-      data: { url: data.url || '/' }
+      icon: './favicon.ico',
+      data: { url: data.url || './' }
     })
   );
 });
@@ -16,7 +16,7 @@ self.addEventListener('notificationclick', event => {
       for (const client of windowClients) {
         if ('focus' in client) return client.focus();
       }
-      if (clients.openWindow) return clients.openWindow(event.notification.data.url || '/');
+      if (clients.openWindow) return clients.openWindow(event.notification.data.url || './');
     })
   );
 });
