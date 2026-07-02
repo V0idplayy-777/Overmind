@@ -469,6 +469,18 @@
       height: 14px;
       display: block;
     }
+
+    .notif-badge {
+  background: #dc2626;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+  margin-left: 4px;
+  line-height: 1.4;
+}
+
     .command-item {
       padding: 12px 14px;
       border-radius: 10px;
@@ -732,6 +744,7 @@
       <div style="display:flex; gap:10px; align-items:center;">
         <div id="admin-btn" style="display:none; background: var(--panel-bg); border-radius: 28px; padding: 4px 12px; font-size:0.85rem; cursor:pointer; align-items:center; gap:6px;">
   🛡️ <span>Admin</span>
+  <span id="admin-chat-badge" class="notif-badge" style="display:none;"></span>
 </div>
         <div class="updates-btn" id="open-updates-btn" style="background: var(--panel-bg); border-radius: 28px; padding: 4px 12px; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:6px; margin-right:4px;">
           📋 <span>Update log</span>
@@ -744,7 +757,7 @@
         <div id="summarize-btn" style="background: var(--panel-bg); border-radius: 28px; padding: 4px 12px; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:6px;">
           📝 <span>Summarize Chat</span>
         </div>
-        <div style="color:var(--muted);">v1.15.1</div>
+        <div style="color:var(--muted);">v1.16.0</div>
         <div id="menu-btn" style="cursor:pointer; font-size:1.3rem; user-select:none;">☰</div>
       </div>
     </div>
@@ -1020,6 +1033,17 @@ const CEREBRAS_API_KEY = 'csk-r25mcjper4yncxt4jrm2h5fktmwhj5d53tnr9hkd8xwxx5j2';
 const COMPRESSION_API_KEY = 'csk-r5jcn4y36yw4w6y44dmcf6tktfy966ffw5tmkvepxkn6myrm';
 const API_URL = 'https://api.cerebras.ai/v1/chat/completions';
 const CF_IMAGE_URL = 'https://overmind-image-proxy.nburfootfowke.workers.dev/';
+
+const VAPID_PUBLIC_KEY = 'BHUUxaIddNepnGfJ8YKk9I_RVQ-T01oVY9J3jnToYi2_ctwIncj9gcrFqRXyvgrRK3lquodw3-NlPRYi7pf57W8';
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; i++) outputArray[i] = rawData.charCodeAt(i);
+  return outputArray;
+}
 
 const COMPRESSION_THRESHOLD = 6500;
 const MAX_RECENT_MESSAGES = 12;
@@ -2991,7 +3015,8 @@ window.onload = async () => {
   userInput.focus();
 
   document.getElementById('admin-chat-close-icon').onclick = closeAdminChat;
-  document.getElementById('admin-chat-send-btn').onclick = sendAdminChatMessage;
+document.getElementById('admin-chat-send-btn').onclick = sendAdminChatMessage;
+document.getElementById('admin-chat-enable-notif-btn').onclick = enableAdminChatNotifications;
   document.getElementById('admin-chat-input').addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -3168,11 +3193,94 @@ let currentUser = null;
 
 let adminChatChannel = null;
 
+let unreadAdminMessages = 0;
+
+function updateAdminChatBadge() {
+  const badge = document.getElementById('admin-chat-badge');
+  if (!badge) return;
+  if (unreadAdminMessages > 0) {
+    badge.textContent = unreadAdminMessages > 9 ? '9+' : unreadAdminMessages;
+    badge.style.display = 'inline-block';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function requestNotificationPermission() {
+  updateNotifButtonVisibility();
+}
+
+function updateNotifButtonVisibility() {
+  const btn = document.getElementById('admin-chat-enable-notif-btn');
+  if (!btn) return;
+  if ('Notification' in window && Notification.permission === 'default') {
+    btn.style.display = 'inline-block';
+  } else {
+    btn.style.display = 'none';
+  }
+}
+
+async function enableAdminChatNotifications() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    alert('Push notifications are not supported in this browser.');
+    return;
+  }
+  try {
+    const registration = await navigator.serviceWorker.register('/sw.js');
+    const result = await Notification.requestPermission();
+    updateNotifButtonVisibility();
+    if (result !== 'granted') {
+      if (result === 'denied') alert('Notifications blocked. Enable them in your browser\'s site settings to receive alerts.');
+      return;
+    }
+    const subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+    });
+    const subJson = subscription.toJSON();
+    await supabaseClient.from('push_subscriptions').upsert({
+      username: currentUser.username,
+      endpoint: subJson.endpoint,
+      p256dh: subJson.keys.p256dh,
+      auth: subJson.keys.auth
+    }, { onConflict: 'endpoint' });
+    new Notification('Notifications enabled', { body: "You'll now get admin chat alerts, even when Overmind is closed." });
+  } catch (err) {
+    console.error(err);
+    alert('Failed to enable notifications: ' + err.message);
+  }
+}
+
+function sendBrowserNotification(msg) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const notif = new Notification(`Admin Chat: ${msg.username}`, {
+    body: msg.message,
+    icon: './favicon.ico'
+  });
+  notif.onclick = () => {
+    window.focus();
+    openAdminChat();
+    notif.close();
+  };
+}
+
+function handleIncomingAdminMessage(msg) {
+  if (msg.username === currentUser?.username) return;
+  const modalOpen = document.getElementById('admin-chat-modal').classList.contains('open');
+  const pageVisible = document.visibilityState === 'visible';
+  if (!modalOpen || !pageVisible) {
+    unreadAdminMessages++;
+    updateAdminChatBadge();
+  }
+}
 function openAdminChat() {
   if (!currentUser?.isAdmin) return;
   document.getElementById('admin-chat-modal').classList.add('open');
   loadAdminChatMessages();
   subscribeAdminChat();
+  unreadAdminMessages = 0;
+  updateAdminChatBadge();
+  updateNotifButtonVisibility();
   setTimeout(() => document.getElementById('admin-chat-input')?.focus(), 0);
 }
 
@@ -3225,8 +3333,9 @@ function subscribeAdminChat() {
   adminChatChannel = supabaseClient
     .channel('admin-chat')
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'admin_chat_messages' }, payload => {
-      appendAdminChatMessage(payload.new);
-    })
+  appendAdminChatMessage(payload.new);
+  handleIncomingAdminMessage(payload.new);
+})
     .subscribe();
 }
 
@@ -3404,6 +3513,8 @@ function updateAdminUI() {
   const btn = document.getElementById('admin-btn');
   if (currentUser?.isAdmin) {
     btn.style.display = 'flex';
+    requestNotificationPermission();
+    subscribeAdminChat();
   } else {
     btn.style.display = 'none';
   }
@@ -3806,9 +3917,12 @@ pluginManager.refreshActivePlugins();
 <div class="modal-backdrop" id="admin-chat-modal">
   <div class="modal" style="max-width:520px; height:70vh;">
     <div class="modal-header">
-      <strong>💬 Admin Chat</strong>
-      <button id="admin-chat-close-icon" style="background:transparent; border:none; font-size:1.3rem; cursor:pointer; color:var(--text);">✕</button>
-    </div>
+  <strong>💬 Admin Chat</strong>
+  <div style="display:flex; align-items:center; gap:8px;">
+    <button id="admin-chat-enable-notif-btn" class="btn" style="padding:6px 10px; font-size:0.8rem; display:none;">🔔 Enable notifications</button>
+    <button id="admin-chat-close-icon" style="background:transparent; border:none; font-size:1.3rem; cursor:pointer; color:var(--text);">✕</button>
+  </div>
+</div>
     <div class="modal-body" style="flex:1; display:flex; flex-direction:column; overflow:hidden;">
       <div id="admin-chat-messages" style="flex:1; overflow-y:auto; padding:16px 18px; display:flex; flex-direction:column; gap:10px;"></div>
       <div style="padding:12px 18px; border-top:1px solid var(--border); display:flex; gap:8px;">
