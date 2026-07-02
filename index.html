@@ -3541,15 +3541,24 @@ async function openAdminPanel() {
     .select('*')
     .order('created_at', { ascending: false });
 
-  const list = document.getElementById('admin-users-list');
-  list.innerHTML = '';
+    const list = document.getElementById('admin-users-list');
+  list.innerHTML = `
+    <input type="text" id="admin-user-search" placeholder="Search users..." style="width:100%;padding:10px 14px;margin-bottom:12px;border-radius:8px;border:1px solid var(--border);background:var(--panel-bg);color:var(--text);">
+    <div id="admin-users-container" style="display:flex;flex-direction:column;gap:8px;"></div>
+  `;
 
-  if (!users) {
-    list.innerHTML = '<div style="color:var(--muted);">Failed to load users.</div>';
-  } else {
-    users.forEach(user => {
+  const searchInput = document.getElementById('admin-user-search');
+  const usersContainer = document.getElementById('admin-users-container');
+
+  function renderUsers(filteredUsers) {
+    usersContainer.innerHTML = '';
+    if (!filteredUsers || filteredUsers.length === 0) {
+      usersContainer.innerHTML = '<div style="color:var(--muted);padding:12px;text-align:center;">No users found.</div>';
+      return;
+    }
+    filteredUsers.forEach(user => {
       const row = document.createElement('div');
-row.style.cssText = `display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--panel-bg);border-radius:10px;gap:8px;flex-wrap:wrap; ${user.is_admin ? 'border: 2px solid #facc15; box-shadow: 0 0 10px rgba(250, 204, 21, 0.4);' : ''}`;
+      row.style.cssText = `display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--panel-bg);border-radius:10px;gap:8px;flex-wrap:wrap; ${user.is_admin ? 'border: 2px solid #facc15; box-shadow: 0 0 10px rgba(250, 204, 21, 0.4);' : ''}`;
       row.innerHTML = `
         <div>
           <strong>${user.username}</strong>
@@ -3558,7 +3567,7 @@ row.style.cssText = `display:flex;justify-content:space-between;align-items:cent
           <div style="font-size:0.8rem;color:var(--muted);">Joined: ${new Date(user.created_at).toLocaleDateString()}</div>
           <div style="font-size:0.8rem;color:var(--muted);">Msg limit: ${user.message_limit ?? 'Default ('+DAILY_MESSAGE_LIMIT+')'}</div>
         </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                        <div style="display:flex;gap:6px;flex-wrap:wrap;">
           ${!user.is_admin ? `
             <button class="btn" style="padding:6px 10px;font-size:0.8rem;" onclick="toggleBanUser('${user.username}', ${user.is_banned})">
               ${user.is_banned ? 'Unban' : 'Ban'}
@@ -3575,15 +3584,27 @@ row.style.cssText = `display:flex;justify-content:space-between;align-items:cent
             Set Limit
           </button>
           ${user.username !== currentUser.username ? `
+            ${user.username === 'V0idplayy' ? 
+              `<button class="btn" style="padding:6px 10px;font-size:0.8rem;background:#4b5563;color:#9ca3af;cursor:not-allowed;" disabled>Login As</button>` : 
+              `<button class="btn" style="padding:6px 10px;font-size:0.8rem;background:#eab308;color:#000;" onclick="impersonateUser('${user.username}')">Login As</button>`
+            }
             <button class="btn danger" style="padding:6px 10px;font-size:0.8rem;" onclick="deleteUser('${user.username}')">
               Delete
             </button>
           ` : ''}
         </div>
       `;
-      list.appendChild(row);
+      usersContainer.appendChild(row);
     });
   }
+
+  renderUsers(users);
+
+  searchInput.addEventListener('input', () => {
+    const term = searchInput.value.toLowerCase().trim();
+    const filtered = users.filter(u => u.username.toLowerCase().includes(term));
+    renderUsers(filtered);
+  });
 
   const annSection = document.getElementById('admin-announcements');
   if (annSection) {
@@ -3846,6 +3867,33 @@ function saveUpdateLogAndRefresh() {
   saveUpdateLogToSupabase(updateLog);
   renderUpdateLog();
   alert('Update log saved to Supabase!');
+}
+
+async function impersonateUser(username) {
+  if (!confirm(`Login as ${username}? You will be logged out of your current session.`)) return;
+  
+  const { data, error } = await supabaseClient
+    .from('users')
+    .select('username, is_admin, is_banned, message_limit, shrek_mode')
+    .eq('username', username)
+    .single();
+
+  if (error || !data) {
+    alert('Failed to impersonate user.');
+    return;
+  }
+
+  currentUser = {
+    username: data.username,
+    isAdmin: data.is_admin,
+    isBanned: data.is_banned,
+    messageLimit: data.message_limit,
+    shrekMode: data.shrek_mode
+  };
+  
+  localStorage.setItem('overmind_user', JSON.stringify(currentUser));
+  alert(`Impersonating ${username}. Refreshing...`);
+  window.location.reload();
 }
 
 applySettings();
