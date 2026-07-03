@@ -3307,13 +3307,100 @@ function appendAdminChatMessage(msg) {
   const isMine = msg.username === currentUser?.username;
   const wrapper = document.createElement('div');
   wrapper.style.cssText = `align-self:${isMine ? 'flex-end' : 'flex-start'}; max-width:80%;`;
+  wrapper.dataset.id = msg.id;
+
   const time = new Date(msg.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-  wrapper.innerHTML = `
-    <div style="font-size:0.75rem; color:var(--muted); margin-bottom:2px; ${isMine ? 'text-align:right;' : ''}">${escapeHTML(msg.username)} · ${time}</div>
-    <div style="background:${isMine ? 'var(--accent)' : 'var(--panel-bg)'}; color:${isMine ? '#000' : 'var(--text)'}; padding:10px 14px; border-radius:12px; line-height:1.4;">${escapeHTML(msg.message)}</div>
-  `;
+
+  const meta = document.createElement('div');
+  meta.style.cssText = `font-size:0.75rem; color:var(--muted); margin-bottom:2px; display:flex; align-items:center; gap:6px; ${isMine ? 'justify-content:flex-end;' : ''}`;
+  meta.innerHTML = `<span>${escapeHTML(msg.username)} · ${time}</span>`;
+
+  if (isMine) {
+    const actions = document.createElement('span');
+    actions.style.cssText = 'display:flex; gap:2px;';
+
+    const editBtn = document.createElement('button');
+    editBtn.className = 'action-btn';
+    editBtn.title = 'Edit';
+    editBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"><path d="M15.353 2.938L13.06.646a1.5 1.5 0 0 0-2.122 0L1 10.586v4.359h4.413l9.937-9.882a1.5 1.5 0 0 0 .003-2.125m-4.439.562L12 2.414l1.584 1.584l-1.089 1.083zM9.5 4.914l1.577 1.577l-6.49 6.454H3v-1.53l6.5-6.5Z"/></svg>`;
+    editBtn.onclick = () => startEditAdminChatMessage(msg);
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'action-btn';
+    delBtn.title = 'Delete';
+    delBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M9 3a1 1 0 0 0-1 1v1H4.5a1 1 0 0 0 0 2H5v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7h.5a1 1 0 1 0 0-2H16V4a1 1 0 0 0-1-1zm1 2V4h4v1zM7 7h10v12H7zm3 2a1 1 0 0 0-1 1v6a1 1 0 1 0 2 0v-6a1 1 0 0 0-1-1m4 0a1 1 0 0 0-1 1v6a1 1 0 1 0 2 0v-6a1 1 0 0 0-1-1"/></svg>`;
+    delBtn.onclick = () => deleteAdminChatMessage(msg.id);
+
+    actions.appendChild(editBtn);
+    actions.appendChild(delBtn);
+    meta.appendChild(actions);
+  }
+
+  const bubble = document.createElement('div');
+  bubble.className = 'admin-chat-bubble';
+  bubble.style.cssText = `background:${isMine ? 'var(--accent)' : 'var(--panel-bg)'}; color:${isMine ? '#000' : 'var(--text)'}; padding:10px 14px; border-radius:12px; line-height:1.4;`;
+  bubble.textContent = msg.message;
+
+  wrapper.appendChild(meta);
+  wrapper.appendChild(bubble);
   container.appendChild(wrapper);
   container.scrollTop = container.scrollHeight;
+}
+
+function startEditAdminChatMessage(msg) {
+  const wrapper = document.querySelector(`#admin-chat-messages [data-id="${msg.id}"]`);
+  if (!wrapper) return;
+  const bubble = wrapper.querySelector('.admin-chat-bubble');
+  if (!bubble) return;
+
+  const editArea = document.createElement('textarea');
+  editArea.className = 'text-input';
+  editArea.value = msg.message;
+  editArea.style.cssText = 'width:100%; min-height:60px; resize:vertical;';
+
+  const controls = document.createElement('div');
+  controls.style.cssText = 'display:flex; gap:6px; justify-content:flex-end; margin-top:6px;';
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'btn';
+  cancelBtn.style.cssText = 'padding:4px 10px; font-size:0.8rem;';
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.onclick = () => wrapper.replaceChild(bubble, editWrapper);
+
+  const saveBtn = document.createElement('button');
+  saveBtn.className = 'btn primary';
+  saveBtn.style.cssText = 'padding:4px 10px; font-size:0.8rem;';
+  saveBtn.textContent = 'Save';
+  saveBtn.onclick = () => saveEditedAdminChatMessage(msg.id, editArea.value.trim());
+
+  controls.appendChild(cancelBtn);
+  controls.appendChild(saveBtn);
+
+  const editWrapper = document.createElement('div');
+  editWrapper.appendChild(editArea);
+  editWrapper.appendChild(controls);
+
+  wrapper.replaceChild(editWrapper, bubble);
+  editArea.focus();
+}
+
+async function saveEditedAdminChatMessage(id, newText) {
+  if (!newText) return;
+  const { error } = await supabaseClient
+    .from('admin_chat_messages')
+    .update({ message: newText })
+    .eq('id', id);
+  if (error) { alert('Failed to update message: ' + error.message); return; }
+  loadAdminChatMessages();
+}
+
+async function deleteAdminChatMessage(id) {
+  const { error } = await supabaseClient
+    .from('admin_chat_messages')
+    .delete()
+    .eq('id', id);
+  if (error) { alert('Failed to delete message: ' + error.message); return; }
+  loadAdminChatMessages();
 }
 
 async function sendAdminChatMessage() {
@@ -3322,6 +3409,26 @@ async function sendAdminChatMessage() {
   const text = input.value.trim();
   if (!text) return;
   input.value = '';
+
+  const { count } = await supabaseClient
+    .from('admin_chat_messages')
+    .select('*', { count: 'exact', head: true });
+
+  if (count >= 100) {
+    const { data: oldest } = await supabaseClient
+      .from('admin_chat_messages')
+      .select('id')
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .single();
+    if (oldest) {
+      await supabaseClient
+        .from('admin_chat_messages')
+        .delete()
+        .eq('id', oldest.id);
+    }
+  }
+
   const { error } = await supabaseClient
     .from('admin_chat_messages')
     .insert({ username: currentUser.username, message: text });
