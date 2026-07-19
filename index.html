@@ -1,3 +1,5 @@
+WARNING: DO NOT REPLACE!!!!! HAS ACHIEVEMENTS!!!
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -757,6 +759,10 @@
         <div id="summarize-btn" style="background: var(--panel-bg); border-radius: 28px; padding: 4px 12px; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:6px;">
           📝 <span>Summarize Chat</span>
         </div>
+
+                <div id="achievements-btn" style="background: var(--panel-bg); border-radius: 28px; padding: 4px 12px; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:6px;">
+          🏆 <span>Achievements</span>
+        </div>
         <div style="color:var(--muted);">v1.18.0</div>
         <div id="menu-btn" style="cursor:pointer; font-size:1.3rem; user-select:none;">☰</div>
       </div>
@@ -960,6 +966,16 @@
       <div class="modal-footer">
         <button class="btn primary" id="updates-close-footer">Got it</button>
       </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="achievements-modal">
+    <div class="modal" style="max-width:520px;">
+      <div class="modal-header">
+        <strong>🏆 Achievements</strong>
+        <button class="close-modal-btn" id="achievements-close" style="background:transparent;border:none;font-size:1.3rem;cursor:pointer;color:var(--text);">✕</button>
+      </div>
+      <div class="modal-body" id="achievements-list" style="padding:16px 18px;max-height:65vh;overflow-y:auto;display:flex;flex-direction:column;gap:12px;"></div>
     </div>
   </div>
 
@@ -1281,6 +1297,8 @@ const MAX_RECENT_MESSAGES = 12;
 const SUMMARY_MAX_TOKENS = 50000;
 
 const DEFAULT_SETTINGS = {
+  totalMessagesSent: 0,
+  totalImagesGenerated: 0,
   theme: 'dark',
   font: 'system',
   accentColor: '#22c55e',
@@ -1296,6 +1314,32 @@ const DEFAULT_SETTINGS = {
   antiHallucination: 'moderate',
   model: 'aero'
 };
+
+const ACHIEVEMENTS = [
+  { id: "first_message", name: "Send First Message", desc: "Send your first message", icon: "📨" },
+  { id: "fifty_messages", name: "Send 50 Messages", desc: "Send 50 messages total", icon: "💬" },
+  { id: "twentyfive_images", name: "Generate 25 Images", desc: "Generate 25 images", icon: "🖼️" },
+  { id: "become_admin", name: "Become An Admin", desc: "Become an administrator", icon: "🛡️" },
+  { id: "secret_pigeon", name: "???", desc: "???", icon: "❓", secret: true }
+];
+
+function loadAchievements() {
+  if (!currentUser) return [];
+  return safeLocalStorageGet(`achievements_${currentUser.username}`, []);
+}
+
+function saveAchievements(unlocked) {
+  if (!currentUser) return;
+  safeLocalStorageSet(`achievements_${currentUser.username}`, unlocked);
+}
+
+function showToast(message, icon = "🏆") {
+  const toast = document.createElement("div");
+  toast.style.cssText = `position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--accent);color:#000;padding:14px 24px;border-radius:9999px;font-weight:600;display:flex;align-items:center;gap:10px;box-shadow:0 10px 30px rgba(0,0,0,0.4);z-index:1000;animation:toastPop 0.3s;`;
+  toast.innerHTML = `${icon} ${message}`;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 5000);
+}
 
 const MODELS = {
   aero: {
@@ -1377,6 +1421,13 @@ function incrementDailyCount() {
   data.count = (data.count || 0) + 1;
   safeLocalStorageSet(DAILY_MESSAGES_KEY, data);
   return data.count;
+}
+
+function incrementTotalMessages() {
+  if (!currentUser) return;
+  settings.totalMessagesSent = (settings.totalMessagesSent || 0) + 1;
+  saveSettings();
+  checkAchievements();
 }
 
 function updateMessageLimitUI() {
@@ -1542,6 +1593,77 @@ async function renderUpdateLog() {
       </ul>
     `;
     container.appendChild(entry);
+  });
+}
+
+function checkAchievements() {
+  if (!currentUser) return;
+  let unlocked = loadAchievements();
+  let changed = false;
+
+  const firstMsg = unlocked.includes("first_message");
+  const fiftyMsg = unlocked.includes("fifty_messages");
+  const twentyFiveImg = unlocked.includes("twentyfive_images");
+  const adminAch = unlocked.includes("become_admin");
+  const pigeonAch = unlocked.includes("secret_pigeon");
+
+  if (!firstMsg && settings.totalMessagesSent >= 1) {
+    unlocked.push("first_message");
+    changed = true;
+    showToast("Achievement Unlocked: Send First Message", "📨");
+  }
+  if (!fiftyMsg && settings.totalMessagesSent >= 50) {
+    unlocked.push("fifty_messages");
+    changed = true;
+    showToast("Achievement Unlocked: Send 50 Messages", "💬");
+  }
+  if (!twentyFiveImg && settings.totalImagesGenerated >= 25) {
+    unlocked.push("twentyfive_images");
+    changed = true;
+    showToast("Achievement Unlocked: Generate 25 Images", "🖼️");
+  }
+  if (!adminAch && currentUser.isAdmin) {
+    unlocked.push("become_admin");
+    changed = true;
+    showToast("Achievement Unlocked: Become An Admin", "🛡️");
+  }
+
+  if (!pigeonAch) {
+    const emptyChats = chats.filter(c => c.messages.length === 0).length;
+    const chickenChat = chats.find(c => c.messages.some(m => m.content === "mmm... chicken"));
+    if (emptyChats >= 24 && chickenChat) {
+      unlocked.push("secret_pigeon");
+      changed = true;
+      showToast("Achievement Unlocked: I like pigeons", "🕊️");
+    }
+  }
+
+  if (changed) saveAchievements(unlocked);
+  return unlocked;
+}
+
+function renderAchievements() {
+  const container = document.getElementById("achievements-list");
+  if (!container) return;
+  container.innerHTML = "";
+  const unlocked = loadAchievements();
+  checkAchievements();
+
+  ACHIEVEMENTS.forEach(ach => {
+    const isUnlocked = unlocked.includes(ach.id);
+    const el = document.createElement("div");
+    el.style.cssText = `padding:16px;border-radius:12px;background:var(--panel-bg);border:2px solid ${isUnlocked ? "var(--accent)" : "var(--border)"};opacity:${isUnlocked ? "1" : "0.6"};`;
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="font-size:2rem;">${ach.icon}</div>
+        <div style="flex:1;">
+          <strong>${isUnlocked && ach.secret ? "I like pigeons" : ach.name}</strong>
+          <div style="font-size:0.9rem;color:var(--muted);">${ach.desc}</div>
+        </div>
+        <div style="color:var(--accent);font-weight:700;">${isUnlocked ? "✓" : "🔒"}</div>
+      </div>
+    `;
+    container.appendChild(el);
   });
 }
 
@@ -2059,6 +2181,9 @@ async function handleImageGeneration(prompt) {
   showTyping();
   try {
     const dataUri = await generateImageCF(prompt);
+    settings.totalImagesGenerated = (settings.totalImagesGenerated || 0) + 1;
+    saveSettings();
+    checkAchievements();
     removeTyping();
     chat.messages.push({ role: 'assistant', type: 'image', content: dataUri, prompt });
     saveChats();
@@ -3103,6 +3228,7 @@ function handleSend() {
     }
     const prompt = text.replace(/^\/imagea!(ine)?\s+/i, '');
     incrementDailyCount();
+    incrementTotalMessages();
     updateMessageLimitUI();
     addMessage(text, true);
     userInput.value = '';
@@ -3123,6 +3249,7 @@ function handleSend() {
   }
 
   incrementDailyCount();
+  incrementTotalMessages();
   updateMessageLimitUI();
 
   addMessage(text, true);
@@ -3282,6 +3409,13 @@ clearChatsBtn.onclick = clearAllChats;
 menuBtn.onclick = () => sidebar.classList.toggle('open');
 openUpdatesBtn.onclick = () => { renderUpdateLog(); updatesModal.classList.add('open'); };
 summarizeBtn.onclick = summarizeChat;
+document.getElementById("achievements-btn").onclick = () => {
+  renderAchievements();
+  document.getElementById("achievements-modal").classList.add("open");
+};
+document.getElementById("achievements-close").onclick = () => {
+  document.getElementById("achievements-modal").classList.remove("open");
+};
 artifactClose.onclick = () => { artifactPanel.classList.remove("open"); };
 artifactPreviewBtn.onclick = () => { renderArtifactPreview(); };
 artifactCodeBtn.onclick = () => { renderArtifactCode(); };
