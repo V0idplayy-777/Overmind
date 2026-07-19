@@ -757,7 +757,7 @@
         <div id="summarize-btn" style="background: var(--panel-bg); border-radius: 28px; padding: 4px 12px; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:6px;">
           📝 <span>Summarize Chat</span>
         </div>
-        <div style="color:var(--muted);">v1.17.0</div>
+        <div style="color:var(--muted);">v1.18.0</div>
         <div id="menu-btn" style="cursor:pointer; font-size:1.3rem; user-select:none;">☰</div>
       </div>
     </div>
@@ -1038,7 +1038,7 @@ function showAdminPage(page) {
   prevBtn.onclick = page === 1 ? null : () => showAdminPage(1);
   nextBtn.onclick = page === 2 ? null : () => showAdminPage(2);
 
-  if (page === 2) loadPollAdmin();
+  if (page === 2) { loadPollAdmin(); loadPopupsAdmin(); renderPopupButtonsEditor(); }
 }
 
 async function getPollData() {
@@ -1081,6 +1081,99 @@ async function resetPoll() {
   poll.version = (poll.version || 1) + 1;
   await savePollData(poll);
   loadPollAdmin();
+}
+
+let popupButtonsDraft = [];
+
+function renderPopupButtonsEditor() {
+  const container = document.getElementById('popup-buttons-editor');
+  if (!container) return;
+  container.innerHTML = '';
+  popupButtonsDraft.forEach((btn, i) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'background:var(--panel-bg);padding:10px;border-radius:8px;display:flex;flex-direction:column;gap:6px;';
+    row.innerHTML = `
+      <div style="display:flex;gap:6px;">
+        <input type="text" class="text-input" placeholder="Button text" value="${escapeHTML(btn.text)}" style="flex:1;" data-field="text" data-i="${i}">
+        <button class="btn danger" style="padding:6px 10px;" data-remove="${i}">🗑</button>
+      </div>
+      <select class="select" data-field="action" data-i="${i}">
+        <option value="close" ${btn.action==='close'?'selected':''}>Close popup</option>
+        <option value="link" ${btn.action==='link'?'selected':''}>Open a link</option>
+        <option value="message" ${btn.action==='message'?'selected':''}>Send message to Overmind (new chat)</option>
+      </select>
+      ${btn.action !== 'close' ? `<input type="text" class="text-input" placeholder="${btn.action==='link' ? 'https://...' : 'Message to send'}" value="${escapeHTML(btn.value||'')}" data-field="value" data-i="${i}">` : ''}
+    `;
+    container.appendChild(row);
+  });
+
+  container.querySelectorAll('[data-field]').forEach(el => {
+    const handler = () => {
+      const i = parseInt(el.dataset.i, 10);
+      popupButtonsDraft[i][el.dataset.field] = el.value;
+      if (el.dataset.field === 'action') renderPopupButtonsEditor();
+    };
+    el.addEventListener('input', handler);
+    el.addEventListener('change', handler);
+  });
+  container.querySelectorAll('[data-remove]').forEach(el => {
+    el.onclick = () => { popupButtonsDraft.splice(parseInt(el.dataset.remove, 10), 1); renderPopupButtonsEditor(); };
+  });
+}
+
+async function loadPopupsAdmin() {
+  const { data } = await supabaseClient.from('popups').select('*').order('created_at', { ascending: false });
+  const container = document.getElementById('popups-admin-list');
+  if (!container) return;
+  container.innerHTML = '';
+  if (!data || !data.length) {
+    container.innerHTML = '<div style="color:var(--muted);font-size:0.9rem;">No popups created yet.</div>';
+    return;
+  }
+  data.forEach(popup => {
+    const el = document.createElement('div');
+    el.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--panel-bg);border-radius:10px;gap:8px;';
+    el.innerHTML = `
+      <div>
+        <strong>${escapeHTML(popup.title)}</strong>
+        <div style="font-size:0.8rem;color:var(--muted);">${escapeHTML(popup.frequency)}</div>
+      </div>
+      <button class="btn danger" style="padding:6px 10px;font-size:0.8rem;" onclick="deletePopupAdmin('${popup.id}')">Delete</button>
+    `;
+    container.appendChild(el);
+  });
+}
+
+async function deletePopupAdmin(id) {
+  if (!confirm('Delete this popup for everyone?')) return;
+  await supabaseClient.from('popups').delete().eq('id', id);
+  loadPopupsAdmin();
+}
+
+function initPopupsAdminUI() {
+  const addBtn = document.getElementById('popup-add-button-btn');
+  const createBtn = document.getElementById('popup-create-btn');
+  if (addBtn) addBtn.onclick = () => {
+    if (popupButtonsDraft.length >= 2) { alert('Max 2 buttons.'); return; }
+    popupButtonsDraft.push({ text: '', action: 'close', value: '' });
+    renderPopupButtonsEditor();
+  };
+  if (createBtn) createBtn.onclick = async () => {
+    const title = document.getElementById('popup-title-input').value.trim();
+    const paragraph = document.getElementById('popup-paragraph-input').value.trim();
+    const frequency = document.getElementById('popup-frequency-select').value;
+    if (!title || !paragraph) { alert('Title and paragraph are required.'); return; }
+    const buttons = popupButtonsDraft.filter(b => b.text.trim());
+    const { error } = await supabaseClient.from('popups').insert({
+      title, paragraph, buttons: JSON.stringify(buttons), frequency
+    });
+    if (error) { alert('Failed to create popup: ' + error.message); return; }
+    document.getElementById('popup-title-input').value = '';
+    document.getElementById('popup-paragraph-input').value = '';
+    popupButtonsDraft = [];
+    renderPopupButtonsEditor();
+    loadPopupsAdmin();
+  };
 }
 
 async function renderUserPoll() {
@@ -3161,6 +3254,7 @@ window.onload = async () => {
   document.getElementById('admin-chat-close-icon').onclick = closeAdminChat;
 document.getElementById('admin-chat-send-btn').onclick = sendAdminChatMessage;
 document.getElementById('admin-chat-enable-notif-btn').onclick = enableAdminChatNotifications;
+initPopupsAdminUI();
   document.getElementById('admin-chat-input').addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -3173,6 +3267,7 @@ document.getElementById('admin-chat-enable-notif-btn').onclick = enableAdminChat
 
   await checkAuth();
   await checkAnnouncements();
+  await checkAndShowPopups();
 };
 
 sendBtn.onclick = handleSend;
@@ -3673,6 +3768,7 @@ currentUser = {
   updateAdminUI();
   updateMessageLimitUI();
   checkAnnouncements();
+  checkAndShowPopups();
 }
 
 function switchToRegister() {
@@ -3747,6 +3843,7 @@ async function checkAuth() {
   updateAdminUI();
   updateMessageLimitUI();
   checkAnnouncements();
+  checkAndShowPopups();
   } else {
     document.getElementById('auth-modal').style.display = 'flex';
   }
@@ -4040,6 +4137,103 @@ async function checkAnnouncements() {
   }
 }
 
+const POPUP_FREQUENCIES = {
+  '5min': 5 * 60 * 1000,
+  '1hour': 60 * 60 * 1000,
+  '1day': 24 * 60 * 60 * 1000
+};
+
+let popupQueue = [];
+
+async function checkAndShowPopups() {
+  if (!currentUser) return;
+  const { data: popups } = await supabaseClient.from('popups').select('*').order('created_at', { ascending: true });
+  if (!popups || !popups.length) return;
+
+  const shownOnce = safeLocalStorageGet('overmind_popups_shown_once', []);
+  const due = [];
+
+  popups.forEach(popup => {
+    if (popup.frequency === 'once') {
+      if (!shownOnce.includes(popup.id)) due.push(popup);
+    } else if (popup.frequency === 'every_open') {
+      due.push(popup);
+    } else {
+      const last = safeLocalStorageGet('overmind_popup_last_' + popup.id, 0);
+      const interval = POPUP_FREQUENCIES[popup.frequency] || 0;
+      if (Date.now() - last >= interval) due.push(popup);
+    }
+  });
+
+  if (!due.length) return;
+  popupQueue = due;
+  showNextPopup();
+}
+
+function showNextPopup() {
+  const popup = popupQueue.shift();
+  if (!popup) return;
+  markPopupShown(popup);
+  showPopupModal(popup);
+}
+
+function markPopupShown(popup) {
+  if (popup.frequency === 'once') {
+    const shownOnce = safeLocalStorageGet('overmind_popups_shown_once', []);
+    shownOnce.push(popup.id);
+    safeLocalStorageSet('overmind_popups_shown_once', shownOnce);
+  } else if (popup.frequency !== 'every_open') {
+    safeLocalStorageSet('overmind_popup_last_' + popup.id, Date.now());
+  }
+}
+
+function showPopupModal(popup) {
+  let buttons = [];
+  try { buttons = typeof popup.buttons === 'string' ? JSON.parse(popup.buttons) : (popup.buttons || []); } catch (e) { buttons = []; }
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-backdrop open';
+  overlay.style.zIndex = '300';
+
+  const buttonsHTML = buttons.length
+    ? buttons.map((b, i) => `<button class="btn ${i===0?'primary':''}" data-popup-btn="${i}">${escapeHTML(b.text)}</button>`).join('')
+    : `<button class="btn primary" data-popup-btn="close">OK</button>`;
+
+  overlay.innerHTML = `
+    <div class="modal" style="width:min(92vw,440px);">
+      <div class="modal-header"><strong>${escapeHTML(popup.title)}</strong></div>
+      <div class="modal-body" style="padding:20px;">
+        <p style="line-height:1.5;">${escapeHTML(popup.paragraph).replace(/\n/g, '<br>')}</p>
+      </div>
+      <div class="modal-footer">${buttonsHTML}</div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  overlay.querySelectorAll('[data-popup-btn]').forEach(btnEl => {
+    btnEl.onclick = () => {
+      const idx = btnEl.dataset.popupBtn;
+      const btnData = idx === 'close' ? { action: 'close' } : buttons[idx];
+      handlePopupButtonAction(btnData);
+      overlay.remove();
+      showNextPopup();
+    };
+  });
+}
+
+function handlePopupButtonAction(btn) {
+  if (!btn) return;
+  if (btn.action === 'link' && btn.value) {
+    window.open(btn.value, '_blank');
+  } else if (btn.action === 'message' && btn.value) {
+    createNewChat().then(() => {
+      userInput.value = btn.value;
+      handleSend();
+    });
+  }
+}
+
 function dismissAnnouncement(id) {
   const dismissed = JSON.parse(localStorage.getItem('dismissed_announcements') || '[]');
   dismissed.push(id);
@@ -4227,6 +4421,35 @@ pluginManager.refreshActivePlugins();
             <button class="btn danger" onclick="resetPoll()">Reset Poll</button>
           </div>
         </div>
+
+    <hr style="border-color:var(--border);">
+
+<div>
+  <div class="field-label" style="font-size:1rem;font-weight:600;color:var(--text);margin-bottom:10px;">🪧 Popups</div>
+
+  <label class="field-label" for="popup-title-input">Title</label>
+  <input type="text" id="popup-title-input" class="text-input" style="margin-bottom:12px;" placeholder="Popup title">
+
+  <label class="field-label" for="popup-paragraph-input">Paragraph</label>
+  <textarea id="popup-paragraph-input" class="text-input" style="margin-bottom:12px;min-height:70px;resize:vertical;" placeholder="Popup text..."></textarea>
+
+  <div id="popup-buttons-editor" style="display:flex;flex-direction:column;gap:12px;margin-bottom:12px;"></div>
+  <button class="btn" id="popup-add-button-btn" style="margin-bottom:12px;">+ Add Button</button>
+
+  <label class="field-label" for="popup-frequency-select">Show frequency</label>
+  <select class="select" id="popup-frequency-select" style="margin-bottom:12px;">
+    <option value="every_open">Every time the app is opened</option>
+    <option value="5min">Every 5 minutes</option>
+    <option value="1hour">Every hour</option>
+    <option value="1day">Every day</option>
+    <option value="once">Only once</option>
+  </select>
+
+  <button class="btn primary" id="popup-create-btn" style="margin-bottom:16px;">Create Popup</button>
+
+  <div class="field-label" style="margin-bottom:8px;">Active popups</div>
+  <div id="popups-admin-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+</div>
 
       </div>
 
