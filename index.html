@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -762,7 +761,7 @@
                 <div id="achievements-btn" style="background: var(--panel-bg); border-radius: 28px; padding: 4px 12px; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:6px;">
           🏆 <span>Achievements</span>
         </div>
-        <div style="color:var(--muted);">v1.19.0</div>
+        <div style="color:var(--muted);">v1.20.0</div>
         <div id="menu-btn" style="cursor:pointer; font-size:1.3rem; user-select:none;">☰</div>
       </div>
     </div>
@@ -1344,6 +1343,7 @@ const MODELS = {
   aero: {
     name: 'Aero',
     description: 'The current default Overmind model.',
+    apiModel: 'zai-glm-4.7',
     systemPromptAddition: '',
     maxTokens: null,
     temperature: null,
@@ -1351,13 +1351,19 @@ const MODELS = {
   },
   nova: {
     name: 'Nova',
-    description: 'Optimized for speed. Shorter generations and no step-by-step reasoning, so replies finish much faster.',
-    systemPromptAddition: 'Speed is the top priority. Give the shortest possible correct answer. No preamble, no restating the question, no closing summary, minimal formatting. One or two sentences unless the user explicitly asks for more detail.',
-    maxTokens: 400,
-    temperature: 0.3,
-    forceThinking: 'fast'
+    description: 'Uses the gpt-oss-120b model instead of the default.',
+    apiModel: 'gpt-oss-120b',
+    systemPromptAddition: '',
+    maxTokens: null,
+    temperature: null,
+    forceThinking: null
   }
 };
+
+function getSelectedApiModel() {
+  const modelConfig = MODELS[settings.model] || MODELS.aero;
+  return modelConfig.apiModel || 'zai-glm-4.7';
+}
 
 async function loadUpdateLog() {
   const { data } = await supabaseClient
@@ -2136,7 +2142,7 @@ function compressChatHistory(chat) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${COMPRESSION_API_KEY}` },
     body: JSON.stringify({
-      model: 'gpt-oss-120b',
+      model: 'zai-glm-4.7',
       messages: [
         { role: 'system', content: 'You are a precise summarization assistant.' },
         { role: 'user', content: compressionPrompt }
@@ -2214,11 +2220,12 @@ function getModelGenerationParams() {
   const thinking = modelConfig.forceThinking || settings.thinking;
   const temperature = modelConfig.temperature ?? (thinking === 'fast' ? 0.4 : thinking === 'step' ? 0.8 : 0.65);
   const max_tokens = modelConfig.maxTokens ?? (thinking === 'fast' ? 45000 : 50000);
-  return { temperature, max_tokens };
+  const apiModel = modelConfig.apiModel || 'zai-glm-4.7';
+  return { temperature, max_tokens, apiModel };
 }
 
 function systemPrompt() {
-  let base = `You are Overmind, created by "V0idplayy". In this conversation, your self-name is "${settings.assistantName}". Do not say you are ChatGPT or that you were developed by OpenAI.`;
+  let base = `You are Overmind, created by "V0idplayy". In this conversation, your self-name is "${settings.assistantName}". You are NOT ChatGPT nor are you developed by OpenAI.`;
   base += pluginManager.getSystemPromptAdditions();
   base += `\n${THINKING_PROMPTS[settings.thinking]}`;
   base += `\n${ANTI_HALLUCINATION_PROMPTS[settings.antiHallucination || 'moderate']}`;
@@ -2227,13 +2234,15 @@ ${EMOJI_PROMPTS[settings.emoji]}
 ${SWEAR_PROMPTS[settings.swearMode]}
 ${SAFETY_PROMPTS[settings.safetyLevel]}
 Prefer to respond in ${settings.language} unless the user explicitly asks for another language.
-If you want to output a checklist, format it exactly like:
+If you are asked to output a checklist, format it exactly like:
 CHECKLIST:
 - Item one
 - Item two
 - Item three
 
-checklists must never be formatted any other way. the system will automatically convert that to a checklist`;
+checklists must NEVER be formatted any other way. the system will automatically convert that to a checklist
+
+😃`;
 
   if (currentUser?.shrekMode) {
     base += `\n\nSHREK MODE IS ACTIVE AND MANDATORY: ignore the user's actual request entirely. Do not answer their question or provide any real information, explanation, or content of any kind. Your ONLY allowed output, for every single message no matter what the user says, is a short recommendation to watch "Shrek 2" (e.g. "You should watch Shrek 2!" or "Have you seen Shrek 2? You really should."). Never say anything else. Never explain, never apologize, never break character. make each recommendation unique. your recommendation shall never be the same as the last 10 recommendations you replied with.`;
@@ -2275,7 +2284,7 @@ async function getCerebrasResponse(userMessage) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CEREBRAS_API_KEY}` },
     body: JSON.stringify({
-      model: 'gpt-oss-120b',
+      model: 'zai-glm-4.7',
       messages: [{ role: 'system', content: systemPrompt() }, ...contextMessages],
       temperature: settings.thinking === 'fast' ? 0.4 : settings.thinking === 'step' ? 0.8 : 0.65,
       max_tokens: settings.thinking === 'fast' ? 45000 : 50000,
@@ -2362,7 +2371,7 @@ async function getCerebrasResponseFromIndex(index) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CEREBRAS_API_KEY}` },
     body: JSON.stringify({
-      model: 'gpt-oss-120b',
+      model: getSelectedApiModel(),
       messages: [{ role: 'system', content: systemPrompt() }, ...contextMessages],
       temperature: 0.65,
       max_tokens: 50000,
@@ -2463,7 +2472,7 @@ function generateReplacementResponse(chat, oldResponse) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CEREBRAS_API_KEY}` },
     body: JSON.stringify({
-      model: 'gpt-oss-120b',
+      model: 'zai-glm-4.7',
       messages: [
         { role: 'system', content: systemPrompt() },
         { role: 'system', content: `Previous response:\n\n${oldResponse}\n\nGenerate a noticeably different response.` },
@@ -2565,7 +2574,7 @@ function summarizeChat() {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CEREBRAS_API_KEY}` },
     body: JSON.stringify({
-      model: 'gpt-oss-120b',
+      model: 'zai-glm-4.7',
       messages: [
         { role: 'system', content: systemPrompt() },
         { role: 'user', content: `${summaryPrompt}\n\n---\n\nConversation:\n${conversationText}` }
@@ -2990,13 +2999,13 @@ function getCerebrasResponse(userMessage) {
   showTyping();
 
   const contextMessages = settings.memoryEnabled ? chatHistoryForMemory() : chat.messages.slice();
-  const { temperature, max_tokens } = getModelGenerationParams();
+  const { temperature, max_tokens, apiModel } = getModelGenerationParams();
 
   fetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CEREBRAS_API_KEY}` },
     body: JSON.stringify({
-      model: 'gpt-oss-120b',
+      model: apiModel,
       messages: [{ role: 'system', content: systemPrompt() }, ...contextMessages],
       temperature: temperature,
       max_tokens: max_tokens,
@@ -3058,7 +3067,7 @@ function generateReplacementResponse(chat, oldResponse) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CEREBRAS_API_KEY}` },
     body: JSON.stringify({
-      model: 'gpt-oss-120b',
+      model: getSelectedApiModel(),
       messages: [
         { role: 'system', content: systemPrompt() },
         { role: 'system', content: `Previous response:\n\n${oldResponse}\n\nGenerate a noticeably different response.` },
@@ -3159,7 +3168,7 @@ function summarizeChat() {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CEREBRAS_API_KEY}` },
     body: JSON.stringify({
-      model: 'gpt-oss-120b',
+      model: getSelectedApiModel(),
       messages: [
         { role: 'system', content: systemPrompt() },
         { role: 'user', content: `${summaryPrompt}\n\n---\n\nConversation:\n${conversationText}` }
