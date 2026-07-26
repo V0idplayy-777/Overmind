@@ -267,6 +267,29 @@
     .admin-nav { width: 100%; flex-direction: row; overflow-x: auto; }
     .admin-content { padding: 18px; }
   }
+
+  .konami-toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #27272a;
+  color: white;
+  border: 2px solid #22c55e;
+  padding: 14px 18px;
+  border-radius: 12px;
+  font-weight: 600;
+  box-shadow: 0 10px 25px rgba(0,0,0,.35);
+  opacity: 0;
+  transform: translateY(-20px);
+  transition: opacity .25s ease, transform .25s ease;
+  z-index: 999999;
+  pointer-events: none;
+}
+
+.konami-toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
 </style>
 </head>
 <body>
@@ -647,7 +670,7 @@ function renderUsersList(list) {
     row.innerHTML = `
       <div>
         <strong>${escapeHTML(user.username)}</strong>
-        ${user.is_admin ? '<span class="pill admin">Admin</span>' : ''}
+        ${user.is_admin ? '<span class="pill admin">Admin (btw, master oogway is in ur walls)</span>' : ''}
         ${user.is_banned ? '<span class="pill banned">Banned</span>' : ''}
         <div style="font-size:0.8rem;color:var(--muted);">Joined: ${new Date(user.created_at).toLocaleDateString()}</div>
         <div style="font-size:0.8rem;color:var(--muted);">Msg limit: ${user.message_limit ?? 'Default (' + DAILY_MESSAGE_LIMIT + ')'}</div>
@@ -1145,6 +1168,59 @@ document.getElementById('login-btn').onclick = handleLogin;
 document.getElementById('login-password').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); });
 document.getElementById('login-username').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); });
 document.getElementById('logout-btn').onclick = handleLogout;
+
+const konamiCode = [
+  "ArrowUp",
+  "ArrowUp",
+  "ArrowDown",
+  "ArrowDown",
+  "ArrowLeft",
+  "ArrowRight",
+  "ArrowLeft",
+  "ArrowRight",
+  "b",
+  "a"
+];
+
+let konamiIndex = 0;
+
+function showKonamiToast() {
+  const oldToast = document.querySelector(".konami-toast");
+  if (oldToast) oldToast.remove();
+
+  const toast = document.createElement("div");
+  toast.className = "konami-toast";
+  toast.textContent = "Master Oogway is currently gooning 💀";
+
+  document.body.appendChild(toast);
+
+  requestAnimationFrame(() => {
+    toast.classList.add("show");
+  });
+
+  setTimeout(() => {
+    toast.classList.remove("show");
+
+    setTimeout(() => {
+      toast.remove();
+    }, 250);
+  }, 5000);
+}
+
+document.addEventListener("keydown", (e) => {
+  const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+
+  if (key === konamiCode[konamiIndex]) {
+    konamiIndex++;
+
+    if (konamiIndex === konamiCode.length) {
+      konamiIndex = 0;
+      showKonamiToast();
+    }
+  } else {
+    konamiIndex = key === konamiCode[0] ? 1 : 0;
+  }
+});
 
 window.onload = async () => {
   supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
