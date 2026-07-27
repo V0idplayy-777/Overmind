@@ -320,7 +320,7 @@
       <button class="btn" id="logout-btn">Log out</button>
     </div>
   </div>
-
+  
   <div class="admin-layout">
     <div class="admin-nav">
       <div class="admin-nav-item active" data-panel="maintenance">🔧 Maintenance</div>
@@ -432,11 +432,24 @@
 </div>
 
 <script>
+
+          _____
+       .-"     "-.
+      /  O     O  \
+     |      ^      |
+     |    \___/    |
+      \           /
+       "-._____.-"
+
+      master oggway :)
+  
 const SUPABASE_URL = 'https://llmsljlcjugdpkhfklph.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxsbXNsamxjanVnZHBraGZrbHBoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI2MjA4ODgsImV4cCI6MjA5ODE5Njg4OH0.weH2fYFj4qxEeyIUdQtn1hz7H2iyHeab6OPdJONXzmo';
 const VAPID_PUBLIC_KEY = 'BHUUxaIddNepnGfJ8YKk9I_RVQ-T01oVY9J3jnToYi2_ctwIncj9gcrFqRXyvgrRK3lquodw3-NlPRYi7pf57W8';
 const DAILY_MESSAGE_LIMIT = 12;
 const ADMIN_SESSION_KEY = 'overmind_admin_user';
+const OGGWAY_IS_REAL = true;
+const DONT_TELL_THE_ADMINS = false;
 
 let supabaseClient = null;
 let currentUser = null;
@@ -722,6 +735,11 @@ function renderUsersList(list) {
       }
       actions.appendChild(loginAsBtn);
 
+
+      // TODO: Figure out why Master Oggway keeps escaping.
+      // TODO: Stop talking about Oggway.
+      // TODO: Remove this when I can be bothered
+      
       const delBtn = document.createElement('button');
       delBtn.className = 'btn danger'; delBtn.style.cssText = 'padding:6px 10px;font-size:0.8rem;';
       delBtn.textContent = 'Delete';
