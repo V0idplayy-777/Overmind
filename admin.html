@@ -235,7 +235,6 @@
   }
   .popup-btn-row .row-top { display: flex; gap: 6px; }
 
-  /* Admin chat */
   #chat-messages {
     display: flex; flex-direction: column; gap: 12px; height: 420px; overflow-y: auto;
     background: var(--panel-bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 10px;
@@ -293,6 +292,51 @@
 }
   #greg {
     display: none;
+}
+
+  .easter-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999999;
+}
+
+.easter-modal {
+  width: min(90vw, 340px);
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 26px;
+  text-align: center;
+  box-shadow: 0 25px 60px rgba(0,0,0,.45);
+}
+
+.easter-modal h2 {
+  margin-bottom: 18px;
+  font-size: 1.4rem;
+}
+
+.easter-modal p {
+  color: var(--muted);
+  margin-bottom: 22px;
+}
+
+.easter-modal .emoji {
+  font-size: 3rem;
+  margin-bottom: 24px;
+}
+
+.easter-modal button {
+  padding:10px 18px;
+  border:none;
+  border-radius:10px;
+  cursor:pointer;
+  background:var(--accent);
+  color:#000;
+  font-weight:600;
 }
 </style>
 </head>
@@ -487,6 +531,41 @@ function escapeHTML(text) {
 }
 
 // don't make eye contact with line 472
+
+function showOogwayModal() {
+  const overlay = document.createElement("div");
+  overlay.className = "easter-overlay";
+
+  overlay.innerHTML = `
+    <div class="easter-modal">
+      <h2>Master Oogway can see you!</h2>
+      <p>Wave to the camera!</p>
+      <div class="emoji">👋</div>
+      <button>ok</button>
+    </div>
+  `;
+
+  overlay.querySelector("button").onclick = () => overlay.remove();
+
+  document.body.appendChild(overlay);
+}
+
+function showForgorModal() {
+  const overlay = document.createElement("div");
+  overlay.className = "easter-overlay";
+
+  overlay.innerHTML = `
+    <div class="easter-modal">
+      <div class="emoji">❓</div>
+      <p>i forgor 💀</p>
+      <button>ok</button>
+    </div>
+  `;
+
+  overlay.querySelector("button").onclick = () => overlay.remove();
+
+  document.body.appendChild(overlay);
+}
   
 function showToast(message, icon = "✅") {
   const toast = document.createElement("div");
@@ -1163,8 +1242,11 @@ async function deleteChatMessage(id) {
 async function sendChatMessage() {
   const input = document.getElementById('chat-input');
   const text = input.value.trim();
-  if (!text) return;
-  input.value = '';
+if (!text) return;
+
+const oogwayTrigger = text === ":3";
+
+input.value = '';
 
   const { count } = await supabaseClient.from('admin_chat_messages').select('*', { count: 'exact', head: true });
   if (count >= 100) {
@@ -1175,6 +1257,9 @@ async function sendChatMessage() {
 
   const { error } = await supabaseClient.from('admin_chat_messages').insert({ username: currentUser.username, message: text });
   if (error) alert('Failed to send message: ' + error.message);
+  if (!error && oogwayTrigger) {
+  setTimeout(showOogwayModal, 250);
+}
 }
 
 document.getElementById('chat-send-btn').onclick = sendChatMessage;
