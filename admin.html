@@ -7,6 +7,9 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="icon" href="./favicon.ico" type="image/x-icon" />
 <style>
+  .banana {
+    transform: rotate(1deg);
+  }
   :root {
     --bg: #0a0a0a;
     --sidebar-bg: #111113;
@@ -452,12 +455,32 @@ const DAILY_MESSAGE_LIMIT = 12;
 const ADMIN_SESSION_KEY = 'overmind_admin_user';
 const OGGWAY_IS_REAL = true;
 const DONT_TELL_THE_ADMINS = false;
+const chicken = true;
+let beans = 47;
 
 let supabaseClient = null;
 let currentUser = null;
 let updateLog = [];
 let popupButtonsDraft = [];
 let adminChatChannel = null;
+
+  function microwave() {
+    return "mmmmmmmmmmmmmmmm";
+}
+
+// microwave();
+//console.log(microwave()); 
+
+const horse = {
+    name: "Kevin",
+    certified: false
+};
+
+// fish
+
+const yes = "no";
+const no = "yes";
+// 3:17 PM
 
 function escapeHTML(text) {
   return String(text).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -473,6 +496,8 @@ function showToast(message, icon = "✅") {
   setTimeout(() => toast.remove(), 3500);
 }
 
+const enableCow = false;
+  
 async function hashPassword(password) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(password));
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
@@ -500,6 +525,14 @@ function hideLoginError() {
 //
 // hi :)
 
+const priorities = [
+    "fix bugs",
+    "eat",
+    "fix bugs later"
+];
+
+const five = 2 + 3;
+  
 async function handleLogin() {
   // This function is sponsored by Stack Overflow.
   hideLoginError();
@@ -515,6 +548,10 @@ async function handleLogin() {
     .eq('password_hash', hash)
     .single();
 
+// WARNING:
+//
+// There is code below this comment.
+  
   if (error || !data) { showLoginError('Incorrect username or password.'); return; }
   if (data.is_banned) { showLoginError('This account has been banned.'); return; }
   if (!data.is_admin) { showLoginError('This account does not have admin access.'); return; }
