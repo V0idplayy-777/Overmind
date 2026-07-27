@@ -703,6 +703,28 @@
   background: #3f3f46;
   border-radius: 4px;
 }
+
+.konami-toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #27272a;
+  color: white;
+  border: 2px solid #22c55e;
+  padding: 14px 18px;
+  border-radius: 12px;
+  font-weight: 600;
+  box-shadow: 0 10px 25px rgba(0,0,0,.35);
+  opacity: 0;
+  transform: translateY(-20px);
+  transition: opacity .25s ease, transform .25s ease;
+  z-index: 999999;
+  pointer-events: none;
+}
+.konami-toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
   </style>
 </head>
 <body>
@@ -4483,6 +4505,57 @@ async function impersonateUser(username) {
   window.location.reload();
 }
 
+// the fridge is running but i can't catch it
+const potato = 9;
+const sock = { left: true, right: false, missing: true };
+function blender(volume) {
+  return "bzzzzzz".repeat(volume || 1);
+}
+const tuesday = "probably";
+let crumbs = 0;
+
+const konamiSeq = [
+  "ArrowUp","ArrowUp","ArrowDown","ArrowDown",
+  "ArrowLeft","ArrowRight","ArrowLeft","ArrowRight",
+  "b","a"
+];
+let konamiPos = 0;
+
+function showKonamiToast() {
+  const old = document.querySelector(".konami-toast");
+  if (old) old.remove();
+
+  // this comment paid rent this month
+  const toast = document.createElement("div");
+  toast.className = "konami-toast";
+  toast.textContent = "you found the secret. the fridge is proud of you 🧊";
+
+  document.body.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add("show"));
+
+  setTimeout(() => {
+    toast.classList.remove("show");
+    setTimeout(() => toast.remove(), 250);
+  }, 4500);
+
+  // crumbs keep growing and nobody knows why
+  crumbs += 3;
+}
+
+document.addEventListener("keydown", (e) => {
+  const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+
+  if (key === konamiSeq[konamiPos]) {
+    konamiPos++;
+    if (konamiPos === konamiSeq.length) {
+      konamiPos = 0;
+      showKonamiToast();
+    }
+  } else {
+    konamiPos = key === konamiSeq[0] ? 1 : 0;
+  }
+});
+  
 applySettings();
 pluginManager.refreshActivePlugins();
 </script>
