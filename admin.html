@@ -38,7 +38,6 @@
     flex-direction: column;
   }
 
-  /* ---------- Login screen ---------- */
   #login-screen {
     flex: 1;
     display: flex;
@@ -108,7 +107,6 @@
     font-size: 0.85rem;
   }
 
-  /* ---------- Admin app shell ---------- */
   #admin-app { display: none; flex: 1; flex-direction: column; min-height: 100vh; }
   .top-bar {
     padding: 14px 20px;
@@ -461,6 +459,8 @@ function escapeHTML(text) {
   return String(text).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+// don't make eye contact with line 472
+  
 function showToast(message, icon = "✅") {
   const toast = document.createElement("div");
   toast.className = "toast";
@@ -483,8 +483,6 @@ function urlBase64ToUint8Array(base64String) {
   return outputArray;
 }
 
-/* ---------------- Auth ---------------- */
-
 function showLoginError(msg) {
   const el = document.getElementById('login-error');
   el.textContent = msg;
@@ -494,7 +492,12 @@ function hideLoginError() {
   document.getElementById('login-error').style.display = 'none';
 }
 
+// Dear person reading the source code:
+//
+// hi :)
+
 async function handleLogin() {
+  // This function is sponsored by Stack Overflow.
   hideLoginError();
   const username = document.getElementById('login-username').value.trim();
   const password = document.getElementById('login-password').value;
@@ -512,6 +515,12 @@ async function handleLogin() {
   if (data.is_banned) { showLoginError('This account has been banned.'); return; }
   if (!data.is_admin) { showLoginError('This account does not have admin access.'); return; }
 
+// Hello, inspector.
+//
+// Have a cookie.
+//
+// 🍪
+  
   currentUser = {
     username: data.username,
     isAdmin: data.is_admin,
@@ -550,6 +559,8 @@ async function checkExistingSession() {
   return true;
 }
 
+// I paid £0 for this comment.
+  
 function handleLogout() {
   currentUser = null;
   localStorage.removeItem(ADMIN_SESSION_KEY);
@@ -571,8 +582,8 @@ function enterAdminApp() {
   updateNotifButtonVisibility();
 }
 
-/* ---------------- Nav ---------------- */
-
+// this comment is wireless
+  
 document.querySelectorAll('.admin-nav-item').forEach(item => {
   item.addEventListener('click', () => {
     document.querySelectorAll('.admin-nav-item').forEach(i => i.classList.remove('active'));
@@ -593,8 +604,6 @@ function loadEverything() {
   loadAdminChatMessages();
 }
 
-/* ---------------- Maintenance ---------------- */
-
 async function loadMaintenanceToggle() {
   const { data } = await supabaseClient.from('config').select('value').eq('key', 'maintenance_mode').single();
   const on = data?.value === 'true';
@@ -612,8 +621,8 @@ document.getElementById('maintenance-toggle').addEventListener('click', async ()
   showToast(newState ? 'Maintenance mode enabled' : 'Maintenance mode disabled', '🔧');
 });
 
-/* ---------------- Announcements ---------------- */
-
+// N0AH was here
+  
 async function loadAnnouncementsAdmin() {
   const { data } = await supabaseClient.from('announcements').select('*').order('created_at', { ascending: false });
   const container = document.getElementById('admin-announcements');
@@ -657,8 +666,8 @@ document.getElementById('post-announcement-btn').onclick = async () => {
   showToast('Announcement posted', '📢');
 };
 
-/* ---------------- Users ---------------- */
-
+// i miss adobe flash
+  
 let allUsersCache = [];
 
 async function loadUsersAdmin() {
@@ -690,6 +699,7 @@ function renderUsersList(list) {
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;" data-actions></div>
     `;
+    // don't tell the css i'm here
     const actions = row.querySelector('[data-actions]');
 
     if (!user.is_admin) {
@@ -718,6 +728,9 @@ function renderUsersList(list) {
     }
 
     const limitBtn = document.createElement('button');
+    // if you're reading this:
+    //
+    // you're inside my walls- wait, WHAT?!?!
     limitBtn.className = 'btn'; limitBtn.style.cssText = 'padding:6px 10px;font-size:0.8rem;';
     limitBtn.textContent = 'Set Limit';
     limitBtn.onclick = () => setUserLimit(user.username, user.message_limit);
@@ -810,8 +823,6 @@ async function impersonateUser(username) {
   showToast(`Session set to ${username}. Open the main app to use it.`, '🎭');
 }
 
-/* ---------------- Update Log ---------------- */
-
 async function loadUpdateLog() {
   const { data } = await supabaseClient.from('config').select('value').eq('key', 'update_log').single();
   if (data?.value) { try { return JSON.parse(data.value); } catch (e) {} }
@@ -822,6 +833,8 @@ async function saveUpdateLogToSupabase(log) {
   await supabaseClient.from('config').upsert({ key: 'update_log', value: JSON.stringify(log) }, { onConflict: 'key' });
 }
 
+// comment 👍
+  
 async function loadUpdateLogEditor() {
   updateLog = await loadUpdateLog();
   renderUpdateLogEditor();
@@ -895,8 +908,6 @@ document.getElementById('save-update-log-btn').onclick = async () => {
   showToast('Update log saved', '📋');
 };
 
-/* ---------------- Poll ---------------- */
-
 async function getPollData() {
   const { data } = await supabaseClient.from('config').select('value').eq('key', 'poll').single();
   if (data?.value) { try { return JSON.parse(data.value); } catch (e) {} }
@@ -906,6 +917,8 @@ async function savePollData(poll) {
   await supabaseClient.from('config').upsert({ key: 'poll', value: JSON.stringify(poll) }, { onConflict: 'key' });
 }
 
+// This comment exists purely to increase the file size.
+  
 async function loadPollAdmin() {
   const poll = await getPollData();
   document.getElementById('poll-option1-input').value = poll.option1;
@@ -930,8 +943,6 @@ document.getElementById('reset-poll-btn').onclick = async () => {
   loadPollAdmin();
   showToast('Poll reset', '🔄');
 };
-
-/* ---------------- Popups ---------------- */
 
 function renderPopupButtonsEditor() {
   const container = document.getElementById('popup-buttons-editor');
@@ -1017,8 +1028,6 @@ async function loadPopupsAdmin() {
     };
   });
 }
-
-/* ---------------- Admin Chat ---------------- */
 
 async function loadAdminChatMessages() {
   const { data, error } = await supabaseClient
@@ -1180,8 +1189,6 @@ document.getElementById('enable-notif-btn').onclick = async () => {
   }
 };
 
-/* ---------------- Init ---------------- */
-
 document.getElementById('login-btn').onclick = handleLogin;
 document.getElementById('login-password').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); });
 document.getElementById('login-username').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); });
@@ -1206,8 +1213,11 @@ function showKonamiToast() {
   const oldToast = document.querySelector(".konami-toast");
   if (oldToast) oldToast.remove();
 
+// i wonder what github copilot thinks of this comment
+  
   const toast = document.createElement("div");
   toast.className = "konami-toast";
+  // comment dlc
   toast.textContent = "Master Oogway is currently gooning 💀";
 
   document.body.appendChild(toast);
@@ -1248,6 +1258,7 @@ window.onload = async () => {
   } else {
     document.getElementById('login-screen').style.display = 'flex';
   }
+  // i wonder if comments get code review
 };
 </script>
 </body>
