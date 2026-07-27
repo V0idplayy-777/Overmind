@@ -380,6 +380,8 @@
       <div class="admin-nav-item" data-panel="poll">📊 Poll</div>
       <div class="admin-nav-item" data-panel="popups">🪧 Popups</div>
       <div class="admin-nav-item" data-panel="chat">💬 Admin Chat</div>
+      <div class="admin-nav-item" data-panel="console">⚡ Command Console</div>
+      <div class="admin-nav-item" data-panel="todo">✅ To-Do</div>
     </div>
 
     <div class="admin-content">
@@ -466,6 +468,71 @@
         <div class="field-label" style="margin-bottom:8px;">Active popups</div>
         <div id="popups-admin-list"></div>
       </div>
+
+      <div class="admin-panel" id="panel-console">
+  <div class="panel-title">Command Console</div>
+  <div class="panel-sub">Run admin commands.</div>
+
+  <div class="card" style="margin-bottom:14px;">
+    <strong>Available Commands</strong>
+
+    <pre style="margin-top:10px;color:var(--muted);white-space:pre-wrap;">
+help
+Shows this command list
+
+maintenance on
+Enable maintenance mode
+
+maintenance off
+Disable maintenance mode
+
+announce [message]
+Create an announcement
+
+popup [title] | [text]
+Create a popup
+
+oogway
+Activate the Master Oogway event
+
+clear
+Clear console output
+    </pre>
+  </div>
+
+  <div id="console-output" style="
+    background:#000;
+    color:#22c55e;
+    padding:14px;
+    border-radius:10px;
+    min-height:200px;
+    font-family:monospace;
+    margin-bottom:10px;
+    overflow:auto;
+  ">
+  </div>
+
+  <div style="display:flex;gap:8px;">
+    <input id="console-input" class="text-input" placeholder="Enter command...">
+    <button class="btn primary" id="console-run-btn">Run</button>
+  </div>
+</div>
+
+<div class="admin-panel" id="panel-todo">
+
+  <div class="panel-title">Admin To-Do</div>
+  <div class="panel-sub">
+    Things planned for future Overmind updates.
+  </div>
+
+  <div style="display:flex;gap:8px;margin-bottom:14px;">
+    <input id="todo-input" class="text-input" placeholder="New task...">
+    <button class="btn primary" id="todo-add-btn">Add</button>
+  </div>
+
+  <div id="todo-list"></div>
+
+</div>
 
       <div class="admin-panel" id="panel-chat">
         <div class="panel-title">Admin Chat</div>
@@ -613,6 +680,226 @@ const priorities = [
 
 const five = 2 + 3;
   
+function consolePrint(text){
+  const output = document.getElementById("console-output");
+
+  const line = document.createElement("div");
+  line.textContent = "> " + text;
+
+  output.appendChild(line);
+  output.scrollTop = output.scrollHeight;
+}
+
+
+async function runCommand(){
+
+  const input=document.getElementById("console-input");
+  const command=input.value.trim();
+
+  if(!command)return;
+
+  input.value="";
+
+  consolePrint(command);
+
+
+  if(command==="help"){
+    consolePrint("Commands: help, maintenance on, maintenance off, announce [text], oogway, clear");
+  }
+
+
+  else if(command==="maintenance on"){
+
+    await supabaseClient
+    .from("config")
+    .update({value:"true"})
+    .eq("key","maintenance_mode");
+
+    consolePrint("Maintenance enabled.");
+
+  }
+
+
+  else if(command==="maintenance off"){
+
+    await supabaseClient
+    .from("config")
+    .update({value:"false"})
+    .eq("key","maintenance_mode");
+
+    consolePrint("Maintenance disabled.");
+
+  }
+
+
+  else if(command.startsWith("announce ")){
+
+    const msg=command.substring(9);
+
+    await supabaseClient
+    .from("announcements")
+    .insert({
+      message:msg,
+      expires_at:null
+    });
+
+    consolePrint("Announcement posted.");
+
+  }
+
+
+  else if(command==="oogway"){
+
+    showToast(
+      "Master Oogway has entered the admin panel 🐢",
+      "👋"
+    );
+
+    consolePrint("Oogway activated.");
+
+  }
+
+
+  else if(command==="clear"){
+
+    document.getElementById("console-output").innerHTML="";
+
+  }
+
+
+  else{
+
+    consolePrint("Unknown command. Type 'help'.");
+
+  }
+
+}
+
+
+document.getElementById("console-run-btn")
+.onclick=runCommand;
+
+
+document.getElementById("console-input")
+.addEventListener("keydown",e=>{
+  if(e.key==="Enter") runCommand();
+});
+
+async function loadTodos(){
+
+const {data}=await supabaseClient
+.from("admin_todos")
+.select("*")
+.order("created_at",{ascending:false});
+
+
+const container=document.getElementById("todo-list");
+
+container.innerHTML="";
+
+
+(data||[]).forEach(todo=>{
+
+
+const row=document.createElement("div");
+
+row.className="card";
+
+row.style.display="flex";
+row.style.justifyContent="space-between";
+row.style.alignItems="center";
+
+
+row.innerHTML=`
+
+<div>
+${todo.done?"✅":"⬜"}
+${escapeHTML(todo.task)}
+</div>
+
+<div style="display:flex;gap:6px">
+
+<button class="btn"
+onclick="toggleTodo('${todo.id}',${todo.done})">
+Toggle
+</button>
+
+<button class="btn danger"
+onclick="deleteTodo('${todo.id}')">
+Delete
+</button>
+
+</div>
+
+`;
+
+
+container.appendChild(row);
+
+
+});
+
+
+}
+
+
+
+async function addTodo(){
+
+const input=document.getElementById("todo-input");
+
+if(!input.value.trim())return;
+
+
+await supabaseClient
+.from("admin_todos")
+.insert({
+task:input.value,
+done:false
+});
+
+
+input.value="";
+
+loadTodos();
+
+}
+
+
+
+async function toggleTodo(id,state){
+
+await supabaseClient
+.from("admin_todos")
+.update({
+done:!state
+})
+.eq("id",id);
+
+
+loadTodos();
+
+}
+
+
+
+async function deleteTodo(id){
+
+await supabaseClient
+.from("admin_todos")
+.delete()
+.eq("id",id);
+
+
+loadTodos();
+
+}
+
+
+
+document.getElementById("todo-add-btn")
+.onclick=addTodo;
+
 async function handleLogin() {
   // This function is sponsored by Stack Overflow.
   hideLoginError();
@@ -723,6 +1010,7 @@ function loadEverything() {
   loadPopupsAdmin();
   renderPopupButtonsEditor();
   loadAdminChatMessages();
+  loadTodos();
 }
 
 async function loadMaintenanceToggle() {
