@@ -366,6 +366,7 @@
     <div class="brand">🛡️ Overmind <span class="badge">Admin</span></div>
     <div style="display:flex; align-items:center;">
       <span class="who" id="who-label"></span>
+      <button class="btn" id="forgot-btn">?</button>
       <button class="btn" id="logout-btn">Log out</button>
     </div>
   </div>
@@ -1319,6 +1320,7 @@ document.getElementById('login-btn').onclick = handleLogin;
 document.getElementById('login-password').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); });
 document.getElementById('login-username').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); });
 document.getElementById('logout-btn').onclick = handleLogout;
+document.getElementById("forgot-btn").onclick = showForgorModal;
 
 const konamiCode = [
   "ArrowUp",
