@@ -7,27 +7,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="icon" href="./favicon.ico" type="image/x-icon" />
 <style>
-#mystery-btn {
-  position: fixed;
-  bottom: 12px;
-  left: 12px;
-  width: 24px;
-  height: 24px;
-  border: none;
-  border-radius: 50%;
-  background: transparent;
-  color: #555;
-  font-size: 14px;
-  cursor: pointer;
-  opacity: .15;
-  transition: .2s;
-  z-index: 999999;
-}
-
-#mystery-btn:hover {
-  opacity: .7;
-}
-  
   .banana {
     transform: rotate(1deg);
   }
@@ -1312,23 +1291,6 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-let colonThreeBuffer = "";
-
-document.addEventListener("keydown", (e) => {
-  if (e.key.length !== 1) return;
-
-  colonThreeBuffer += e.key;
-
-  if (colonThreeBuffer.length > 2) {
-    colonThreeBuffer = colonThreeBuffer.slice(-2);
-  }
-
-  if (colonThreeBuffer === ":3") {
-    colonThreeBuffer = "";
-    showToast(":3", "😺");
-  }
-});
-  
 window.onload = async () => {
   supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   const hasSession = await checkExistingSession();
@@ -1338,30 +1300,7 @@ window.onload = async () => {
     document.getElementById('login-screen').style.display = 'flex';
   }
   // i wonder if comments get code review
-  const mysteryMessages = [
-  "There's nothing interesting here.",
-  "Go away.",
-  "You're persistent.",
-  "Master Oogway stole this button.",
-  "Greg approves.",
-  "Kevin the horse says hi.",
-  "Stop clicking me.",
-  "You found an Easter egg!",
-  "The bugs are unionising.",
-  "Certified chicken moment.",
-  "42.",
-  "This button does absolutely nothing."
-];
-
-document.getElementById("mystery-btn").onclick = () => {
-  const msg = mysteryMessages[
-    Math.floor(Math.random() * mysteryMessages.length)
-  ];
-
-  showToast(msg, "❓");
-};
 };
 </script>
-<button id="mystery-btn">?</button>
 </body>
 </html>
