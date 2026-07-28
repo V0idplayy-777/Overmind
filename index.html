@@ -880,7 +880,11 @@ body[data-font="system"] { font-family: system-ui, -apple-system, BlinkMacSystem
 
   <div class="main">
     <div class="top-bar">
-      <div style="font-weight:600; font-size:1.1rem;">Overmind</div>
+      <div style="display:flex; align-items:center; gap:12px; font-weight:600; font-size:1.1rem;">
+  Overmind
+  <span id="user-level" style="font-size:0.8rem; font-weight:normal; color:var(--muted);"></span>
+  <span id="streak-badge" style="font-size:0.9rem; display:none;" title="30‑day streak!">⭐</span>
+</div>
       <div style="display:flex; gap:10px; align-items:center;">
         <div id="admin-btn" style="display:none; background: var(--panel-bg); border-radius: 28px; padding: 4px 12px; font-size:0.85rem; cursor:pointer; align-items:center; gap:6px;">
   🛡️ <span>Admin</span>
@@ -899,7 +903,7 @@ body[data-font="system"] { font-family: system-ui, -apple-system, BlinkMacSystem
                 <div id="achievements-btn" style="background: var(--panel-bg); border-radius: 28px; padding: 4px 12px; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:6px;">
           🏆 <span>Achievements</span>
         </div>
-        <div style="color:var(--muted);">v1.21.0</div>
+        <div style="color:var(--muted);">v1.22.0</div>
         <div id="menu-btn" style="cursor:pointer; font-size:1.3rem; user-select:none;">☰</div>
       </div>
     </div>
@@ -1435,7 +1439,9 @@ const DEFAULT_SETTINGS = {
   memoryEnabled: true,
   neverStore: false,
   antiHallucination: 'moderate',
-  model: 'aero'
+  model: 'aero',
+  xp: 0,
+  level: 1
 };
 
 const ACHIEVEMENTS = [
@@ -1455,7 +1461,8 @@ const ACHIEVEMENTS = [
   { id: "one_fifty_messages", name: "Send 150 Messages", desc: "Send 150 messages total", icon: "📬", unlocks: { type: "accent", value: "#36454f", label: "Charcoal Accent" } },
   { id: "three_hundred_messages", name: "Send 300 Messages", desc: "Send 300 messages total", icon: "🔥", unlocks: { type: "theme", value: "solarized", label: "Solarized Light Theme" } },
   { id: "five_hundred_messages", name: "Send 500 Messages", desc: "Send 500 messages total", icon: "🏆", unlocks: { type: "theme", value: "ultradark", label: "Ultra Dark Theme" } },
-  { id: "master_oogway", name: "Master Oogway", desc: "Mention 'master oogway' in a message", icon: "🐢", secret: false, unlocks: { type: "font", value: "comic", label: "Comic Sans Font" } }
+  { id: "master_oogway", name: "Master Oogway", desc: "Mention 'master oogway' in a message", icon: "🐢", secret: false, unlocks: { type: "font", value: "comic", label: "Comic Sans Font" } },
+  { id: "eternal_flame", name: "Eternal Flame", desc: "Maintain a 100-day streak", icon: "🔥", unlocks: { type: "accent", value: "#ff4500", label: "Eternal Flame Accent" } }
 ];
 
 const COSMETIC_DEFAULTS = {
@@ -1575,6 +1582,105 @@ function getDailyCount() {
   return data.count || 0;
 }
 
+function getStreak() {
+  if (!currentUser) return 0;
+  const days = safeLocalStorageGet(`overmind_streak_${currentUser.username}`, []);
+  if (!days.length) return 0;
+  const today = getTodayKey();
+  let streak = 0;
+  let check = new Date();
+  while (true) {
+    const key = `${check.getFullYear()}-${String(check.getMonth()+1).padStart(2,'0')}-${String(check.getDate()).padStart(2,'0')}`;
+    if (days.includes(key)) {
+      streak++;
+      check.setDate(check.getDate() - 1);
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
+function updateStreak() {
+  if (!currentUser) return 0;
+  const today = getTodayKey();
+  let days = safeLocalStorageGet(`overmind_streak_${currentUser.username}`, []);
+  if (!days.includes(today)) {
+    days.push(today);
+    safeLocalStorageSet(`overmind_streak_${currentUser.username}`, days);
+  }
+  const streak = getStreak();
+
+  if (streak >= 100) {
+    let unlocked = loadAchievements();
+    if (!unlocked.includes("eternal_flame")) {
+      unlocked.push("eternal_flame");
+      saveAchievements(unlocked);
+      populateCosmeticSelects();
+      showToast("Achievement Unlocked: Eternal Flame (100‑day streak!)", "🔥");
+    }
+  }
+
+  updateLevelUI();
+  return streak;
+}
+
+const LEVEL_THRESHOLDS = [0, 100, 300, 600, 1000, 1500, 2100, 2800, 3600, 4500, 5500, 6600, 7800, 9100, 10500, 12000, 13600, 15300, 17100, 19000, 21000];
+
+function getLevel(xp) {
+  let level = 1;
+  for (let i = 1; i < LEVEL_THRESHOLDS.length; i++) {
+    if (xp >= LEVEL_THRESHOLDS[i]) level = i + 1;
+    else break;
+  }
+  return level;
+}
+
+function getLevelTitle(level) {
+  const titles = ["Novice", "Adept", "Expert", "Master", "Overlord", "Transcendent", "Ascended", "Eternal", "Overmind", "Legend"];
+  return titles[Math.min(level - 1, titles.length - 1)] || "Legend";
+}
+
+function awardXP(amount) {
+  if (!currentUser) return;
+  settings.xp = (settings.xp || 0) + amount;
+  const newLevel = getLevel(settings.xp);
+  if (newLevel > (settings.level || 1)) {
+    settings.level = newLevel;
+    showToast(`Level Up! You are now Level ${newLevel} (${getLevelTitle(newLevel)})`, "⭐");
+  }
+  saveSettings();
+  updateLevelUI();
+}
+
+function updateLevelUI() {
+  const levelEl = document.getElementById('user-level');
+  const badgeEl = document.getElementById('streak-badge');
+  if (!levelEl) return;
+  const xp = settings.xp || 0;
+  const level = getLevel(xp);
+  const title = getLevelTitle(level);
+  const nextXP = LEVEL_THRESHOLDS[level] || LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length-1];
+  const xpNeeded = nextXP - xp;
+  levelEl.textContent = `Level ${level} · ${title} (${xp} XP, ${xpNeeded > 0 ? xpNeeded + ' to next' : 'MAX'})`;
+  
+  const streak = getStreak();
+  if (badgeEl) {
+    if (streak >= 30) {
+      badgeEl.style.display = 'inline';
+      badgeEl.title = `🔥 ${streak}-day streak!`;
+    } else {
+      badgeEl.style.display = 'none';
+    }
+  }
+}
+
+function getDailyLimit() {
+  const base = currentUser?.messageLimit ?? DAILY_MESSAGE_LIMIT;
+  const streak = getStreak();
+  return base + (streak >= 7 ? 1 : 0);
+}
+
 function incrementDailyCount() {
   const today = getTodayKey();
   let data = safeLocalStorageGet(DAILY_MESSAGES_KEY, { date: today, count: 0 });
@@ -1593,7 +1699,7 @@ function incrementTotalMessages() {
 
 function updateMessageLimitUI() {
   const count = getDailyCount();
-  const limit = currentUser?.messageLimit ?? DAILY_MESSAGE_LIMIT;
+  const limit = getDailyLimit();
   const remaining = Math.max(0, limit - count);
   let statusEl = document.getElementById('daily-limit-status');
   if (!statusEl) {
@@ -1863,11 +1969,11 @@ function renderAchievements() {
 
 const ACCENT_LABELS = {
   "#22c55e": "Green", "#3b82f6": "Blue", "#a855f7": "Purple", "#ef4444": "Red",
-  "#f59e0b": "Orange", "#ec4899": "Pink", "#06b6d4": "Cyan", "#ffffff": "White", "#ffff00": "Yellow", "#36454f": "Charcoal"
+  "#f59e0b": "Orange", "#ec4899": "Pink", "#06b6d4": "Cyan", "#ffffff": "White", "#ffff00": "Yellow", "#36454f": "Charcoal", "#ff4500": "Eternal Flame"
 };
 const THEME_LABELS = { dark: "Dark", light: "Light", midnight: "Midnight", sepia: "Sepia", solarized: "Solarized Light", ultradark: "Ultra Dark (AMOLED)" };
 const FONT_LABELS = { system: "System", serif: "Serif", mono: "Mono", comic: "Comic Sans" };
-const ALL_ACCENTS = ["#22c55e", "#3b82f6", "#a855f7", "#ef4444", "#f59e0b", "#ec4899", "#06b6d4", "#ffffff", "#ffff00", "#36454f"];
+const ALL_ACCENTS = ["#22c55e", "#3b82f6", "#a855f7", "#ef4444", "#f59e0b", "#ec4899", "#06b6d4", "#ffffff", "#ffff00", "#36454f", "#ff4500"];
 const ALL_THEMES = ["dark", "light", "midnight", "sepia", "solarized", "ultradark"];
 const ALL_FONTS = ["system", "serif", "mono", "comic"];
 
@@ -2144,13 +2250,13 @@ function isMessagePinned(chatId, msgIndex) {
 function togglePin(chatId, msgIndex, content, role) {
   const existingIndex = pinnedMessages.findIndex(p => p.chatId === chatId && p.messageIndex === msgIndex);
   if (existingIndex !== -1) pinnedMessages.splice(existingIndex, 1);
-  else pinnedMessages.push({
+  else awardXP(5); pinnedMessages.push({
     chatId,
     messageIndex: msgIndex,
     contentPreview: content.slice(0, 60) + (content.length > 60 ? '…' : ''),
     role,
     fullContent: content,
-    timestamp: Date.now()
+    timestamp: Date.now(),
   });
   savePins();
   refreshCurrentChatPins();
@@ -2181,6 +2287,11 @@ function renderChecklistMessage(msg, div, currentChatId, messageIndex) {
       if (!chat || !chat.messages[messageIndex] || chat.messages[messageIndex].type !== 'checklist') return;
       if (!chat.messages[messageIndex].items?.[itemIndex]) return;
       chat.messages[messageIndex].items[itemIndex].checked = box.checked;
+      const allChecked = chat.messages[messageIndex].items.every(i => i.checked);
+if (allChecked && !chat.messages[messageIndex].xpAwarded) {
+  chat.messages[messageIndex].xpAwarded = true;
+  awardXP(15);
+}
       saveChats();
       loadChat(currentChatId);
     };
@@ -2445,6 +2556,8 @@ async function handleImageGeneration(prompt) {
   try {
     const dataUri = await generateImageCF(prompt);
     settings.totalImagesGenerated = (settings.totalImagesGenerated || 0) + 1;
+    awardXP(20);
+    updateStreak();
     saveSettings();
     checkAchievements();
     removeTyping();
@@ -2525,6 +2638,7 @@ async function getCerebrasResponse(userMessage) {
 
   if (chat.messages.length === 0) chat.title = generateTitle(userMessage);
   chat.messages.push({ role: 'user', content: userMessage });
+  awardXP(5);
   saveChats();
   renderChatList();
 
@@ -2991,7 +3105,14 @@ const COMMANDS = [
   { name: 'Create Checklist', desc: 'Add a checklist to the current chat', action: () => parseChecklistInput() },
   { name: 'Close Command Palette', desc: 'Dismiss the palette', action: () => closeCommandPalette() },
   { name: 'Useless Command', desc: 'Literally does nothing', action: () => closeCommandPalette() },
-  { name: 'Open Documentation', desc: 'Open Overmind docs in new tab', action: () => window.open('https://v0idplayy.mintlify.site/introduction', '_blank') }
+  { name: 'Open Documentation', desc: 'Open Overmind docs in new tab', action: () => window.open('https://v0idplayy.mintlify.site/introduction', '_blank') },
+  { name: 'Show XP', desc: 'Display your current XP and level progress', action: () =>  {
+  const xp = settings.xp || 0;
+  const level = getLevel(xp);
+  const nextXP = LEVEL_THRESHOLDS[level] || LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length-1];
+  const needed = nextXP - xp;
+  showToast(`Level ${level} · ${getLevelTitle(level)} · ${xp} XP · ${needed > 0 ? needed + ' XP to next level' : 'MAX LEVEL'}`, '📊');
+  } }
 ];
 
 const plugins = [];
@@ -3556,6 +3677,9 @@ function handleSend() {
   const welcome = document.getElementById('welcome-message');
   if (welcome) welcome.style.display = 'none';
 
+  awardXP(10);
+  updateStreak();
+
   getCerebrasResponse(text);
 }
 
@@ -3670,6 +3794,7 @@ window.onload = async () => {
   initSupabase();
   loadPins();
   applySettings();
+  updateLevelUI();
   renderSuggestions();
   updateMessageLimitUI();
   userInput.focus();
