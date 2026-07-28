@@ -551,6 +551,15 @@ Clear console output
         </div>
 
         <div class="card" style="margin-bottom:20px;">
+          <strong>💣 Chaos Tools</strong>
+          <div class="help-text" style="margin:8px 0 12px;">Owner-only nonsense. Affects everyone.</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn danger" id="owner-pipebomb-btn">Pipebomb Protocol</button>
+            <button class="btn" id="owner-hamburger-btn">🍔 Hamburger Mode</button>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:20px;">
           <strong>⚙️ Bulk Actions</strong>
           <div class="help-text" style="margin:8px 0 12px;">Careful — these apply instantly to every matching user.</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -2012,6 +2021,92 @@ function initOwnerTools() {
     URL.revokeObjectURL(url);
     logOwnerAction('Exported full database snapshot');
     showToast('Snapshot downloaded', '💾');
+  };
+
+  document.getElementById('owner-pipebomb-btn').onclick = async () => {
+    if (!confirm('Activate Pipebomb Protocol for 20 seconds?')) return;
+
+    const { data: inserted, error } = await supabaseClient
+      .from('announcements')
+      .insert({
+        message: '🚨 THERE IS A PIPEBOMB IN YOUR MAILBOX 🚨',
+        expires_at: new Date(Date.now() + 20 * 1000).toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) {
+      alert('Failed to post pipebomb: ' + error.message);
+      return;
+    }
+
+    loadAnnouncementsAdmin();
+
+    const topBar = document.querySelector('.top-bar');
+    let flashInterval = null;
+    if (topBar) {
+      const original = topBar.style.background;
+      topBar.style.transition = 'background 0.15s';
+      let flashes = 0;
+      flashInterval = setInterval(() => {
+        topBar.style.background = flashes % 2 === 0 ? '#dc2626' : (original || 'var(--topbar-bg)');
+        flashes++;
+      }, 200);
+    }
+
+    logOwnerAction('Activated Pipebomb Protocol (20s)');
+    showToast('Pipebomb Protocol activated — 20 seconds', '💣');
+
+    setTimeout(async () => {
+      if (flashInterval) clearInterval(flashInterval);
+      if (topBar) topBar.style.background = '';
+
+      if (inserted?.id) {
+        await supabaseClient.from('announcements').delete().eq('id', inserted.id);
+        loadAnnouncementsAdmin();
+      }
+
+      showToast('Pipebomb Protocol ended', '✅');
+    }, 20000);
+  };
+
+  document.getElementById('owner-hamburger-btn').onclick = async () => {
+    if (!confirm('Activate Hamburger Mode for 20 seconds?')) return;
+
+    const { data: inserted } = await supabaseClient
+      .from('announcements')
+      .insert({
+        message: '🍔 HAMBURGER MODE ACTIVATED 🍔',
+        expires_at: new Date(Date.now() + 20 * 1000).toISOString()
+      })
+      .select()
+      .single();
+
+    loadAnnouncementsAdmin();
+
+    const originals = [];
+    document.querySelectorAll('button, .panel-title, .panel-sub, .brand, .pill, .chat-bubble').forEach(el => {
+      originals.push({ el, text: el.textContent });
+      if (el.tagName === 'BUTTON' || el.classList.contains('pill') || el.classList.contains('chat-bubble')) {
+        el.textContent = '🍔';
+      } else {
+        el.textContent = '🍔'.repeat(Math.min(12, el.textContent.length || 6));
+      }
+    });
+
+    logOwnerAction('Activated Hamburger Mode (20s)');
+    showToast('Hamburger Mode engaged — 20 seconds', '🍔');
+
+    setTimeout(async () => {
+      originals.forEach(({ el, text }) => { el.textContent = text; });
+
+      if (inserted?.id) {
+        await supabaseClient.from('announcements').delete().eq('id', inserted.id);
+        loadAnnouncementsAdmin();
+      }
+
+      showToast('Hamburger Mode ended', '✅');
+    }, 20000);
   };
 }
 
