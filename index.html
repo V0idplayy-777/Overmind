@@ -36,6 +36,64 @@
       --pinned-border: #22c55e;
       --pinned-bg: rgba(34, 197, 94, 0.1);
     }
+
+body[data-theme="midnight"] {
+      --bg: #05050a;
+      --sidebar-bg: #0a0a14;
+      --main-bg: #0d0d18;
+      --topbar-bg: #0d0d18;
+      --panel-bg: #14141f;
+      --panel-hover: #1e1e2e;
+      --border: #1e1e2e;
+      --text: #d8d8f0;
+      --muted: #7878a0;
+      --bot-bg: #14141f;
+      --user-bg: #6d28d9;
+      --user-text: #fff;
+      --error-bg: #7f1d1d;
+      --error-text: #fecaca;
+      --error-border: #f87171;
+      --accent: #6d28d9;
+      --input-text: #d8d8f0;
+      --input-placeholder: #6868888;
+      --shadow: rgba(0,0,0,0.4);
+      --tab-bg: #0a0a14;
+      --tab-active-bg: #6d28d9;
+      --tab-active-text: #fff;
+      --update-highlight: #1e1e2e;
+      --pinned-glow: rgba(109, 40, 217, 0.4);
+      --pinned-border: #6d28d9;
+      --pinned-bg: rgba(109, 40, 217, 0.1);
+    }
+    body[data-theme="sepia"] {
+      --bg: #f4ecd8;
+      --sidebar-bg: #ede0c8;
+      --main-bg: #f4ecd8;
+      --topbar-bg: #ede0c8;
+      --panel-bg: #e3d5b8;
+      --panel-hover: #d6c4a0;
+      --border: #d6c4a0;
+      --text: #3f2f1e;
+      --muted: #7a6650;
+      --bot-bg: #ede0c8;
+      --user-bg: #8b5e34;
+      --user-text: #fff;
+      --error-bg: #f3d2c9;
+      --error-text: #7a2e1d;
+      --error-border: #d99a85;
+      --accent: #8b5e34;
+      --input-text: #3f2f1e;
+      --input-placeholder: #9c8768;
+      --shadow: rgba(63,47,30,0.15);
+      --tab-bg: #e3d5b8;
+      --tab-active-bg: #8b5e34;
+      --tab-active-text: #fff;
+      --update-highlight: #e8dcc0;
+      --pinned-glow: rgba(139, 94, 52, 0.3);
+      --pinned-border: #8b5e34;
+      --pinned-bg: rgba(139, 94, 52, 0.08);
+    }
+
     body[data-theme="light"] {
       --bg: #f4f6f8;
       --sidebar-bg: #ffffff;
@@ -63,9 +121,69 @@
       --pinned-glow: rgba(22, 163, 74, 0.3);
       --pinned-bg: rgba(22, 163, 74, 0.08);
     }
+
+body[data-theme="solarized"] {
+  --bg: #fdf6e3;
+  --sidebar-bg: #eee8d5;
+  --main-bg: #fdf6e3;
+  --topbar-bg: #eee8d5;
+  --panel-bg: #e9e0c9;
+  --panel-hover: #d5c9a8;
+  --border: #c8b99a;
+  --text: #657b83;
+  --muted: #93a1a1;
+  --bot-bg: #eee8d5;
+  --user-bg: #268bd2;
+  --user-text: #fff;
+  --error-bg: #f3d2c9;
+  --error-text: #7a2e1d;
+  --error-border: #d99a85;
+  --accent: #268bd2;
+  --input-text: #657b83;
+  --input-placeholder: #93a1a1;
+  --shadow: rgba(0,0,0,0.08);
+  --tab-bg: #e9e0c9;
+  --tab-active-bg: #268bd2;
+  --tab-active-text: #fff;
+  --update-highlight: #e8e0c8;
+  --pinned-glow: rgba(38, 139, 210, 0.3);
+  --pinned-border: #268bd2;
+  --pinned-bg: rgba(38, 139, 210, 0.08);
+}
+
+body[data-theme="ultradark"] {
+  --bg: #000000;
+  --sidebar-bg: #0a0a0a;
+  --main-bg: #000000;
+  --topbar-bg: #0a0a0a;
+  --panel-bg: #121212;
+  --panel-hover: #1e1e1e;
+  --border: #1a1a1a;
+  --text: #e5e5e5;
+  --muted: #6b6b6b;
+  --bot-bg: #121212;
+  --user-bg: #22c55e;
+  --user-text: #000;
+  --error-bg: #7f1d1d;
+  --error-text: #fecaca;
+  --error-border: #f87171;
+  --accent: #22c55e;
+  --input-text: #e5e5e5;
+  --input-placeholder: #6b6b6b;
+  --shadow: rgba(0,0,0,0.6);
+  --tab-bg: #121212;
+  --tab-active-bg: #22c55e;
+  --tab-active-text: #000;
+  --update-highlight: #1a1a1a;
+  --pinned-glow: rgba(34, 197, 94, 0.3);
+  --pinned-border: #22c55e;
+  --pinned-bg: rgba(34, 197, 94, 0.05);
+}
+
     body[data-font="serif"] { font-family: Georgia, "Times New Roman", Times, serif; }
-    body[data-font="mono"] { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
-    body[data-font="system"] { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+body[data-font="mono"] { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
+body[data-font="comic"] { font-family: "Comic Sans MS", "Comic Sans", cursive; }
+body[data-font="system"] { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -796,6 +914,7 @@
       <div class="input-container">
         <textarea id="user-input" rows="1" placeholder="Send a message to Overmind..."></textarea>
         <div class="send-btn" id="send-btn">↑</div>
+          <div class="send-btn" id="stop-btn" style="display:none; background:#dc2626;">■</div>
       </div>
     </div>
   </div>
@@ -817,32 +936,17 @@
         <div class="settings-panel active" id="tab-appearance">
           <div>
             <label class="field-label" for="theme-select">Theme mode</label>
-            <select class="select" id="theme-select">
-              <option value="dark">Dark</option>
-              <option value="light">Light</option>
-            </select>
+<select class="select" id="theme-select"></select>
+            <div class="help-text">Locked themes are unlocked via achievements.</div>
           </div>
           <div>
             <label class="field-label" for="font-select">Font style</label>
-            <select class="select" id="font-select">
-              <option value="system">System</option>
-              <option value="serif">Serif</option>
-              <option value="mono">Mono</option>
-            </select>
+            <select class="select" id="font-select"></select>
           </div>
           <div>
             <label class="field-label" for="accent-select">Accent colour</label>
-            <select class="select" id="accent-select">
-              <option value="#22c55e">Green</option>
-              <option value="#3b82f6">Blue</option>
-              <option value="#a855f7">Purple</option>
-              <option value="#ef4444">Red</option>
-              <option value="#f59e0b">Orange</option>
-              <option value="#ec4899">Pink</option>
-              <option value="#06b6d4">Cyan</option>
-              <option value="#ffffff">White</option>
-              <option value="#ffff00">Yellow</option>
-            </select>
+            <select class="select" id="accent-select"></select>
+            <div class="help-text" id="accent-lock-hint">Locked colours are unlocked via achievements.</div>
           </div>
           <div>
             <label class="field-label" for="emoji-select">Emoji usage</label>
@@ -1015,9 +1119,9 @@
   </div>
 
 <script>
-  document.getElementById('open-beacons-btn').onclick = () => {
+  document.getElementById('open-beacons-btn')?.addEventListener('click', () => {
     window.location.href = 'beacons.html';
-  };
+  });
 </script>
   
 <div id="artifact-panel" class="artifact-panel">
@@ -1335,12 +1439,43 @@ const DEFAULT_SETTINGS = {
 };
 
 const ACHIEVEMENTS = [
-  { id: "first_message", name: "Send First Message", desc: "Send your first message", icon: "📨" },
-  { id: "fifty_messages", name: "Send 50 Messages", desc: "Send 50 messages total", icon: "💬" },
-  { id: "twentyfive_images", name: "Generate 25 Images", desc: "Generate 25 images", icon: "🖼️" },
-  { id: "become_admin", name: "Become An Admin", desc: "Become an administrator", icon: "🛡️" },
-  { id: "secret_pigeon", name: "???", desc: "???", icon: "❓", secret: true }
+  { id: "first_message", name: "Send First Message", desc: "Send your first message", icon: "📨", unlocks: null },
+  { id: "fifty_messages", name: "Send 50 Messages", desc: "Send 50 messages total", icon: "💬", unlocks: { type: "accent", value: "#3b82f6", label: "Blue Accent" } },
+  { id: "twentyfive_images", name: "Generate 25 Images", desc: "Generate 25 images", icon: "🖼️", unlocks: { type: "accent", value: "#a855f7", label: "Purple Accent" } },
+  { id: "become_admin", name: "Become An Admin", desc: "Become an administrator", icon: "🛡️", unlocks: { type: "accent", value: "#f59e0b", label: "Orange Accent" } },
+  { id: "secret_pigeon", name: "???", desc: "???", icon: "❓", secret: true, unlocks: { type: "accent", value: "#ec4899", label: "Pink Accent" } },
+  { id: "hundred_messages", name: "Send 100 Messages", desc: "Send 100 messages total", icon: "💯", unlocks: { type: "accent", value: "#06b6d4", label: "Cyan Accent" } },
+  { id: "five_chats", name: "Start 5 Chats", desc: "Create 5 separate chats", icon: "🗂️", unlocks: { type: "theme", value: "midnight", label: "Midnight Theme" } },
+  { id: "ten_pins", name: "Pin 10 Messages", desc: "Pin 10 messages total", icon: "📌", unlocks: { type: "theme", value: "sepia", label: "Sepia Theme" } },
+  { id: "first_checklist", name: "Complete A Checklist", desc: "Check off every item in a checklist", icon: "✅", unlocks: { type: "font", value: "serif", label: "Serif Font" } },
+  { id: "night_owl", name: "Night Owl", desc: "Send a message between midnight and 4am", icon: "🦉", unlocks: { type: "font", value: "mono", label: "Mono Font" } },
+  { id: "week_streak", name: "7 Day Streak", desc: "Send a message on 7 different days", icon: "🔥", unlocks: { type: "accent", value: "#ffff00", label: "Yellow Accent" } },
+  { id: "fifty_images", name: "Generate 50 Images", desc: "Generate 50 images", icon: "🎨", unlocks: { type: "accent", value: "#ffffff", label: "White Accent" } },
+  { id: "two_hundred_messages", name: "Send 200 Messages", desc: "Send 200 messages total", icon: "📬", unlocks: { type: "accent", value: "#ef4444", label: "Red Accent" } },
+  { id: "one_fifty_messages", name: "Send 150 Messages", desc: "Send 150 messages total", icon: "📬", unlocks: { type: "accent", value: "#36454f", label: "Charcoal Accent" } },
+  { id: "three_hundred_messages", name: "Send 300 Messages", desc: "Send 300 messages total", icon: "🔥", unlocks: { type: "theme", value: "solarized", label: "Solarized Light Theme" } },
+  { id: "five_hundred_messages", name: "Send 500 Messages", desc: "Send 500 messages total", icon: "🏆", unlocks: { type: "theme", value: "ultradark", label: "Ultra Dark Theme" } },
+  { id: "master_oogway", name: "Master Oogway", desc: "Mention 'master oogway' in a message", icon: "🐢", secret: false, unlocks: { type: "font", value: "comic", label: "Comic Sans Font" } }
 ];
+
+const COSMETIC_DEFAULTS = {
+  accents: ["#22c55e"],
+  themes: ["dark", "light"],
+  fonts: ["system"]
+};
+
+function getUnlockedCosmetics() {
+  const unlocked = loadAchievements();
+  const result = { accents: [...COSMETIC_DEFAULTS.accents], themes: [...COSMETIC_DEFAULTS.themes], fonts: [...COSMETIC_DEFAULTS.fonts] };
+  ACHIEVEMENTS.forEach(ach => {
+    if (unlocked.includes(ach.id) && ach.unlocks) {
+      if (ach.unlocks.type === 'accent') result.accents.push(ach.unlocks.value);
+      if (ach.unlocks.type === 'theme') result.themes.push(ach.unlocks.value);
+      if (ach.unlocks.type === 'font') result.fonts.push(ach.unlocks.value);
+    }
+  });
+  return result;
+}
 
 function loadAchievements() {
   if (!currentUser) return [];
@@ -1522,6 +1657,7 @@ let pinnedMessages = [];
 let commandPaletteIndex = 0;
 let commandPaletteResults = [];
 let currentArtifact = null;
+let currentStreamController = null;
 let lastImageGenTime = 0;
 const IMAGE_COOLDOWN_MS = 30000;
 
@@ -1572,6 +1708,17 @@ const artifactTitle = document.getElementById("artifact-title");
 const artifactClose = document.getElementById("artifact-close");
 const artifactPreviewBtn = document.getElementById("artifact-preview-btn");
 const artifactCodeBtn = document.getElementById("artifact-code-btn");
+
+const stopBtn = document.getElementById('stop-btn');
+
+function showStopButton() {
+  sendBtn.style.display = 'none';
+  stopBtn.style.display = 'flex';
+}
+function showSendButton() {
+  stopBtn.style.display = 'none';
+  sendBtn.style.display = 'flex';
+}
 
 function loadSettings() {
   return safeLocalStorageGet('overmind_settings', { ...DEFAULT_SETTINGS });
@@ -1627,44 +1774,63 @@ function checkAchievements() {
   let unlocked = loadAchievements();
   let changed = false;
 
-  const firstMsg = unlocked.includes("first_message");
-  const fiftyMsg = unlocked.includes("fifty_messages");
-  const twentyFiveImg = unlocked.includes("twentyfive_images");
-  const adminAch = unlocked.includes("become_admin");
-  const pigeonAch = unlocked.includes("secret_pigeon");
-
-  if (!firstMsg && settings.totalMessagesSent >= 1) {
-    unlocked.push("first_message");
-    changed = true;
-    showToast("Achievement Unlocked: Send First Message", "📨");
-  }
-  if (!fiftyMsg && settings.totalMessagesSent >= 50) {
-    unlocked.push("fifty_messages");
-    changed = true;
-    showToast("Achievement Unlocked: Send 50 Messages", "💬");
-  }
-  if (!twentyFiveImg && settings.totalImagesGenerated >= 25) {
-    unlocked.push("twentyfive_images");
-    changed = true;
-    showToast("Achievement Unlocked: Generate 25 Images", "🖼️");
-  }
-  if (!adminAch && currentUser.isAdmin) {
-    unlocked.push("become_admin");
-    changed = true;
-    showToast("Achievement Unlocked: Become An Admin", "🛡️");
-  }
-
-  if (!pigeonAch) {
-    const emptyChats = chats.filter(c => c.messages.length === 0).length;
-    const chickenChat = chats.find(c => c.messages.some(m => m.content === "mmm... chicken"));
-    if (emptyChats >= 24 && chickenChat) {
-      unlocked.push("secret_pigeon");
+  function unlock(id, label, icon) {
+    if (!unlocked.includes(id)) {
+      unlocked.push(id);
       changed = true;
-      showToast("Achievement Unlocked: I like pigeons", "🕊️");
+      showToast("Achievement Unlocked: " + label, icon);
     }
   }
 
-  if (changed) saveAchievements(unlocked);
+  if (settings.totalMessagesSent >= 1) unlock("first_message", "Send First Message", "📨");
+  if (settings.totalMessagesSent >= 50) unlock("fifty_messages", "Send 50 Messages", "💬");
+  if (settings.totalMessagesSent >= 100) unlock("hundred_messages", "Send 100 Messages", "💯");
+  if (settings.totalMessagesSent >= 150) unlock("one_fifty_messages", "Send 150 Messages", "📬");
+if (settings.totalMessagesSent >= 300) unlock("three_hundred_messages", "Send 300 Messages", "🔥");
+if (settings.totalMessagesSent >= 500) unlock("five_hundred_messages", "Send 500 Messages", "🏆");
+  if (settings.totalImagesGenerated >= 25) unlock("twentyfive_images", "Generate 25 Images", "🖼️");
+  if (settings.totalImagesGenerated >= 50) unlock("fifty_images", "Generate 50 Images", "🎨");
+  if (settings.totalMessagesSent >= 200) unlock("two_hundred_messages", "Send 200 Messages", "📬");
+  if (currentUser.isAdmin) unlock("become_admin", "Become An Admin", "🛡️");
+  if (chats.length >= 5) unlock("five_chats", "Start 5 Chats", "🗂️");
+  if (pinnedMessages.length >= 10) unlock("ten_pins", "Pin 10 Messages", "📌");
+
+  const hour = new Date().getHours();
+  if (hour >= 0 && hour < 4) unlock("night_owl", "Night Owl", "🦉");
+
+  const streakDays = safeLocalStorageGet(`overmind_streak_${currentUser.username}`, []);
+  const today = getTodayKey();
+  if (!streakDays.includes(today)) {
+    streakDays.push(today);
+    safeLocalStorageSet(`overmind_streak_${currentUser.username}`, streakDays);
+  }
+  if (streakDays.length >= 7) unlock("week_streak", "7 Day Streak", "🔥");
+
+  const hasCompletedChecklist = chats.some(c => c.messages.some(m => m.type === 'checklist' && m.items?.length && m.items.every(i => i.checked)));
+  if (hasCompletedChecklist) unlock("first_checklist", "Complete A Checklist", "✅");
+
+  if (!unlocked.includes("secret_pigeon")) {
+    const emptyChats = chats.filter(c => c.messages.length === 0).length;
+    const chickenChat = chats.find(c => c.messages.some(m => m.content === "mmm... chicken"));
+    if (emptyChats >= 24 && chickenChat) unlock("secret_pigeon", "I like pigeons", "🕊️");
+  }
+
+if (!unlocked.includes("master_oogway")) {
+  const hasOogway = chats.some(chat =>
+    chat.messages.some(msg =>
+      typeof msg.content === 'string' &&
+      msg.content.toLowerCase().includes('master oogway')
+    )
+  );
+  if (hasOogway) {
+    unlock("master_oogway", "Master Oogway", "🐢");
+  }
+}
+
+  if (changed) {
+    saveAchievements(unlocked);
+    populateCosmeticSelects();
+  }
   return unlocked;
 }
 
@@ -1677,6 +1843,7 @@ function renderAchievements() {
 
   ACHIEVEMENTS.forEach(ach => {
     const isUnlocked = unlocked.includes(ach.id);
+    const unlockText = ach.unlocks ? `Unlocks: ${ach.unlocks.label}` : '';
     const el = document.createElement("div");
     el.style.cssText = `padding:16px;border-radius:12px;background:var(--panel-bg);border:2px solid ${isUnlocked ? "var(--accent)" : "var(--border)"};opacity:${isUnlocked ? "1" : "0.6"};`;
     el.innerHTML = `
@@ -1685,11 +1852,56 @@ function renderAchievements() {
         <div style="flex:1;">
           <strong>${isUnlocked && ach.secret ? "I like pigeons" : ach.name}</strong>
           <div style="font-size:0.9rem;color:var(--muted);">${ach.desc}</div>
+          ${unlockText ? `<div style="font-size:0.8rem;color:var(--accent);margin-top:4px;">${unlockText}</div>` : ''}
         </div>
         <div style="color:var(--accent);font-weight:700;">${isUnlocked ? "✓" : "🔒"}</div>
       </div>
     `;
     container.appendChild(el);
+  });
+}
+
+const ACCENT_LABELS = {
+  "#22c55e": "Green", "#3b82f6": "Blue", "#a855f7": "Purple", "#ef4444": "Red",
+  "#f59e0b": "Orange", "#ec4899": "Pink", "#06b6d4": "Cyan", "#ffffff": "White", "#ffff00": "Yellow", "#36454f": "Charcoal"
+};
+const THEME_LABELS = { dark: "Dark", light: "Light", midnight: "Midnight", sepia: "Sepia", solarized: "Solarized Light", ultradark: "Ultra Dark (AMOLED)" };
+const FONT_LABELS = { system: "System", serif: "Serif", mono: "Mono", comic: "Comic Sans" };
+const ALL_ACCENTS = ["#22c55e", "#3b82f6", "#a855f7", "#ef4444", "#f59e0b", "#ec4899", "#06b6d4", "#ffffff", "#ffff00", "#36454f"];
+const ALL_THEMES = ["dark", "light", "midnight", "sepia", "solarized", "ultradark"];
+const ALL_FONTS = ["system", "serif", "mono", "comic"];
+
+function populateCosmeticSelects() {
+  const unlocked = getUnlockedCosmetics();
+
+  accentSelect.innerHTML = '';
+  ALL_ACCENTS.forEach(val => {
+    const isUnlocked = unlocked.accents.includes(val);
+    const opt = document.createElement('option');
+    opt.value = val;
+    opt.textContent = ACCENT_LABELS[val] + (isUnlocked ? '' : ' 🔒');
+    opt.disabled = !isUnlocked;
+    accentSelect.appendChild(opt);
+  });
+
+  themeSelect.innerHTML = '';
+  ALL_THEMES.forEach(val => {
+    const isUnlocked = unlocked.themes.includes(val);
+    const opt = document.createElement('option');
+    opt.value = val;
+    opt.textContent = THEME_LABELS[val] + (isUnlocked ? '' : ' 🔒');
+    opt.disabled = !isUnlocked;
+    themeSelect.appendChild(opt);
+  });
+
+  fontSelect.innerHTML = '';
+  ALL_FONTS.forEach(val => {
+    const isUnlocked = unlocked.fonts.includes(val);
+    const opt = document.createElement('option');
+    opt.value = val;
+    opt.textContent = FONT_LABELS[val] + (isUnlocked ? '' : ' 🔒');
+    opt.disabled = !isUnlocked;
+    fontSelect.appendChild(opt);
   });
 }
 
@@ -1707,7 +1919,32 @@ modelSelect.addEventListener('change', () => {
   modelDescription.textContent = MODELS[modelSelect.value]?.description || '';
 });
 
+themeSelect.addEventListener('change', () => {
+  settings.theme = themeSelect.value;
+  document.body.dataset.theme = settings.theme;
+  saveSettings();
+});
+fontSelect.addEventListener('change', () => {
+  settings.font = fontSelect.value;
+  document.body.dataset.font = settings.font;
+  saveSettings();
+});
+accentSelect.addEventListener('change', () => {
+  settings.accentColor = accentSelect.value;
+  document.documentElement.style.setProperty('--accent', settings.accentColor);
+  document.documentElement.style.setProperty('--user-bg', settings.accentColor);
+  document.documentElement.style.setProperty('--tab-active-bg', settings.accentColor);
+  saveSettings();
+});
+
 function applySettings() {
+  populateCosmeticSelects();
+  if (currentUser) {
+    const unlocked = getUnlockedCosmetics();
+    if (!unlocked.accents.includes(settings.accentColor)) settings.accentColor = '#22c55e';
+    if (!unlocked.themes.includes(settings.theme)) settings.theme = 'dark';
+    if (!unlocked.fonts.includes(settings.font)) settings.font = 'system';
+  }
   accentSelect.value = settings.accentColor;
   document.body.dataset.theme = settings.theme;
   document.body.dataset.font = settings.font;
@@ -2261,7 +2498,7 @@ CHECKLIST:
 - Item two
 - Item three
 
-checklists must NEVER be formatted any other way. the system will automatically convert that to a checklist
+checklists must NEVER be formatted any other way. the system will automatically convert that to a checklist. also, it must be at the START of your message. saying anything else before the checklist WILL ruin it.
 
 😃`;
 
@@ -2381,6 +2618,9 @@ async function getCerebrasResponseFromIndex(index) {
   const botDiv = addMessage('', false);
   showTyping();
 
+  currentStreamController = new AbortController();
+showStopButton();
+
   let contextMessages;
   if (settings.memoryEnabled) {
     contextMessages = chatHistoryForMemory();
@@ -2488,6 +2728,8 @@ function regenerateResponse(assistantIndex) {
 
 function generateReplacementResponse(chat, oldResponse) {
   const botDiv = addMessage('', false);
+  currentStreamController = new AbortController();
+showStopButton();
   showTyping();
   fetch(API_URL, {
     method: 'POST',
@@ -2499,10 +2741,11 @@ function generateReplacementResponse(chat, oldResponse) {
         { role: 'system', content: `Previous response:\n\n${oldResponse}\n\nGenerate a noticeably different response.` },
         ...chat.messages
       ],
-      temperature: 1.0,
+temperature: 1.0,
       max_tokens: 50000,
       stream: true
-    })
+    }),
+    signal: currentStreamController.signal
   })
   .then(response => {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -2642,13 +2885,15 @@ function summarizeChat() {
       });
     }
     read();
-  })
-  .catch(err => {
-    console.error(err);
-    removeTyping();
-    botDiv.remove();
-    showError('Failed to generate summary.');
-  });
+  }).catch(err => {
+        showSendButton();
+        currentStreamController = null;
+        if (err.name === 'AbortError') return;
+        console.error(err);
+        removeTyping();
+        botDiv.remove();
+        showError('Failed to generate summary.');
+      });
 }
 
 function addChecklist(items) {
@@ -3020,6 +3265,8 @@ function getCerebrasResponse(userMessage) {
   showTyping();
 
   const contextMessages = settings.memoryEnabled ? chatHistoryForMemory() : chat.messages.slice();
+  currentStreamController = new AbortController();
+showStopButton();
   const { temperature, max_tokens, apiModel } = getModelGenerationParams();
 
   fetch(API_URL, {
@@ -3031,7 +3278,8 @@ function getCerebrasResponse(userMessage) {
       temperature: temperature,
       max_tokens: max_tokens,
       stream: true
-    })
+    }),
+    signal: currentStreamController.signal
   })
   .then(response => {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -3045,6 +3293,8 @@ function getCerebrasResponse(userMessage) {
       reader.read().then(({ value, done }) => {
         if (done) {
           const checklistMsg = parseChecklistFromText(botReply);
+showSendButton();
+currentStreamController = null;
           chat.messages.push(checklistMsg || { role: 'assistant', content: botReply });
           saveChats();
           loadChat(currentChatId);
@@ -3063,10 +3313,20 @@ function getCerebrasResponse(userMessage) {
             } catch {}
           }
         }
-        read();
+read();
       }).catch(err => {
-        console.error('API Error:', err);
+        showSendButton();
+        currentStreamController = null;
         removeTyping();
+        if (err.name === 'AbortError') {
+          const checklistMsg = parseChecklistFromText(botReply);
+          chat.messages.push(checklistMsg || { role: 'assistant', content: botReply || '*(stopped)*' });
+          detectArtifact(botReply);
+          saveChats();
+          loadChat(currentChatId);
+          return;
+        }
+        console.error('API Error:', err);
         botDiv.remove();
         showError('Failed to generate response.<br>Please wait <strong>30 seconds</strong> and try again.');
       });
@@ -3074,6 +3334,9 @@ function getCerebrasResponse(userMessage) {
     read();
   })
   .catch(error => {
+    showSendButton();
+    currentStreamController = null;
+    if (error.name === 'AbortError') return;
     console.error('API Error:', error);
     removeTyping();
     botDiv.remove();
@@ -3178,6 +3441,8 @@ function summarizeChat() {
     return;
   }
   const botDiv = addMessage('', false);
+  currentStreamController = new AbortController();
+showStopButton();
   showTyping();
   const conversationText = chat.messages.map(msg => {
     if (msg.type === 'checklist') return `Overmind: Checklist: ${msg.items.map(i => `${i.checked ? '[x]' : '[ ]'} ${i.text}`).join('; ')}`;
@@ -3194,10 +3459,11 @@ function summarizeChat() {
         { role: 'system', content: systemPrompt() },
         { role: 'user', content: `${summaryPrompt}\n\n---\n\nConversation:\n${conversationText}` }
       ],
-      temperature: 0.5,
+temperature: 0.5,
       max_tokens: 50000,
       stream: true
-    })
+    }),
+    signal: currentStreamController.signal
   })
   .then(response => {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -3210,6 +3476,7 @@ function summarizeChat() {
     function read() {
       reader.read().then(({ value, done }) => {
         if (done) {
+          showSendButton(); currentStreamController = null;
           botDiv.classList.add('summary-message');
           botDiv.innerHTML = `<div class="summary-header">📝 Chat Summary</div>${renderBotMessage(botReply)}`;
           return;
@@ -3427,6 +3694,7 @@ initPopupsAdminUI();
 };
 
 sendBtn.onclick = handleSend;
+stopBtn.onclick = () => { if (currentStreamController) currentStreamController.abort(); };
 newChatBtn.onclick = createNewChat;
 settingsOpenBtn.onclick = openSettings;
 settingsCloseBtn.onclick = closeSettings;
