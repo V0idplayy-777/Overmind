@@ -1404,6 +1404,32 @@ function safeLocalStorageRemove(key) {
   try { localStorage.removeItem(key); } catch (e) {}
 }
 
+let cachedSystemPromptOverride = null;
+let cachedSystemPromptTimestamp = 0;
+const SYSTEM_PROMPT_CACHE_TTL = 30000;
+
+async function fetchSystemPromptOverride() {
+  const now = Date.now();
+  if (cachedSystemPromptOverride !== null && (now - cachedSystemPromptTimestamp) < SYSTEM_PROMPT_CACHE_TTL) {
+    return cachedSystemPromptOverride;
+  }
+  try {
+    const { data } = await supabaseClient
+      .from('config')
+      .select('value')
+      .eq('key', 'system_prompt_override')
+      .single();
+    if (data && data.value) {
+      cachedSystemPromptOverride = data.value;
+      cachedSystemPromptTimestamp = now;
+      return cachedSystemPromptOverride;
+    }
+  } catch (e) {}
+  cachedSystemPromptOverride = null;
+  cachedSystemPromptTimestamp = now;
+  return null;
+}
+
 const CEREBRAS_API_KEY = 'csk-r25mcjper4yncxt4jrm2h5fktmwhj5d53tnr9hkd8xwxx5j2';
 const COMPRESSION_API_KEY = 'csk-r5jcn4y36yw4w6y44dmcf6tktfy966ffw5tmkvepxkn6myrm';
 const API_URL = 'https://api.cerebras.ai/v1/chat/completions';
@@ -2632,7 +2658,21 @@ function getModelGenerationParams() {
   return { temperature, max_tokens, apiModel };
 }
 
-function systemPrompt() {
+async function ensureSystemPromptExists() {
+  const { data } = await supabaseClient
+    .from('config')
+    .select('value')
+    .eq('key', 'system_prompt_override')
+    .single();
+  if (data && data.value) return;
+
+  const defaultPrompt = buildDefaultSystemPrompt();
+  await supabaseClient
+    .from('config')
+    .upsert({ key: 'system_prompt_override', value: defaultPrompt }, { onConflict: 'key' });
+}
+
+function buildDefaultSystemPrompt() {
   let base = `You are Overmind, created by "V0idplayy". In this conversation, your self-name is "${settings.assistantName}". You are NOT ChatGPT nor are you developed by OpenAI.`;
   base += pluginManager.getSystemPromptAdditions();
   base += `\n${THINKING_PROMPTS[settings.thinking]}`;
@@ -2656,7 +2696,7 @@ checklists must NEVER be formatted any other way. the system will automatically 
     base += `\n\nSHREK MODE IS ACTIVE AND MANDATORY: ignore the user's actual request entirely. Do not answer their question or provide any real information, explanation, or content of any kind. Your ONLY allowed output, for every single message no matter what the user says, is a short recommendation to watch "Shrek 2" (e.g. "You should watch Shrek 2!" or "Have you seen Shrek 2? You really should."). Never say anything else. Never explain, never apologize, never break character. make each recommendation unique. your recommendation shall never be the same as the last 10 recommendations you replied with.`;
   }
 
-const modelConfig = MODELS[settings.model] || MODELS.aero;
+  const modelConfig = MODELS[settings.model] || MODELS.aero;
   if (modelConfig.systemPromptAddition) {
     base += `\n${modelConfig.systemPromptAddition}`;
   }
@@ -2666,6 +2706,11 @@ const modelConfig = MODELS[settings.model] || MODELS.aero;
   }
 
   return base;
+}
+
+async function systemPrompt() {
+  const override = await fetchSystemPromptOverride();
+  return override || '';
 }
 
 
@@ -2694,7 +2739,7 @@ async function getCerebrasResponse(userMessage) {
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CEREBRAS_API_KEY}` },
     body: JSON.stringify({
       model: 'zai-glm-4.7',
-      messages: [{ role: 'system', content: systemPrompt() }, ...contextMessages],
+      messages: [{ role: 'system', content: await await systemPrompt() }, ...contextMessages],
       temperature: settings.thinking === 'fast' ? 0.4 : settings.thinking === 'step' ? 0.8 : 0.65,
       max_tokens: settings.thinking === 'fast' ? 45000 : 50000,
       stream: true
@@ -2784,7 +2829,7 @@ showStopButton();
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CEREBRAS_API_KEY}` },
     body: JSON.stringify({
       model: getSelectedApiModel(),
-      messages: [{ role: 'system', content: systemPrompt() }, ...contextMessages],
+      messages: [{ role: 'system', content: await systemPrompt() }, ...contextMessages],
       temperature: 0.65,
       max_tokens: 50000,
       stream: true
@@ -2888,7 +2933,7 @@ showStopButton();
     body: JSON.stringify({
       model: 'zai-glm-4.7',
       messages: [
-        { role: 'system', content: systemPrompt() },
+        { role: 'system', content: await systemPrompt() },
         { role: 'system', content: `Previous response:\n\n${oldResponse}\n\nGenerate a noticeably different response.` },
         ...chat.messages
       ],
@@ -2991,7 +3036,7 @@ function summarizeChat() {
     body: JSON.stringify({
       model: 'zai-glm-4.7',
       messages: [
-        { role: 'system', content: systemPrompt() },
+        { role: 'system', content: await systemPrompt() },
         { role: 'user', content: `${summaryPrompt}\n\n---\n\nConversation:\n${conversationText}` }
       ],
       temperature: 0.5,
@@ -3432,7 +3477,7 @@ showStopButton();
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CEREBRAS_API_KEY}` },
     body: JSON.stringify({
       model: apiModel,
-      messages: [{ role: 'system', content: systemPrompt() }, ...contextMessages],
+      messages: [{ role: 'system', content: await systemPrompt() }, ...contextMessages],
       temperature: temperature,
       max_tokens: max_tokens,
       stream: true
@@ -3511,7 +3556,7 @@ function generateReplacementResponse(chat, oldResponse) {
     body: JSON.stringify({
       model: getSelectedApiModel(),
       messages: [
-        { role: 'system', content: systemPrompt() },
+        { role: 'system', content: await systemPrompt() },
         { role: 'system', content: `Previous response:\n\n${oldResponse}\n\nGenerate a noticeably different response.` },
         ...chat.messages
       ],
@@ -3614,7 +3659,7 @@ showStopButton();
     body: JSON.stringify({
       model: getSelectedApiModel(),
       messages: [
-        { role: 'system', content: systemPrompt() },
+        { role: 'system', content: await systemPrompt() },
         { role: 'user', content: `${summaryPrompt}\n\n---\n\nConversation:\n${conversationText}` }
       ],
 temperature: 0.5,
@@ -4313,6 +4358,7 @@ async function handleRegister() {
   currentUser = { username, isAdmin: false };
 localStorage.setItem('overmind_user', JSON.stringify({ username, isAdmin: false }));
   closeAuthModal();
+  await ensureSystemPromptExists();
   await loadChats();
   if (!chats.length) createNewChat();
   else loadChat(chats[0].id);
@@ -4355,6 +4401,7 @@ currentUser = {
 };
   localStorage.setItem('overmind_user', JSON.stringify(currentUser));
   closeAuthModal();
+  await ensureSystemPromptExists();
   await loadChats();
   if (!chats.length) createNewChat();
   else loadChat(chats[0].id);
@@ -4430,6 +4477,7 @@ async function checkAuth() {
     localStorage.setItem('overmind_user', JSON.stringify(currentUser));
 
     closeAuthModal();
+    await ensureSystemPromptExists();
   await loadChats();
   if (!chats.length) createNewChat();
   else loadChat(chats[0].id);
