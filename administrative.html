@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Portal - System Status</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #0b0f19;
+            color: #f3f4f6;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+        .dashboard {
+            width: 100%;
+            max-width: 900px;
+            background: #111827;
+            border: 1px solid #1f2937;
+            border-radius: 8px;
+            padding: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #1f2937;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        .status-badge {
+            background: #065f46;
+            color: #34d399;
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+        .alert-banner {
+            background: #7f1d1d;
+            border: 1px solid #f87171;
+            color: #fca5a5;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .btn-danger {
+            background: #dc2626;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-danger:hover { background: #b91c1c; }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+        .card {
+            background: #1f2937;
+            padding: 15px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+        .card h3 { margin: 0 0 10px 0; color: #9ca3af; font-size: 0.8rem; text-transform: uppercase; }
+        .card p { margin: 0; font-size: 1.5rem; font-weight: bold; }
+
+        #panic-screen {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000000;
+            color: #00ff00;
+            font-family: 'Courier New', Courier, monospace;
+            padding: 40px;
+            box-sizing: border-box;
+            font-size: 1.2rem;
+            line-height: 1.6;
+            z-index: 9999;
+        }
+        .error-text { color: #ff0000; font-weight: bold; }
+        .joke-text { color: #00ffff; font-weight: bold; font-size: 1.5rem; }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard">
+        <div class="header">
+            <h2>Core Web Administrative Control Panel</h2>
+            <span class="status-badge">● ADMIN ACCESS GRANTED</span>
+        </div>
+        
+        <div class="alert-banner">
+            <div>
+                <strong>⚠️ CRITICAL SYSTEM WARNING:</strong> 
+                Unoptimised temporary logs are threatening server stability. Database sync required. Admin panel will be locked until fixed.
+            </div>
+            <button class="btn-danger" onclick="triggerPanic()">FIX SYSTEM NOW!</button>
+        </div>
+
+        <div class="grid">
+            <div class="card"><h3>Server Load</h3><p>42.1%</p></div>
+            <div class="card"><h3>Active Databases</h3><p>SQL_PROD_MAIN</p></div>
+            <div class="card"><h3>Bandwidth</h3><p>844 GB/s</p></div>
+            
+        </div>
+        <h3>Warning:</h3>
+            <p>Admin panel locked until critical system warning fixed. Please fix system now.</p>
+    </div>
+
+    <div id="panic-screen"></div>
+
+<script>
+function triggerPanic() {
+    const screen = document.getElementById('panic-screen');
+    screen.style.display = 'block';
+    
+    if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+    }
+
+    const lines = [
+        "C:\\Users\\MasterAdmin> initializing emergency database optimization...",
+        "Error: Root authentication mismatch.",
+        "Executing override command: rm -rf /website/production/database",
+        "<span class='error-text'>Wiping user directories... [100% COMPLETE]</span>",
+        "<span class='error-text'>Deleting layout templates... [100% COMPLETE]</span>",
+        "<span class='error-text'>Purging system core media folders... [100% COMPLETE]</span>",
+        "Wiping local backup partitions... done.",
+        "------------------------------------",
+        "<span class='error-text'>CRITICAL SYSTEM FAILURE: ALL WEBSITE DATA PERMANENTLY DESTROYED BY CURRENT ADMINISTRATOR SESSION.</span>",
+        "Disconnecting from server hosting node...",
+        "...",
+        "...",
+        "<span class='joke-text'>Just kidding. 😂</span>",
+        "<span class='joke-text'>No admin powers for you. Close this tab and go back to being a normal user.</span>"
+    ];
+
+    let currentLine = 0;
+
+    function printLine() {
+        if (currentLine < lines.length) {
+            screen.innerHTML += lines[currentLine] + "<br>";
+            currentLine++;
+            let speed = currentLine > 27 ? 4500 : 1800; 
+            setTimeout(printLine, speed);
+        }
+    }
+
+    printLine();
+}
+</script>
+
+</body>
+</html>
