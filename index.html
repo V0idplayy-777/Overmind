@@ -183,6 +183,7 @@ body[data-theme="ultradark"] {
     body[data-font="serif"] { font-family: Georgia, "Times New Roman", Times, serif; }
 body[data-font="mono"] { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
 body[data-font="comic"] { font-family: "Comic Sans MS", "Comic Sans", cursive; }
+body[data-font="papyrus"] { font-family: Papyrus, "Copperplate", fantasy; }
 body[data-font="system"] { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -1450,6 +1451,7 @@ const ACHIEVEMENTS = [
   { id: "twentyfive_images", name: "Generate 25 Images", desc: "Generate 25 images", icon: "🖼️", unlocks: { type: "accent", value: "#a855f7", label: "Purple Accent" } },
   { id: "become_admin", name: "Become An Admin", desc: "Become an administrator", icon: "🛡️", unlocks: { type: "accent", value: "#f59e0b", label: "Orange Accent" } },
   { id: "secret_pigeon", name: "???", desc: "???", icon: "❓", secret: true, unlocks: { type: "accent", value: "#ec4899", label: "Pink Accent" } },
+  { id: "void_stares_back", name: "The Void Stares Back", desc: "Send a message that is only \"…\" or \"?\" three times in a row", icon: "🌀", secret: true, unlocks: { type: "accent", value: "#4b0082", label: "Void Accent" } },
   { id: "hundred_messages", name: "Send 100 Messages", desc: "Send 100 messages total", icon: "💯", unlocks: { type: "accent", value: "#06b6d4", label: "Cyan Accent" } },
   { id: "five_chats", name: "Start 5 Chats", desc: "Create 5 separate chats", icon: "🗂️", unlocks: { type: "theme", value: "midnight", label: "Midnight Theme" } },
   { id: "ten_pins", name: "Pin 10 Messages", desc: "Pin 10 messages total", icon: "📌", unlocks: { type: "theme", value: "sepia", label: "Sepia Theme" } },
@@ -1462,6 +1464,8 @@ const ACHIEVEMENTS = [
   { id: "three_hundred_messages", name: "Send 300 Messages", desc: "Send 300 messages total", icon: "🔥", unlocks: { type: "theme", value: "solarized", label: "Solarized Light Theme" } },
   { id: "five_hundred_messages", name: "Send 500 Messages", desc: "Send 500 messages total", icon: "🏆", unlocks: { type: "theme", value: "ultradark", label: "Ultra Dark Theme" } },
   { id: "master_oogway", name: "Master Oogway", desc: "Mention 'master oogway' in a message", icon: "🐢", secret: false, unlocks: { type: "font", value: "comic", label: "Comic Sans Font" } },
+  { id: "oogways_favorite", name: "Oogway's Favorite", desc: "Trigger the Konami code while the achievements modal is open", icon: "🥋", secret: false, unlocks: { type: "accent", value: "#00ffff", label: "Turtle Accent" } },
+  { id: "gooning_adjacent", name: "Gooning Adjacent", desc: "Keep a single chat open for more than 3 hours of real time", icon: "🛋️", secret: true, unlocks: { type: "font", value: "papyrus", label: "Papyrus Font" } },
   { id: "eternal_flame", name: "Eternal Flame", desc: "Maintain a 100-day streak", icon: "🔥", unlocks: { type: "accent", value: "#ff4500", label: "Eternal Flame Accent" } }
 ];
 
@@ -1757,6 +1761,8 @@ const ANTI_HALLUCINATION_PROMPTS = {
 
 let chats = [];
 let currentChatId = null;
+let chatOpenedAt = null;
+const GOONING_THRESHOLD_MS = 3 * 60 * 60 * 1000;
 let chatSearchTerm = '';
 let settings = loadSettings();
 let pinnedMessages = [];
@@ -1875,6 +1881,19 @@ async function renderUpdateLog() {
   });
 }
 
+function checkGooningAdjacent() {
+  if (!currentUser || !currentChatId || !chatOpenedAt) return;
+  if (Date.now() - chatOpenedAt >= GOONING_THRESHOLD_MS) {
+    let unlocked = loadAchievements();
+    if (!unlocked.includes("gooning_adjacent")) {
+      unlocked.push("gooning_adjacent");
+      saveAchievements(unlocked);
+      populateCosmeticSelects();
+      showToast("Achievement Unlocked: Gooning Adjacent", "🛋️");
+    }
+  }
+}
+
 function checkAchievements() {
   if (!currentUser) return;
   let unlocked = loadAchievements();
@@ -1919,6 +1938,23 @@ if (settings.totalMessagesSent >= 500) unlock("five_hundred_messages", "Send 500
     const emptyChats = chats.filter(c => c.messages.length === 0).length;
     const chickenChat = chats.find(c => c.messages.some(m => m.content === "mmm... chicken"));
     if (emptyChats >= 24 && chickenChat) unlock("secret_pigeon", "I like pigeons", "🕊️");
+  }
+
+  if (!unlocked.includes("void_stares_back")) {
+    const voidPattern = /^(\.\.\.|…|\?)$/;
+    const hasVoidStreak = chats.some(chat => {
+      let streak = 0;
+      for (const msg of chat.messages) {
+        if (msg.role === 'user' && typeof msg.content === 'string' && voidPattern.test(msg.content.trim())) {
+          streak++;
+          if (streak >= 3) return true;
+        } else if (msg.role === 'user') {
+          streak = 0;
+        }
+      }
+      return false;
+    });
+    if (hasVoidStreak) unlock("void_stares_back", "The Void Stares Back", "🌀");
   }
 
 if (!unlocked.includes("master_oogway")) {
@@ -1969,13 +2005,13 @@ function renderAchievements() {
 
 const ACCENT_LABELS = {
   "#22c55e": "Green", "#3b82f6": "Blue", "#a855f7": "Purple", "#ef4444": "Red",
-  "#f59e0b": "Orange", "#ec4899": "Pink", "#06b6d4": "Cyan", "#ffffff": "White", "#ffff00": "Yellow", "#36454f": "Charcoal", "#ff4500": "Eternal Flame"
+  "#f59e0b": "Orange", "#ec4899": "Pink", "#06b6d4": "Cyan", "#ffffff": "White", "#ffff00": "Yellow", "#36454f": "Charcoal", "#ff4500": "Eternal Flame", "#4b0082": "Void", "#00ffff": "Turtle"
 };
 const THEME_LABELS = { dark: "Dark", light: "Light", midnight: "Midnight", sepia: "Sepia", solarized: "Solarized Light", ultradark: "Ultra Dark (AMOLED)" };
-const FONT_LABELS = { system: "System", serif: "Serif", mono: "Mono", comic: "Comic Sans" };
-const ALL_ACCENTS = ["#22c55e", "#3b82f6", "#a855f7", "#ef4444", "#f59e0b", "#ec4899", "#06b6d4", "#ffffff", "#ffff00", "#36454f", "#ff4500"];
+const FONT_LABELS = { system: "System", serif: "Serif", mono: "Mono", comic: "Comic Sans", papyrus: "Papyrus" };
+const ALL_ACCENTS = ["#22c55e", "#3b82f6", "#a855f7", "#ef4444", "#f59e0b", "#ec4899", "#06b6d4", "#ffffff", "#ffff00", "#36454f", "#ff4500", "#4b0082", "#00ffff"];
 const ALL_THEMES = ["dark", "light", "midnight", "sepia", "solarized", "ultradark"];
-const ALL_FONTS = ["system", "serif", "mono", "comic"];
+const ALL_FONTS = ["system", "serif", "mono", "comic", "papyrus"];
 
 function populateCosmeticSelects() {
   const unlocked = getUnlockedCosmetics();
@@ -2402,6 +2438,7 @@ function renderChatList() {
 }
 
 async function loadChat(id) {
+  if (id !== currentChatId) chatOpenedAt = Date.now();
   currentChatId = id;
   const chat = chats.find(c => c.id === id);
   if (!chat) return;
@@ -3794,6 +3831,7 @@ window.onload = async () => {
   initSupabase();
   loadPins();
   applySettings();
+  setInterval(checkGooningAdjacent, 60000);
   updateLevelUI();
   renderSuggestions();
   updateMessageLimitUI();
@@ -4933,6 +4971,17 @@ function showKonamiToast() {
 
   // crumbs keep growing and nobody knows why
   crumbs += 3;
+
+  if (currentUser && document.getElementById("achievements-modal")?.classList.contains("open")) {
+    const unlocked = loadAchievements();
+    if (!unlocked.includes("oogways_favorite")) {
+      unlocked.push("oogways_favorite");
+      saveAchievements(unlocked);
+      populateCosmeticSelects();
+      showToast("Achievement Unlocked: Oogway's Favorite", "🥋");
+      renderAchievements();
+    }
+  }
 }
 
 document.addEventListener("keydown", (e) => {
