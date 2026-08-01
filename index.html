@@ -411,14 +411,14 @@ body[data-font="upside"] {
 body[data-font="leet"] { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      height: 100vh;
-      overflow: hidden;
-      display: flex;
-      transition: background .2s ease, color .2s ease;
-    }
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  transition: background .2s ease, color .2s ease;
+}
     .sidebar {
   width: 280px;
   background: var(--sidebar-bg);
@@ -978,6 +978,10 @@ body[data-font="leet"] { font-family: system-ui, -apple-system, BlinkMacSystemFo
   box-shadow: 0 4px 15px var(--shadow);
 }
 
+.suggestion-chip:nth-child(n+3) {
+  display: none;
+}
+
 .suggestion-chip:hover {
   background: var(--panel-hover);
   border-color: var(--accent);
@@ -1103,6 +1107,223 @@ body[data-accent="#d7ff00"] .settings-tab.active {
   0%, 100% { box-shadow: 0 0 12px 2px rgba(215,255,0,0.6); }
   50% { box-shadow: 0 0 30px 9px rgba(215,255,0,0.95); }
 }
+
+@media (max-width: 768px) {
+  html, body {
+    height: 100%;
+    height: 100dvh;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+  }
+  body {
+    flex-direction: column;
+    display: flex;
+  }
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100dvh;
+    width: 280px;
+    z-index: 200;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+  }
+  .sidebar.open {
+    transform: translateX(0);
+  }
+  .main {
+  width: 100%;
+  height: 100dvh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+  .top-bar {
+    padding: 10px 12px;
+    flex-wrap: wrap;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .top-bar > div:first-child {
+    font-size: 1rem;
+  }
+  .top-bar > div:last-child {
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .top-bar > div:last-child > div {
+    padding: 3px 8px;
+    font-size: 0.75rem;
+  }
+  #achievements-btn,
+  #summarize-btn,
+  #user-level,
+  #streak-badge,
+  .top-bar > div:last-child > div:nth-last-child(2) {
+    display: none !important;
+  }
+  .chat-area {
+  padding: 12px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  width: 100%;
+  box-sizing: border-box;
+}
+  .message {
+    max-width: 92%;
+    padding: 12px 14px;
+  }
+  .input-area {
+    padding: 10px 12px;
+    flex-shrink: 0;
+  }
+  .input-container {
+  max-width: 100%;
+  width: 100%;
+  border-radius: 16px;
+}
+  .input-container textarea {
+    font-size: 1rem;
+    padding: 10px 12px;
+  }
+  .send-btn {
+    width: 40px;
+    height: 40px;
+  }
+  .modal {
+    width: 96vw;
+    max-height: 90vh;
+  }
+  .settings-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+  .settings-tab {
+    min-width: 80px;
+    padding: 8px 10px;
+    font-size: 0.85rem;
+  }
+  .settings-tab[data-tab="poll"] {
+    display: none !important;
+  }
+  .welcome-text {
+  position: static !important;
+  top: auto !important;
+  left: auto !important;
+  transform: none !important;
+  width: 100%;
+  font-size: 2.2rem;
+  margin: 0 auto 100px auto;
+  text-align: center;
+}
+  .suggestions {
+  margin-top: 0 !important;
+  margin-bottom: 24px;
+  padding: 0 16px;
+  gap: 8px;
+  position: static;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+  .suggestion-chip {
+    padding: 9px 12px;
+    font-size: 0.8rem;
+  }
+  .artifact-panel.open {
+    width: 100%;
+    position: fixed;
+    top: 0;
+    right: 0;
+    height: 100%;
+    z-index: 150;
+  }
+  #menu-btn {
+    display: block;
+    position: relative;
+    z-index: 50;
+  }
+  .modal-backdrop.open {
+    z-index: 300;
+  }
+  body {
+    height: 100dvh;
+}
+}
+
+@media (max-width: 480px) {
+  .sidebar {
+    width: 100%;
+  }
+  .message {
+    max-width: 96%;
+    padding: 10px 12px;
+  }
+  .top-bar {
+    padding: 8px 10px;
+  }
+  .chat-area {
+    padding: 8px;
+  }
+  .input-area {
+    padding: 8px 10px;
+  }
+  .welcome-text {
+    margin-top: 160px;
+    font-size: 1.8rem;
+    margin-bottom: 16px;
+  }
+  .suggestions {
+    gap: 6px;
+  }
+  .modal {
+    width: 100vw;
+    border-radius: 0;
+    max-height: 100vh;
+  }
+}
+
+html, body {
+  width: 100%;
+  height: 100dvh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+body {
+  display: flex;
+}
+
+body > .main {
+  min-height: 100dvh;
+}
+
+.main {
+  flex: 1 1 auto;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-area {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.input-area {
+  flex: 0 0 auto;
+}
+
   </style>
 </head>
 <body>
@@ -2797,6 +3018,7 @@ function renderChatList() {
       </div>
     `;
     item.onclick = () => loadChat(chat.id);
+    sidebar.classList.remove('open');
     item.querySelector('[data-action="rename"]').onclick = e => { e.stopPropagation(); renameChat(chat.id); };
     item.querySelector('[data-action="delete"]').onclick = e => { e.stopPropagation(); deleteChat(chat.id); };
     chatList.appendChild(item);
@@ -4314,17 +4536,23 @@ initPopupsAdminUI();
   await checkAndShowPopups();
 };
 
-sendBtn.onclick = handleSend;
-stopBtn.onclick = () => { if (currentStreamController) currentStreamController.abort(); };
-newChatBtn.onclick = createNewChat;
-settingsOpenBtn.onclick = openSettings;
+newChatBtn.onclick = () => {
+  createNewChat();
+  sidebar.classList.remove('open');
+};
+settingsOpenBtn.onclick = () => {
+  openSettings();
+  sidebar.classList.remove('open');
+};
 settingsCloseBtn.onclick = closeSettings;
 settingsSaveBtn.onclick = saveSettingsFromUI;
 const docsBtn = document.getElementById('docs-btn');
 if (docsBtn) docsBtn.onclick = () => window.open('https://v0idplayy-777.github.io/overmind-api/', '_blank');
 exportChatsBtn.onclick = exportChats;
 clearChatsBtn.onclick = clearAllChats;
-menuBtn.onclick = () => sidebar.classList.toggle('open');
+menuBtn.onclick = () => {
+  sidebar.classList.toggle('open');
+};
 openUpdatesBtn.onclick = () => { renderUpdateLog(); updatesModal.classList.add('open'); };
 summarizeBtn.onclick = summarizeChat;
 document.getElementById("achievements-btn").onclick = () => {
