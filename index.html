@@ -1337,14 +1337,35 @@ body > .main {
         <div id="login-form">
   <input type="text" id="login-username" class="text-input" placeholder="Username" style="margin-bottom:12px;">
   <input type="password" id="login-password" class="text-input" placeholder="Password">
-  <button onclick="handleLogin()" class="btn primary" style="width:100%;margin-top:16px;">Login</button>
+  <label style="display:flex; align-items:flex-start; gap:8px; margin-top:16px; font-size:0.85rem; color:var(--muted); cursor:pointer;">
+    <input type="checkbox" id="login-legal-checkbox" style="margin-top:3px; accent-color:var(--accent);">
+    <span>I agree to the <a href="#" onclick="showLegalModal('tos'); return false;" style="color:var(--accent);">Terms of Service</a> and <a href="#" onclick="showLegalModal('privacy'); return false;" style="color:var(--accent);">Privacy Policy</a></span>
+  </label>
+  <button onclick="handleLogin()" class="btn primary" style="width:100%;margin-top:12px;">Login</button>
   <div style="text-align:center;margin-top:12px;color:var(--muted);cursor:pointer;" onclick="switchToRegister()">Need an account? Register</div>
+</div>
+
+<div class="modal-backdrop" id="legal-modal" style="z-index:250;">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-header">
+      <strong id="legal-modal-title">Terms of Service</strong>
+      <button id="legal-modal-close" style="background:transparent;border:none;font-size:1.3rem;cursor:pointer;color:var(--text);">✕</button>
+    </div>
+    <div class="modal-body" id="legal-modal-body" style="padding:20px;max-height:60vh;overflow-y:auto;line-height:1.6;font-size:0.92rem;color:var(--text);"></div>
+    <div class="modal-footer">
+      <button class="btn primary" id="legal-modal-ok">Close</button>
+    </div>
+  </div>
 </div>
 
 <div id="register-form" style="display:none;">
   <input type="text" id="reg-username" class="text-input" placeholder="Username" style="margin-bottom:12px;">
   <input type="password" id="reg-password" class="text-input" placeholder="Password">
-  <button onclick="handleRegister()" class="btn primary" style="width:100%;margin-top:16px;">Create Account</button>
+  <label style="display:flex; align-items:flex-start; gap:8px; margin-top:16px; font-size:0.85rem; color:var(--muted); cursor:pointer;">
+    <input type="checkbox" id="reg-legal-checkbox" style="margin-top:3px; accent-color:var(--accent);">
+    <span>I agree to the <a href="#" onclick="showLegalModal('tos'); return false;" style="color:var(--accent);">Terms of Service</a> and <a href="#" onclick="showLegalModal('privacy'); return false;" style="color:var(--accent);">Privacy Policy</a></span>
+  </label>
+  <button onclick="handleRegister()" class="btn primary" style="width:100%;margin-top:12px;">Create Account</button>
   <div style="text-align:center;margin-top:12px;color:var(--muted);cursor:pointer;" onclick="switchToLogin()">Already have an account? Login</div>
 </div>
       </div>
@@ -1543,6 +1564,10 @@ body > .main {
             <button class="btn" id="export-chats-btn">Export chats</button>
             <button class="btn danger" id="clear-chats-btn">Clear all chats</button>
             <button class="btn danger" id="logout-btn">Log out</button>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+  <button class="btn" onclick="showLegalModal('tos')">📄 View Terms of Service</button>
+  <button class="btn" onclick="showLegalModal('privacy')">🔒 View Privacy Policy</button>
+</div>
           </div>
         </div>
                 <div class="settings-panel" id="tab-plugins">
@@ -4982,6 +5007,9 @@ function usernameToEmail(username) {
 }
 
 async function handleRegister() {
+  if (!document.getElementById('reg-legal-checkbox').checked) {
+    return alert('Please agree to the Terms of Service and Privacy Policy to continue.');
+  }
   const username = document.getElementById('reg-username').value.trim();
   const password = document.getElementById('reg-password').value;
   if (!username || !password) return alert('Username and password required');
@@ -5021,6 +5049,9 @@ async function hashPassword(password) {
 }
 
 async function handleLogin() {
+  if (!document.getElementById('login-legal-checkbox').checked) {
+    return alert('Please agree to the Terms of Service and Privacy Policy to continue.');
+  }
   const username = document.getElementById('login-username').value.trim();
   const password = document.getElementById('login-password').value;
   if (!username || !password) return alert('Username and password required');
@@ -5051,10 +5082,11 @@ currentUser = {
   if (!chats.length) createNewChat();
   else loadChat(chats[0].id);
   renderChatList();
-  updateAdminUI();
-  updateMessageLimitUI();
-  checkAnnouncements();
-  checkAndShowPopups();
+updateAdminUI();
+updateMessageLimitUI();
+checkAnnouncements();
+checkAndShowPopups();
+checkLegalUpdateNotice();
 }
 
 function switchToRegister() {
@@ -5072,6 +5104,159 @@ function switchToLogin() {
 function closeAuthModal() {
   document.getElementById('auth-modal').style.display = 'none';
 }
+
+const TOS_TEXT = `
+<p><strong>Last updated:</strong> August 3, 2026</p>
+<p>Welcome to Overmind ("the Service," "we," "us"). By creating an account or using the Service, you agree to the following terms. If you do not agree, do not use the Service.</p>
+
+<p><strong>1. Eligibility.</strong> You must be able to form a binding contract in your jurisdiction to use the Service. If local law sets a minimum age for using AI chat services, you must meet it.</p>
+
+<p><strong>2. Nature of the Service.</strong> Overmind is an AI-powered chat assistant. Responses are generated automatically and may be incomplete, outdated, or simply wrong. Do not rely on the Service for medical, legal, financial, or safety-critical decisions. Always verify important information independently.</p>
+
+<p><strong>3. Accounts.</strong> You are responsible for maintaining the confidentiality of your login credentials and for all activity that occurs under your account, whether or not authorized by you. Notify us if you suspect unauthorized use.</p>
+
+<p><strong>4. Acceptable Use.</strong> You agree not to use the Service to:</p>
+<ul style="margin-left:20px;">
+<li>Generate or request illegal content, including content that violates intellectual property or exploits minors</li>
+<li>Harass, threaten, or impersonate others</li>
+<li>Attempt to bypass safety measures, rate limits, or access controls</li>
+<li>Interfere with the Service's infrastructure (e.g. excessive automated requests, scraping)</li>
+<li>Resell or redistribute access to the Service without permission</li>
+</ul>
+
+<p><strong>5. Message Limits & Availability.</strong> Daily message limits, available models, and features may change at any time without prior notice. We do not guarantee uninterrupted availability and may perform maintenance that temporarily disables the Service.</p>
+
+<p><strong>6. Content You Submit.</strong> You retain rights to content you submit, but grant us a license to process, store, and display it back to you as needed to operate the Service. You are responsible for ensuring you have the right to submit any content you provide (e.g. uploaded text or prompts).</p>
+
+<p><strong>7. AI-Generated Content.</strong> Responses generated by the Service are provided "as is." We make no claim of ownership over AI-generated output, but we also make no warranty as to its accuracy, originality, or fitness for any purpose.</p>
+
+<p><strong>8. Admin & Moderation Actions.</strong> Administrators may suspend, ban, rate-limit, or delete accounts that violate these terms, at their discretion, with or without notice.</p>
+
+<p><strong>9. Termination.</strong> You may stop using the Service at any time. We may suspend or terminate your access for violation of these terms, extended inactivity, or at our discretion.</p>
+
+<p><strong>10. Disclaimer of Warranty.</strong> The Service is provided "as is" and "as available," without warranties of any kind, express or implied, including merchantability, fitness for a particular purpose, and non-infringement.</p>
+
+<p><strong>11. Limitation of Liability.</strong> To the maximum extent permitted by law, we are not liable for indirect, incidental, or consequential damages arising from your use of the Service, including reliance on AI-generated content.</p>
+
+<p><strong>12. Changes to These Terms.</strong> We may update these Terms at any time. Material changes will typically be announced in-app. Continued use of the Service after changes take effect constitutes acceptance of the revised Terms.</p>
+
+<p><strong>13. Contact.</strong> Questions about these Terms can be directed to an administrator via Admin Chat or the Service's documentation.</p>
+`;
+
+const PRIVACY_TEXT = `
+<p><strong>Last updated:</strong> August 3, 2026</p>
+<p>This Privacy Policy explains what data Overmind collects, how it's used, and the choices available to you.</p>
+
+<p><strong>1. Information We Collect.</strong></p>
+<ul style="margin-left:20px;">
+<li><strong>Account data:</strong> username and a hashed (not plaintext) password</li>
+<li><strong>Chat data:</strong> messages you send and receive, chat titles, timestamps, pinned messages, and checklists — stored via Supabase unless you enable "Never store chat history"</li>
+<li><strong>Settings:</strong> theme, tone, model preference, and other personalization choices, stored locally in your browser</li>
+<li><strong>Usage data:</strong> message counts, XP, achievements, and streaks, used for gamification features</li>
+<li><strong>Push notification data:</strong> if enabled, a browser-generated subscription endpoint used only to deliver Admin Chat alerts</li>
+</ul>
+
+<p><strong>2. How We Use Your Data.</strong> Data is used to operate core features: displaying your chat history, applying your settings, enforcing daily message limits, and showing achievement progress. We do not use your data for advertising.</p>
+
+<p><strong>3. Third-Party AI Processing.</strong> Messages you send are transmitted to third-party AI inference providers to generate responses. These providers process your message content but are not authorized to use it to build user profiles or sell it onward under our agreements with them.</p>
+
+<p><strong>4. Local Storage.</strong> Many preferences (theme, achievements, streaks, cached daily message counts) are stored in your browser's local storage rather than our servers. Clearing your browser data will reset these.</p>
+
+<p><strong>5. "Never Store Chat History" Mode.</strong> When enabled, new chats are not saved to our servers and exist only for the duration of your session.</p>
+
+<p><strong>6. Data Sharing.</strong> We do not sell your personal data. Limited data may be visible to administrators for moderation and support purposes (see Section 7). We do not share your data with advertisers.</p>
+
+<p><strong>7. Administrator Access.</strong> Administrators can view usernames, account status (banned/admin/message limits), and may access chat content for moderation, debugging, or support purposes. Administrators are expected to access this data only when necessary.</p>
+
+<p><strong>8. Data Retention.</strong> Chat data is retained until you delete it (via chat deletion, "Clear all chats," or account deletion) or an administrator removes it.</p>
+
+<p><strong>9. Your Choices.</strong> You can export your chats, clear all chats, disable memory, enable "Never store chat history," or request account deletion via an administrator at any time.</p>
+
+<p><strong>10. Children's Privacy.</strong> The Service is not directed at children under the age required by applicable law to independently consent to data processing. If you believe a child has created an account without appropriate consent, contact an administrator.</p>
+
+<p><strong>11. Security.</strong> Passwords are hashed before storage. No method of transmission or storage is 100% secure, and we cannot guarantee absolute security.</p>
+
+<p><strong>12. Changes to This Policy.</strong> We may update this Privacy Policy from time to time. Material changes will typically be announced in-app. Continued use after changes take effect constitutes acceptance.</p>
+
+<p><strong>13. Contact.</strong> Questions about this policy can be directed to an administrator via Admin Chat or the Service's documentation.</p>
+`;
+
+async function broadcastLegalUpdate() {
+  if (!confirm('Show a "Terms & Privacy Policy updated" popup to every user? This will appear the next time each user opens the app.')) return;
+  await supabaseClient.from('config').upsert({
+    key: 'legal_update_notice',
+    value: JSON.stringify({ shown: true, timestamp: Date.now() })
+  }, { onConflict: 'key' });
+  alert('Notice will now show for all users.');
+}
+
+async function checkLegalUpdateNotice() {
+  if (!currentUser) return;
+  const { data } = await supabaseClient
+    .from('config')
+    .select('value')
+    .eq('key', 'legal_update_notice')
+    .single();
+  if (!data || !data.value) return;
+
+  let notice;
+  try { notice = JSON.parse(data.value); } catch (e) { return; }
+  if (!notice.timestamp) return;
+
+  const seenKey = 'overmind_legal_notice_seen_' + (currentUser.username || '');
+  const seenTimestamp = safeLocalStorageGet(seenKey, 0);
+  if (seenTimestamp >= notice.timestamp) return;
+
+  showLegalUpdatePopup(notice.timestamp);
+}
+
+function showLegalUpdatePopup(noticeTimestamp) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-backdrop open';
+  overlay.style.zIndex = '260';
+  overlay.innerHTML = `
+    <div class="modal" style="width:min(92vw,440px);">
+      <div class="modal-header">
+        <strong>ANNOUNCEMENT!!</strong>
+        <button class="legal-notice-close-icon" style="background:transparent;border:none;font-size:1.3rem;cursor:pointer;color:var(--text);">✕</button>
+      </div>
+      <div class="modal-body" style="padding:20px;">
+        <p style="line-height:1.5;">Bro, I have explosive diarrhoea!</p>
+      </div>
+      <div class="modal-footer" style="flex-wrap:wrap;">
+        <button class="btn legal-notice-view-tos">fish</button>
+        <button class="btn legal-notice-view-privacy">:)</button>
+        <button class="btn primary legal-notice-close">PeePee PooPoo</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const dismiss = () => {
+    safeLocalStorageSet('overmind_legal_notice_seen_' + (currentUser.username || ''), noticeTimestamp);
+    overlay.remove();
+  };
+
+  overlay.querySelector('.legal-notice-close').onclick = dismiss;
+  overlay.querySelector('.legal-notice-close-icon').onclick = dismiss;
+  overlay.querySelector('.legal-notice-view-tos').onclick = () => { overlay.remove(); showLegalModal('tos'); };
+  overlay.querySelector('.legal-notice-view-privacy').onclick = () => { overlay.remove(); showLegalModal('privacy'); };
+  overlay.addEventListener('click', e => { if (e.target === overlay) dismiss(); });
+}
+
+function showLegalModal(type) {
+  const title = document.getElementById('legal-modal-title');
+  const body = document.getElementById('legal-modal-body');
+  title.textContent = type === 'tos' ? 'Terms of Service' : 'Privacy Policy';
+  body.innerHTML = type === 'tos' ? TOS_TEXT : PRIVACY_TEXT;
+  document.getElementById('legal-modal').classList.add('open');
+}
+
+document.getElementById('legal-modal-close').onclick = () => document.getElementById('legal-modal').classList.remove('open');
+document.getElementById('legal-modal-ok').onclick = () => document.getElementById('legal-modal').classList.remove('open');
+document.getElementById('legal-modal').addEventListener('click', e => {
+  if (e.target.id === 'legal-modal') document.getElementById('legal-modal').classList.remove('open');
+});
 
 async function checkAuth() {
   const { data: configData } = await supabaseClient
@@ -5131,6 +5316,7 @@ async function checkAuth() {
   updateMessageLimitUI();
   checkAnnouncements();
   checkAndShowPopups();
+  checkLegalUpdateNotice();
   } else {
     document.getElementById('auth-modal').style.display = 'flex';
   }
@@ -5769,6 +5955,14 @@ pluginManager.refreshActivePlugins();
             <button class="btn primary" onclick="savePollOptions()">Save Poll</button>
             <button class="btn danger" onclick="resetPoll()">Reset Poll</button>
           </div>
+
+          <hr style="border-color:var(--border);">
+<br>
+<div>
+  <div class="field-label" style="font-size:1rem;font-weight:600;color:var(--text);margin-bottom:10px;">⚖️ Coming Soon!</div>
+  <div class="help-text" style="margin-bottom:12px;">Gooning- I mean- Coming Soon!</div>
+  <button class="btn primary" onclick="broadcastLegalUpdate()">Free Robux</button>
+</div>
         </div>
 
     <hr style="border-color:var(--border);">
