@@ -4370,10 +4370,13 @@ function handleSend() {
 
   const currentCount = getDailyCount();
   if (currentCount >= limit) {
-    showError(`You've reached your daily limit of ${limit} messages.<br>Come back tomorrow!`);
+    showError(`You've reached your daily limit of ${limit} messages.<br>This was your choice. We didn't make you do this.`);
     return;
   }
 
+// this function has been "temporary" since v1.9.0. 
+// it has a wife and kids now. we're not touching it.
+  
   incrementDailyCount();
   incrementTotalMessages();
   updateMessageLimitUI();
