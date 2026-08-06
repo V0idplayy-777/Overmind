@@ -1405,7 +1405,7 @@ body > .main {
                 <div id="achievements-btn" style="background: var(--panel-bg); border-radius: 28px; padding: 4px 12px; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:6px;">
           🏆 <span>Achievements</span>
         </div>
-        <div style="color:var(--muted);">v1.25.1</div>
+        <div style="color:var(--muted);">v1.26.0</div>
         <div id="menu-btn" style="cursor:pointer; font-size:1.3rem; user-select:none;">☰</div>
       </div>
     </div>
@@ -1549,9 +1549,14 @@ body > .main {
           <div class="toggle-row">
             <div>
               <div class="field-label" style="margin-bottom:0;">Memory</div>
-              <div class="help-text" style="margin-top:4px;">When on, the bot can use prior chats as extra context.</div>
+              <div class="help-text" style="margin-top:4px;">When on, the AI can save new facts about you to memory using /memory. Turn off to stop new memories from being added — what's already stored stays until you edit it below.</div>
             </div>
             <div class="toggle" id="memory-toggle" role="switch" aria-checked="true" tabindex="0"></div>
+          </div>
+          <div>
+            <label class="field-label" for="user-memory-textarea">Stored memory</label>
+            <textarea id="user-memory-textarea" class="text-input" style="min-height:140px;resize:vertical;" placeholder="Nothing remembered yet."></textarea>
+            <div class="help-text">What the AI remembers about you across chats. Edit or delete anything here — changes save when you hit Save below.</div>
           </div>
           <div class="toggle-row">
             <div>
@@ -2407,6 +2412,30 @@ async function saveChats() {
     .upsert({ ...chat, username: currentUser.username }, { onConflict: 'id,username' });
 }
 
+async function getUserMemory() {
+  if (!currentUser) return '';
+  const { data } = await supabaseClient
+    .from('user_memory')
+    .select('content')
+    .eq('username', currentUser.username)
+    .single();
+  return data?.content || '';
+}
+
+async function saveUserMemory(content) {
+  if (!currentUser) return;
+  await supabaseClient
+    .from('user_memory')
+    .upsert({ username: currentUser.username, content }, { onConflict: 'username' });
+}
+
+async function appendUserMemory(newFacts) {
+  if (!currentUser || !newFacts.length) return;
+  const existing = await getUserMemory();
+  const updated = (existing ? existing + '\n' : '') + newFacts.join('\n');
+  await saveUserMemory(updated);
+}
+
 function loadPins() { pinnedMessages = safeLocalStorageGet('overmind_pins', []); }
 function savePins() { safeLocalStorageSet('overmind_pins', pinnedMessages); }
 
@@ -3062,12 +3091,6 @@ async function loadChat(id) {
     <div id="suggestions" class="suggestions"></div>
   `;
 
-  if (!settings.memoryEnabled && roughTokenCount(JSON.stringify(chat.messages)) > COMPRESSION_THRESHOLD) {
-    const compressed = await compressChatHistory(chat);
-    chat.messages = compressed;
-    saveChats();
-  }
-
   chat.messages.forEach((msg, index) => {
   addMessage(msg, msg.role === 'user', index);
   if(msg.role === 'assistant' && typeof msg.content === 'string'){
@@ -3133,6 +3156,18 @@ function parseChecklistFromText(text) {
   const items = lines.slice(1).map(line => line.replace(/^[-*]\s*/, '')).filter(Boolean);
   if (!items.length) return null;
   return { role: 'assistant', type: 'checklist', items: items.map(t => ({ text: t, checked: false })) };
+}
+
+function extractMemoryLines(text) {
+  const lines = String(text || '').split('\n');
+  const kept = [];
+  const memories = [];
+  lines.forEach(line => {
+    const match = line.match(/^\/memory\s+(.+)$/i);
+    if (match) memories.push(match[1].trim());
+    else kept.push(line);
+  });
+  return { cleanText: kept.join('\n').replace(/\n{3,}/g, '\n\n').trim(), memories };
 }
 
 function roughTokenCount(text) {
@@ -3359,6 +3394,14 @@ checklists must NEVER be formatted any other way. the system will automatically 
     finalPrompt = finalPrompt.replaceAll(key, value);
   }
 
+  const memoryContent = await getUserMemory();
+  finalPrompt += `\n\nYou have persistent memory about this user, stored across all their chats. Current memory:\n${memoryContent || '(nothing remembered yet)'}`;
+  if (settings.memoryEnabled) {
+    finalPrompt += `\n\nTo remember something new and durable about the user, put a line formatted exactly as:\n/memory the fact to remember\nanywhere in your reply, on its own line. That line is saved and then hidden from the user, so write the rest of your reply normally around it. Only use it for things worth remembering long-term, not everyday chat.`;
+  } else {
+    finalPrompt += `\n\nThe user has turned off new memories. Do not use /memory for any reason.`;
+  }
+
   return finalPrompt;
 }
 
@@ -3406,16 +3449,18 @@ async function getCerebrasResponse(userMessage) {
     function read() {
       reader.read().then(({ value, done }) => {
         if (done) {
-          const checklistMsg = parseChecklistFromText(botReply);
+          const { cleanText, memories } = extractMemoryLines(botReply);
+          if (memories.length) appendUserMemory(memories);
+          const checklistMsg = parseChecklistFromText(cleanText);
           chat.messages.push(
     checklistMsg ||
     {
         role:"assistant",
-        content:botReply
+        content:cleanText
     }
 );
 
-detectArtifact(botReply);
+detectArtifact(cleanText);
 
 saveChats();
 
@@ -3466,12 +3511,7 @@ async function getCerebrasResponseFromIndex(index) {
   currentStreamController = new AbortController();
 showStopButton();
 
-  let contextMessages;
-  if (settings.memoryEnabled) {
-    contextMessages = chatHistoryForMemory();
-  } else {
-    contextMessages = await compressChatHistory(chat);
-  }
+  const contextMessages = await compressChatHistory(chat);
 
   fetch(API_URL, {
     method: 'POST',
@@ -3496,16 +3536,18 @@ showStopButton();
     function read() {
       reader.read().then(({ value, done }) => {
         if (done) {
-          const checklistMsg = parseChecklistFromText(botReply);
+          const { cleanText, memories } = extractMemoryLines(botReply);
+          if (memories.length) appendUserMemory(memories);
+          const checklistMsg = parseChecklistFromText(cleanText);
           chat.messages.push(
     checklistMsg ||
     {
         role:"assistant",
-        content:botReply
+        content:cleanText
     }
 );
 
-detectArtifact(botReply);
+detectArtifact(cleanText);
 
 saveChats();
 
@@ -3765,6 +3807,8 @@ function openSettings() {
   applySettings();
   document.getElementById('bsod-overlay').style.display = 'none';
   settingsModal.classList.add('open');
+  const memoryTextarea = document.getElementById('user-memory-textarea');
+  if (memoryTextarea) getUserMemory().then(content => { memoryTextarea.value = content; });
   const activeTab = document.querySelector('.settings-tab.active');
   if (activeTab && activeTab.dataset.tab === 'poll') renderUserPoll();
 }
@@ -3785,7 +3829,10 @@ function saveSettingsFromUI() {
   settings.memoryEnabled = memoryToggle.classList.contains('on');
   settings.neverStore = noStoreToggle.classList.contains('on');
   settings.model = modelSelect.value;
-  
+
+  const memoryTextarea = document.getElementById('user-memory-textarea');
+  if (memoryTextarea) saveUserMemory(memoryTextarea.value);
+
   saveSettings();
   applySettings();
   applyBSODLock();
@@ -4118,7 +4165,7 @@ async function getCerebrasResponse(userMessage) {
   const botDiv = addMessage('', false);
   showTyping();
 
-  const contextMessages = settings.memoryEnabled ? chatHistoryForMemory() : chat.messages.slice();
+  const contextMessages = await compressChatHistory(chat);
   currentStreamController = new AbortController();
 showStopButton();
   const { temperature, max_tokens, apiModel } = getModelGenerationParams();
@@ -4146,10 +4193,12 @@ showStopButton();
     function read() {
       reader.read().then(({ value, done }) => {
         if (done) {
-          const checklistMsg = parseChecklistFromText(botReply);
+          const { cleanText, memories } = extractMemoryLines(botReply);
+          if (memories.length) appendUserMemory(memories);
+          const checklistMsg = parseChecklistFromText(cleanText);
 showSendButton();
 currentStreamController = null;
-          chat.messages.push(checklistMsg || { role: 'assistant', content: botReply });
+          chat.messages.push(checklistMsg || { role: 'assistant', content: cleanText });
           saveChats();
           loadChat(currentChatId);
           return;
@@ -4173,9 +4222,11 @@ read();
         currentStreamController = null;
         removeTyping();
         if (err.name === 'AbortError') {
-          const checklistMsg = parseChecklistFromText(botReply);
-          chat.messages.push(checklistMsg || { role: 'assistant', content: botReply || '*(stopped)*' });
-          detectArtifact(botReply);
+          const { cleanText, memories } = extractMemoryLines(botReply);
+          if (memories.length) appendUserMemory(memories);
+          const checklistMsg = parseChecklistFromText(cleanText);
+          chat.messages.push(checklistMsg || { role: 'assistant', content: cleanText || '*(stopped)*' });
+          detectArtifact(cleanText);
           saveChats();
           loadChat(currentChatId);
           return;
@@ -4227,16 +4278,18 @@ async function generateReplacementResponse(chat, oldResponse) {
     function read() {
       reader.read().then(({ value, done }) => {
         if (done) {
-          const checklistMsg = parseChecklistFromText(botReply);
+          const { cleanText, memories } = extractMemoryLines(botReply);
+          if (memories.length) appendUserMemory(memories);
+          const checklistMsg = parseChecklistFromText(cleanText);
           chat.messages.push(
     checklistMsg ||
     {
         role:"assistant",
-        content:botReply
+        content:cleanText
     }
 );
 
-detectArtifact(botReply);
+detectArtifact(cleanText);
 
 saveChats();
 
