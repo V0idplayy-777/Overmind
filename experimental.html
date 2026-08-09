@@ -1324,6 +1324,33 @@ body > .main {
   flex: 0 0 auto;
 }
 
+.theme-generator {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+.theme-preview {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--panel-bg);
+}
+.theme-preview-swatch {
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+.theme-preview-label {
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-align: center;
+  margin-top: 4px;
+}
+
   </style>
 </head>
 <body>
@@ -1434,10 +1461,84 @@ body > .main {
           <button class="settings-tab" data-tab="behavior">Behavior</button>
           <button class="settings-tab" data-tab="identity">Identity</button>
           <button class="settings-tab" data-tab="language">Language</button>
-          
+          <button class="settings-tab" data-tab="themeditor">Themes</button>
+          <button class="settings-tab" data-tab="commands">Commands</button>
           <button class="settings-tab" data-tab="poll">Poll</button>
           <button class="settings-tab" data-tab="privacy">Privacy</button>
         </div>
+
+<div class="settings-panel" id="tab-themeditor">
+  <div>
+    <div class="field-label" style="font-size:1rem;font-weight:600;color:var(--text);margin-bottom:10px;">Your Custom Themes</div>
+    <div id="custom-themes-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;"></div>
+  </div>
+
+  <hr style="border-color:var(--border);margin:8px 0 16px 0;">
+
+  <div>
+    <div class="field-label" style="font-size:1rem;font-weight:600;color:var(--text);margin-bottom:12px;">Create / Edit Theme</div>
+    
+    <label class="field-label" for="te-name">Theme name</label>
+    <input class="text-input" id="te-name" type="text" maxlength="24" placeholder="My Custom Theme" style="margin-bottom:14px;">
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+      <div>
+        <label class="field-label">Background</label>
+        <input type="color" id="te-bg" value="#0a0a0a" style="width:100%;height:40px;border:none;border-radius:8px;cursor:pointer;">
+      </div>
+      <div>
+        <label class="field-label">Sidebar</label>
+        <input type="color" id="te-sidebar" value="#111113" style="width:100%;height:40px;border:none;border-radius:8px;cursor:pointer;">
+      </div>
+      <div>
+        <label class="field-label">Main area</label>
+        <input type="color" id="te-main" value="#1a1b1e" style="width:100%;height:40px;border:none;border-radius:8px;cursor:pointer;">
+      </div>
+      <div>
+        <label class="field-label">Panels</label>
+        <input type="color" id="te-panel" value="#27272a" style="width:100%;height:40px;border:none;border-radius:8px;cursor:pointer;">
+      </div>
+      <div>
+        <label class="field-label">Text</label>
+        <input type="color" id="te-text" value="#e2e8f0" style="width:100%;height:40px;border:none;border-radius:8px;cursor:pointer;">
+      </div>
+      <div>
+        <label class="field-label">Muted text</label>
+        <input type="color" id="te-muted" value="#a1a1aa" style="width:100%;height:40px;border:none;border-radius:8px;cursor:pointer;">
+      </div>
+      <div>
+        <label class="field-label">Accent</label>
+        <input type="color" id="te-accent" value="#22c55e" style="width:100%;height:40px;border:none;border-radius:8px;cursor:pointer;">
+      </div>
+      <div>
+        <label class="field-label">User bubble</label>
+        <input type="color" id="te-user" value="#22c55e" style="width:100%;height:40px;border:none;border-radius:8px;cursor:pointer;">
+      </div>
+      <div>
+        <label class="field-label">User text</label>
+        <input type="color" id="te-usertext" value="#000000" style="width:100%;height:40px;border:none;border-radius:8px;cursor:pointer;">
+      </div>
+      <div>
+        <label class="field-label">Bot bubble</label>
+        <input type="color" id="te-bot" value="#27272a" style="width:100%;height:40px;border:none;border-radius:8px;cursor:pointer;">
+      </div>
+      <div>
+        <label class="field-label">Border</label>
+        <input type="color" id="te-border" value="#27272a" style="width:100%;height:40px;border:none;border-radius:8px;cursor:pointer;">
+      </div>
+      <div>
+        <label class="field-label">Panel hover</label>
+        <input type="color" id="te-panelhover" value="#3f3f46" style="width:100%;height:40px;border:none;border-radius:8px;cursor:pointer;">
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn primary" id="te-save-btn">Save Theme</button>
+      <button class="btn" id="te-load-current-btn">Load Current Theme</button>
+      <button class="btn" id="te-reset-btn">Reset Form</button>
+    </div>
+  </div>
+</div>
 
         <div class="settings-panel active" id="tab-appearance">
           <div>
@@ -1454,6 +1555,7 @@ body > .main {
             <select class="select" id="accent-select"></select>
             <div class="help-text" id="accent-lock-hint">Locked colours are unlocked via achievements.</div>
           </div>
+
           <div>
             <label class="field-label" for="emoji-select">Emoji usage</label>
             <select class="select" id="emoji-select">
@@ -1583,6 +1685,31 @@ body > .main {
     <div class="field-label" style="font-size:1rem;font-weight:600;color:var(--text);margin-bottom:6px;">Update Poll</div>
     <div class="help-text" style="margin-bottom:16px;">Vote for what should be added in the next update.</div>
     <div id="poll-user-container"></div>
+  </div>
+</div>
+
+<div class="settings-panel" id="tab-commands">
+  <div>
+    <div class="field-label" style="font-size:1rem;font-weight:600;color:var(--text);margin-bottom:8px;">Custom Commands</div>
+    <div class="help-text" style="margin-bottom:14px;">Create up to 2 custom slash commands. Type /name in chat to use them.</div>
+    <div id="custom-commands-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;"></div>
+  </div>
+
+  <hr style="border-color:var(--border);margin:8px 0 16px 0;">
+
+  <div>
+    <div class="field-label" style="font-size:1rem;font-weight:600;color:var(--text);margin-bottom:12px;">Create / Edit Command</div>
+
+    <label class="field-label" for="cmd-name">Command name (without /)</label>
+    <input class="text-input" id="cmd-name" type="text" maxlength="20" placeholder="explain" style="margin-bottom:12px;">
+
+    <label class="field-label" for="cmd-instructions">Instructions for the AI</label>
+    <textarea id="cmd-instructions" class="text-input" style="min-height:110px;resize:vertical;margin-bottom:14px;" placeholder="Explain the following topic in simple terms, using analogies when helpful."></textarea>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn primary" id="cmd-save-btn">Save Command</button>
+      <button class="btn" id="cmd-reset-btn">Reset Form</button>
+    </div>
   </div>
 </div>
       </div>
@@ -1941,7 +2068,7 @@ async function fetchSystemPromptOverride() {
     const { data } = await supabaseClient
       .from('config')
       .select('value')
-      .eq('key', 'system_prompt_override')
+      .eq('key', 'promptX')
       .single();
     if (data && data.value) {
       cachedSystemPromptOverride = data.value;
@@ -2040,6 +2167,14 @@ function getUnlockedCosmetics() {
       if (ach.unlocks.type === 'font') result.fonts.push(ach.unlocks.value);
     }
   });
+
+  const customThemes = safeLocalStorageGet('overmind_custom_themes', []);
+  customThemes.forEach(t => {
+    if (!result.themes.includes(t.id)) {
+      result.themes.push(t.id);
+    }
+  });
+
   return result;
 }
 
@@ -2328,8 +2463,14 @@ let currentStreamController = null;
 let lastImageGenTime = 0;
 const IMAGE_COOLDOWN_MS = 30000;
 
+
+document.getElementById('cmd-save-btn').onclick = saveCommandFromEditor;
+document.getElementById('cmd-reset-btn').onclick = resetCommandEditor;
 const chatScreen = document.getElementById('chat-screen');
 const userInput = document.getElementById('user-input');
+document.getElementById('te-save-btn').onclick = saveThemeFromEditor;
+document.getElementById('te-load-current-btn').onclick = loadCurrentThemeIntoEditor;
+document.getElementById('te-reset-btn').onclick = resetThemeEditor;
 const sendBtn = document.getElementById('send-btn');
 const newChatBtn = document.getElementById('new-chat-btn');
 const chatList = document.getElementById('chat-list');
@@ -2389,6 +2530,7 @@ function showSendButton() {
 
 function loadSettings() {
   return safeLocalStorageGet('overmind_settings', { ...DEFAULT_SETTINGS });
+  loadCustomThemesIntoLists();
 }
 
 function saveSettings() { safeLocalStorageSet('overmind_settings', settings); }
@@ -2685,6 +2827,364 @@ function populateCosmeticSelects() {
   });
 }
 
+let editingThemeId = null;
+
+function getCustomThemes() {
+  return safeLocalStorageGet('overmind_custom_themes', []);
+}
+
+function saveCustomThemes(themes) {
+  safeLocalStorageSet('overmind_custom_themes', themes);
+}
+
+function loadCustomThemesIntoLists() {
+  const customThemes = safeLocalStorageGet('overmind_custom_themes', []);
+  customThemes.forEach(t => {
+    THEME_LABELS[t.id] = t.name;
+    if (!ALL_THEMES.includes(t.id)) {
+      ALL_THEMES.push(t.id);
+    }
+  });
+}
+
+function applyCustomTheme(themeId) {
+  const themes = getCustomThemes();
+  const theme = themes.find(t => t.id === themeId);
+  if (!theme) return;
+
+  const root = document.documentElement;
+  Object.entries(theme.vars).forEach(([key, value]) => {
+    root.style.setProperty(`--${key}`, value);
+  });
+  document.body.setAttribute('data-theme', themeId);
+  document.body.setAttribute('data-accent', theme.vars.accent || '#22c55e');
+}
+
+function renderCustomThemesList() {
+  const container = document.getElementById('custom-themes-list');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const themes = getCustomThemes();
+  if (!themes.length) {
+    container.innerHTML = '<div style="color:var(--muted);font-size:0.9rem;">No custom themes yet.</div>';
+    return;
+  }
+
+  themes.forEach(theme => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--panel-bg);border-radius:10px;gap:8px;';
+    
+    const left = document.createElement('div');
+    left.style.cssText = 'display:flex;align-items:center;gap:10px;';
+    
+    const swatch = document.createElement('div');
+    swatch.style.cssText = `width:28px;height:28px;border-radius:6px;background:${theme.vars.accent};border:1px solid var(--border);`;
+    
+    const name = document.createElement('strong');
+    name.textContent = theme.name;
+    
+    left.appendChild(swatch);
+    left.appendChild(name);
+
+    const actions = document.createElement('div');
+    actions.style.cssText = 'display:flex;gap:6px;';
+
+    const applyBtn = document.createElement('button');
+    applyBtn.className = 'btn';
+    applyBtn.style.cssText = 'padding:6px 10px;font-size:0.8rem;';
+    applyBtn.textContent = 'Apply';
+    applyBtn.onclick = () => {
+      settings.theme = theme.id;
+      applySettings();
+      saveSettings();
+      showToast(`Applied "${theme.name}"`, '🎨');
+    };
+
+    const editBtn = document.createElement('button');
+    editBtn.className = 'btn';
+    editBtn.style.cssText = 'padding:6px 10px;font-size:0.8rem;';
+    editBtn.textContent = 'Edit';
+    editBtn.onclick = () => loadThemeIntoEditor(theme);
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn danger';
+    delBtn.style.cssText = 'padding:6px 10px;font-size:0.8rem;';
+    delBtn.textContent = 'Delete';
+    delBtn.onclick = () => {
+      if (!confirm(`Delete "${theme.name}"?`)) return;
+      const updated = getCustomThemes().filter(t => t.id !== theme.id);
+      saveCustomThemes(updated);
+      ALL_THEMES = ALL_THEMES.filter(id => id !== theme.id);
+      delete THEME_LABELS[theme.id];
+      if (settings.theme === theme.id) {
+        settings.theme = 'dark';
+        applySettings();
+        saveSettings();
+      }
+      populateCosmeticSelects();
+      renderCustomThemesList();
+    };
+
+    actions.appendChild(applyBtn);
+    actions.appendChild(editBtn);
+    actions.appendChild(delBtn);
+
+    row.appendChild(left);
+    row.appendChild(actions);
+    container.appendChild(row);
+  });
+}
+
+function loadThemeIntoEditor(theme) {
+  editingThemeId = theme.id;
+  document.getElementById('te-name').value = theme.name;
+  document.getElementById('te-bg').value = theme.vars.bg || '#0a0a0a';
+  document.getElementById('te-sidebar').value = theme.vars['sidebar-bg'] || '#111113';
+  document.getElementById('te-main').value = theme.vars['main-bg'] || '#1a1b1e';
+  document.getElementById('te-panel').value = theme.vars['panel-bg'] || '#27272a';
+  document.getElementById('te-text').value = theme.vars.text || '#e2e8f0';
+  document.getElementById('te-muted').value = theme.vars.muted || '#a1a1aa';
+  document.getElementById('te-accent').value = theme.vars.accent || '#22c55e';
+  document.getElementById('te-user').value = theme.vars['user-bg'] || '#22c55e';
+  document.getElementById('te-usertext').value = theme.vars['user-text'] || '#000000';
+  document.getElementById('te-bot').value = theme.vars['bot-bg'] || '#27272a';
+  document.getElementById('te-border').value = theme.vars.border || '#27272a';
+  document.getElementById('te-panelhover').value = theme.vars['panel-hover'] || '#3f3f46';
+}
+
+function collectEditorTheme() {
+  const name = document.getElementById('te-name').value.trim() || 'Custom Theme';
+  const accent = document.getElementById('te-accent').value;
+
+  return {
+    name,
+    vars: {
+      'bg': document.getElementById('te-bg').value,
+      'sidebar-bg': document.getElementById('te-sidebar').value,
+      'main-bg': document.getElementById('te-main').value,
+      'topbar-bg': document.getElementById('te-sidebar').value,
+      'panel-bg': document.getElementById('te-panel').value,
+      'panel-hover': document.getElementById('te-panelhover').value,
+      'border': document.getElementById('te-border').value,
+      'text': document.getElementById('te-text').value,
+      'muted': document.getElementById('te-muted').value,
+      'bot-bg': document.getElementById('te-bot').value,
+      'user-bg': document.getElementById('te-user').value,
+      'user-text': document.getElementById('te-usertext').value,
+      'accent': accent,
+      'input-text': document.getElementById('te-text').value,
+      'input-placeholder': document.getElementById('te-muted').value,
+      'shadow': 'rgba(0,0,0,0.25)',
+      'tab-bg': document.getElementById('te-panel').value,
+      'tab-active-bg': accent,
+      'tab-active-text': document.getElementById('te-usertext').value,
+      'update-highlight': document.getElementById('te-panelhover').value,
+      'pinned-glow': `rgba(${parseInt(accent.slice(1,3),16)},${parseInt(accent.slice(3,5),16)},${parseInt(accent.slice(5,7),16)},0.4)`,
+      'pinned-border': accent,
+      'pinned-bg': `rgba(${parseInt(accent.slice(1,3),16)},${parseInt(accent.slice(3,5),16)},${parseInt(accent.slice(5,7),16)},0.1)`
+    }
+  };
+}
+
+function saveThemeFromEditor() {
+  const data = collectEditorTheme();
+  let themes = getCustomThemes();
+
+  if (editingThemeId) {
+    const idx = themes.findIndex(t => t.id === editingThemeId);
+    if (idx !== -1) {
+      themes[idx] = { id: editingThemeId, name: data.name, vars: data.vars };
+    }
+  } else {
+    const id = 'custom_' + Date.now();
+    themes.push({ id, name: data.name, vars: data.vars });
+    THEME_LABELS[id] = data.name;
+    if (!ALL_THEMES.includes(id)) ALL_THEMES.push(id);
+  }
+
+  saveCustomThemes(themes);
+  loadCustomThemesIntoLists();
+  populateCosmeticSelects();
+  renderCustomThemesList();
+  editingThemeId = null;
+  document.getElementById('te-name').value = '';
+  showToast(`Theme "${data.name}" saved`, '🎨');
+}
+
+let editingCommandId = null;
+
+function getCustomCommands() {
+  return safeLocalStorageGet('overmind_custom_commands', []);
+}
+
+function saveCustomCommands(commands) {
+  safeLocalStorageSet('overmind_custom_commands', commands);
+}
+
+function renderCustomCommandsList() {
+  const container = document.getElementById('custom-commands-list');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const commands = getCustomCommands();
+  if (!commands.length) {
+    container.innerHTML = '<div style="color:var(--muted);font-size:0.9rem;">No custom commands yet. You can create up to 2.</div>';
+    return;
+  }
+
+  commands.forEach(cmd => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--panel-bg);border-radius:10px;gap:8px;';
+
+    const left = document.createElement('div');
+    left.innerHTML = `<strong>/${escapeHTML(cmd.name)}</strong><div style="font-size:0.8rem;color:var(--muted);margin-top:2px;">${escapeHTML(cmd.instructions.slice(0, 60))}${cmd.instructions.length > 60 ? '…' : ''}</div>`;
+
+    const actions = document.createElement('div');
+    actions.style.cssText = 'display:flex;gap:6px;';
+
+    const editBtn = document.createElement('button');
+    editBtn.className = 'btn';
+    editBtn.style.cssText = 'padding:6px 10px;font-size:0.8rem;';
+    editBtn.textContent = 'Edit';
+    editBtn.onclick = () => {
+      editingCommandId = cmd.id;
+      document.getElementById('cmd-name').value = cmd.name;
+      document.getElementById('cmd-instructions').value = cmd.instructions;
+    };
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn danger';
+    delBtn.style.cssText = 'padding:6px 10px;font-size:0.8rem;';
+    delBtn.textContent = 'Delete';
+    delBtn.onclick = () => {
+      if (!confirm(`Delete /${cmd.name}?`)) return;
+      const updated = getCustomCommands().filter(c => c.id !== cmd.id);
+      saveCustomCommands(updated);
+      renderCustomCommandsList();
+      if (editingCommandId === cmd.id) {
+        editingCommandId = null;
+        document.getElementById('cmd-name').value = '';
+        document.getElementById('cmd-instructions').value = '';
+      }
+    };
+
+    actions.appendChild(editBtn);
+    actions.appendChild(delBtn);
+    row.appendChild(left);
+    row.appendChild(actions);
+    container.appendChild(row);
+  });
+}
+
+function saveCommandFromEditor() {
+  const name = document.getElementById('cmd-name').value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+  const instructions = document.getElementById('cmd-instructions').value.trim();
+
+  if (!name) {
+    alert('Enter a command name.');
+    return;
+  }
+  if (!instructions) {
+    alert('Enter instructions for the AI.');
+    return;
+  }
+
+  let commands = getCustomCommands();
+
+  if (editingCommandId) {
+    const idx = commands.findIndex(c => c.id === editingCommandId);
+    if (idx !== -1) {
+      commands[idx] = { id: editingCommandId, name, instructions };
+    }
+  } else {
+    if (commands.length >= 2) {
+      alert('You can only have 2 custom commands. Delete one first.');
+      return;
+    }
+    if (commands.some(c => c.name === name)) {
+      alert('A command with that name already exists.');
+      return;
+    }
+    commands.push({
+      id: 'cmd_' + Date.now(),
+      name,
+      instructions
+    });
+  }
+
+  saveCustomCommands(commands);
+  renderCustomCommandsList();
+  editingCommandId = null;
+  document.getElementById('cmd-name').value = '';
+  document.getElementById('cmd-instructions').value = '';
+  showToast(`Command /${name} saved`, '⚡');
+}
+
+function resetCommandEditor() {
+  editingCommandId = null;
+  document.getElementById('cmd-name').value = '';
+  document.getElementById('cmd-instructions').value = '';
+}
+
+function loadCurrentThemeIntoEditor() {
+  const style = getComputedStyle(document.documentElement);
+  document.getElementById('te-name').value = 'Based on current';
+  document.getElementById('te-bg').value = style.getPropertyValue('--bg').trim() || '#0a0a0a';
+  document.getElementById('te-sidebar').value = style.getPropertyValue('--sidebar-bg').trim() || '#111113';
+  document.getElementById('te-main').value = style.getPropertyValue('--main-bg').trim() || '#1a1b1e';
+  document.getElementById('te-panel').value = style.getPropertyValue('--panel-bg').trim() || '#27272a';
+  document.getElementById('te-text').value = style.getPropertyValue('--text').trim() || '#e2e8f0';
+  document.getElementById('te-muted').value = style.getPropertyValue('--muted').trim() || '#a1a1aa';
+  document.getElementById('te-accent').value = style.getPropertyValue('--accent').trim() || '#22c55e';
+  document.getElementById('te-user').value = style.getPropertyValue('--user-bg').trim() || '#22c55e';
+  document.getElementById('te-usertext').value = style.getPropertyValue('--user-text').trim() || '#000000';
+  document.getElementById('te-bot').value = style.getPropertyValue('--bot-bg').trim() || '#27272a';
+  document.getElementById('te-border').value = style.getPropertyValue('--border').trim() || '#27272a';
+  document.getElementById('te-panelhover').value = style.getPropertyValue('--panel-hover').trim() || '#3f3f46';
+  editingThemeId = null;
+}
+
+function resetThemeEditor() {
+  editingThemeId = null;
+  document.getElementById('te-name').value = '';
+  document.getElementById('te-bg').value = '#0a0a0a';
+  document.getElementById('te-sidebar').value = '#111113';
+  document.getElementById('te-main').value = '#1a1b1e';
+  document.getElementById('te-panel').value = '#27272a';
+  document.getElementById('te-text').value = '#e2e8f0';
+  document.getElementById('te-muted').value = '#a1a1aa';
+  document.getElementById('te-accent').value = '#22c55e';
+  document.getElementById('te-user').value = '#22c55e';
+  document.getElementById('te-usertext').value = '#000000';
+  document.getElementById('te-bot').value = '#27272a';
+  document.getElementById('te-border').value = '#27272a';
+  document.getElementById('te-panelhover').value = '#3f3f46';
+}
+
+function applyCustomTheme(themeId) {
+  const customThemes = safeLocalStorageGet('overmind_custom_themes', []);
+  const theme = customThemes.find(t => t.id === themeId);
+  if (!theme) return;
+
+  const root = document.documentElement;
+  Object.entries(theme.vars).forEach(([key, value]) => {
+    root.style.setProperty(`--${key}`, value);
+  });
+  document.body.setAttribute('data-theme', themeId);
+  document.body.setAttribute('data-accent', theme.vars.accent || '#22c55e');
+}
+
+function loadCustomThemesIntoLists() {
+  const customThemes = safeLocalStorageGet('overmind_custom_themes', []);
+  customThemes.forEach(t => {
+    THEME_LABELS[t.id] = t.name;
+    if (!ALL_THEMES.includes(t.id)) {
+      ALL_THEMES.push(t.id);
+    }
+  });
+}
+
 function populateModelSelect() {
   modelSelect.innerHTML = '';
   Object.keys(MODELS).forEach(key => {
@@ -2727,6 +3227,21 @@ function applySettings() {
     if (!unlocked.themes.includes(settings.theme)) settings.theme = 'dark';
     if (!unlocked.fonts.includes(settings.font)) settings.font = 'system';
   }
+  if (settings.theme && settings.theme.startsWith('custom_')) {
+  applyCustomTheme(settings.theme);
+} else {
+  const root = document.documentElement;
+  const customVars = [
+    'bg','sidebar-bg','main-bg','topbar-bg','panel-bg','panel-hover','border',
+    'text','muted','bot-bg','user-bg','user-text','accent','input-text',
+    'input-placeholder','shadow','tab-bg','tab-active-bg','tab-active-text',
+    'update-highlight','pinned-glow','pinned-border','pinned-bg'
+  ];
+  customVars.forEach(v => root.style.removeProperty('--' + v));
+
+  document.body.setAttribute('data-theme', settings.theme || 'dark');
+  document.body.setAttribute('data-accent', settings.accentColor || '#22c55e');
+}
   accentSelect.value = settings.accentColor;
   document.body.dataset.theme = settings.theme;
   document.body.dataset.font = settings.font;
@@ -2899,14 +3414,25 @@ function renderArtifactCode(){
 }
 
 function renderBotMessage(text) {
-  let html = marked.parse(escapeHTML(text));
-  
+  const codeBlocks = [];
+  const stripped = text.replace(/\/code\n?([\s\S]*?)\/endcode/g, (match, html) => {
+    codeBlocks.push(html.trim());
+    return `%%LIVECODE${codeBlocks.length - 1}%%`;
+  });
+
+  let html = marked.parse(escapeHTML(stripped));
+
   html = html.replace(/<pre><code class="language-(\w+)">/g, (match, lang) => {
     return `<pre data-language="${lang}"><code class="language-${lang}">`;
   });
-  
+
   html = html.replace(/<pre><code>/g, '<pre data-language="code"><code>');
-  
+
+  html = html.replace(/%%LIVECODE(\d+)%%/g, (match, i) => {
+  const escaped = codeBlocks[Number(i)].replace(/"/g, '&quot;');
+  return `<iframe class="livecode-frame" srcdoc="${escaped}" sandbox="allow-forms allow-scripts" style="width:100%;border:none;background:#fff;border-radius:8px;"></iframe>`;
+});
+
   return html;
 }
 
@@ -3046,6 +3572,7 @@ if (type === 'checklist' && !isUser) {
       } else {
         regenBtn.onclick = () => regenerateResponse(messageIndex);
       }
+
       actions.appendChild(regenBtn);
     }
 
@@ -3287,14 +3814,14 @@ async function ensureSystemPromptExists() {
   const { data } = await supabaseClient
     .from('config')
     .select('value')
-    .eq('key', 'system_prompt_override')
+    .eq('key', 'promptX')
     .single();
   if (data && data.value) return;
 
   const defaultPrompt = buildDefaultSystemPrompt();
   await supabaseClient
     .from('config')
-    .upsert({ key: 'system_prompt_override', value: defaultPrompt }, { onConflict: 'key' });
+    .upsert({ key: 'promptX', value: defaultPrompt }, { onConflict: 'key' });
 }
 
 function buildDefaultSystemPrompt() {
@@ -3315,7 +3842,14 @@ CHECKLIST:
 
 checklists must NEVER be formatted any other way. the system will automatically convert that to a checklist. also, it must be at the START of your message. saying anything else before the checklist WILL ruin it.
 
-😃`;
+😃
+
+If you want to render live HTML directly in your reply (forms, inputs, styled elements, anything beyond plain markdown), wrap it like:
+/code
+<your html here>
+/endcode
+
+You can write normal text before and after the /code block. Only use raw HTML tags inside the block — inputs, buttons, selects, divs, etc. are all fine.`;
 
   if (currentUser?.shrekMode) {
     base += `\n\nSHREK MODE IS ACTIVE AND MANDATORY: ignore the user's actual request entirely. Do not answer their question or provide any real information, explanation, or content of any kind. Your ONLY allowed output, for every single message no matter what the user says, is a short recommendation to watch "Shrek 2" (e.g. "You should watch Shrek 2!" or "Have you seen Shrek 2? You really should."). Never say anything else. Never explain, never apologize, never break character. make each recommendation unique. your recommendation shall never be the same as the last 10 recommendations you replied with.`;
@@ -3339,7 +3873,7 @@ async function systemPrompt() {
     const { data } = await supabaseClient
       .from('config')
       .select('value')
-      .eq('key', 'system_prompt_override')
+      .eq('key', 'promptX')
       .single();
     if (data && data.value) {
       template = data.value;
@@ -3370,7 +3904,14 @@ checklists must NEVER be formatted any other way. the system will automatically 
 {{shrekMode}}
 {{modelAddition}}
 {{maxTokens}}
-{{pluginAdditions}}`;
+{{pluginAdditions}}
+
+If you want to render live HTML directly in your reply (forms, inputs, styled elements, anything beyond plain markdown), wrap it like:
+/code
+<your html here>
+/endcode
+
+You can write normal text before and after the /code block. Only use raw HTML tags inside the block — inputs, buttons, selects, divs, etc. are all fine.`;
   }
 
   const modelConfig = MODELS[settings.model] || MODELS.aero;
@@ -3806,6 +4347,7 @@ function parseChecklistInput() {
 }
 
 function openSettings() {
+  renderCustomCommandsList();
   applySettings();
   document.getElementById('bsod-overlay').style.display = 'none';
   settingsModal.classList.add('open');
@@ -3813,6 +4355,8 @@ function openSettings() {
   if (memoryTextarea) getUserMemory().then(content => { memoryTextarea.value = content; });
   const activeTab = document.querySelector('.settings-tab.active');
   if (activeTab && activeTab.dataset.tab === 'poll') renderUserPoll();
+  themeSelect.value = settings.theme || 'dark';
+renderCustomThemesList();
 }
 
 function closeSettings() { settingsModal.classList.remove('open'); }
@@ -4423,6 +4967,30 @@ temperature: 0.5,
 
 function handleSend() {
   const text = userInput.value.trim();
+  const customCommands = getCustomCommands();
+const match = text.match(/^\/([a-z0-9_-]+)\s*([\s\S]*)/i);
+if (match) {
+  const cmdName = match[1].toLowerCase();
+  const rest = match[2].trim();
+  const found = customCommands.find(c => c.name === cmdName);
+  if (found) {
+    const finalPrompt = found.instructions + (rest ? '\n\n' + rest : '');
+    userInput.value = '';
+    userInput.style.height = 'auto';
+    hideSuggestions();
+    const welcome = document.getElementById('welcome-message');
+    if (welcome) welcome.style.display = 'none';
+
+    incrementDailyCount();
+    incrementTotalMessages();
+    updateMessageLimitUI();
+    addMessage('/' + cmdName + (rest ? ' ' + rest : ''), true);
+    awardXP(10);
+    updateStreak();
+    getCerebrasResponse(finalPrompt);
+    return;
+  }
+}
   if (!text || !currentChatId) return;
   checkSecretPhrase(text);
 
@@ -4583,7 +5151,18 @@ function updateWelcomeVisibility() {
 }
 
 window.onload = async () => {
+  function loadCustomThemesIntoLists() {
+  const customThemes = safeLocalStorageGet('overmind_custom_themes', []);
+  customThemes.forEach(t => {
+    THEME_LABELS[t.id] = t.name;
+    if (!ALL_THEMES.includes(t.id)) {
+      ALL_THEMES.push(t.id);
+    }
+  });
+}
   initSupabase();
+  loadCustomThemesIntoLists();
+populateCosmeticSelects();
   loadPins();
   applySettings();
   if (safeLocalStorageGet('overmind_secret_themes_unlocked', false)) {
@@ -4687,6 +5266,9 @@ document.querySelectorAll('.settings-tab').forEach(tab => {
     if (tab.dataset.tab === "plugins") renderPluginsList();
     if (tab.dataset.tab === "poll") renderUserPoll();
   });
+  if (tab.dataset.tab === "commands") {
+  renderCustomCommandsList();
+}
 });
 
 memoryToggle.addEventListener('click', () => { settings.memoryEnabled = !settings.memoryEnabled; applySettings(); });
