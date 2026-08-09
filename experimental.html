@@ -2994,6 +2994,8 @@ if (type === 'checklist' && !isUser) {
   renderChecklistMessage(msg, div, currentChatId, messageIndex);
 } else if (type === 'image' && !isUser) {
       div.innerHTML = `<img src="${escapeHTML(text)}" alt="${escapeHTML(msg.prompt || 'Generated image')}" style="max-width:100%;border-radius:10px;display:block;cursor:zoom-in;" onclick="openImageLightbox('${escapeHTML(text)}')">`;
+} else if (isUser && text.toLowerCase().startsWith('/code ')) {
+  div.innerHTML = text.slice(6);
 } else if (isUser) {
   div.innerHTML = escapeHTML(displayText);
 } else {
