@@ -610,6 +610,16 @@ body[data-font="leet"] { font-family: system-ui, -apple-system, BlinkMacSystemFo
       cursor: pointer;
       flex-shrink: 0;
     }
+
+.send-btn.listening {
+      background: #dc2626;
+      animation: micPulse 1.2s ease-in-out infinite;
+    }
+    @keyframes micPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,.5); }
+      50% { box-shadow: 0 0 0 10px rgba(220,38,38,0); }
+    }
+
     .modal-backdrop {
       position: fixed;
       inset: 0;
@@ -1419,6 +1429,7 @@ body > .main {
     <div class="input-area">
       <div class="input-container">
         <textarea id="user-input" rows="1" placeholder="Send a message to Overmind..."></textarea>
+        <div class="send-btn" id="mic-btn" style="display:none;">🎤</div>
         <div class="send-btn" id="send-btn">↑</div>
           <div class="send-btn" id="stop-btn" style="display:none; background:#dc2626;">■</div>
       </div>
@@ -2331,6 +2342,7 @@ const IMAGE_COOLDOWN_MS = 30000;
 const chatScreen = document.getElementById('chat-screen');
 const userInput = document.getElementById('user-input');
 const sendBtn = document.getElementById('send-btn');
+const micBtn = document.getElementById('mic-btn');
 const newChatBtn = document.getElementById('new-chat-btn');
 const chatList = document.getElementById('chat-list');
 const sidebar = document.querySelector('.sidebar');
@@ -4655,10 +4667,66 @@ userInput.addEventListener('keydown', e => {
     handleSend();
   }
 });
-userInput.addEventListener('input', () => {
-  userInput.style.height = 'auto';
-  userInput.style.height = Math.min(userInput.scrollHeight, 180) + 'px';
-});
+let recognition = null;
+let isListening = false;
+const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+if (SpeechRecognitionCtor) micBtn.style.display = 'flex';
+
+function startVoiceInput() {
+  recognition = new SpeechRecognitionCtor();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = 'en-US';
+
+  let baseText = userInput.value ? userInput.value.trim() + ' ' : '';
+  userInput.dataset.origPlaceholder = userInput.placeholder;
+  userInput.placeholder = 'Listening...';
+
+  recognition.onresult = e => {
+    let interim = '';
+    let final = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) final += e.results[i][0].transcript;
+      else interim += e.results[i][0].transcript;
+    }
+    if (final) baseText += final + ' ';
+    userInput.value = baseText + interim;
+    userInput.style.height = 'auto';
+    userInput.style.height = Math.min(userInput.scrollHeight, 180) + 'px';
+  };
+
+  recognition.onerror = e => {
+    stopVoiceInput();
+    if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+      showError('Microphone access was denied.');
+    } else if (e.error !== 'no-speech' && e.error !== 'aborted') {
+      showError('Voice input failed: ' + escapeHTML(e.error));
+    }
+  };
+
+  recognition.onend = stopVoiceInput;
+
+  recognition.start();
+  isListening = true;
+  micBtn.classList.add('listening');
+  micBtn.textContent = '⏹';
+}
+
+function stopVoiceInput() {
+  isListening = false;
+  micBtn.classList.remove('listening');
+  micBtn.textContent = '🎤';
+  if (userInput.dataset.origPlaceholder) userInput.placeholder = userInput.dataset.origPlaceholder;
+  if (recognition) {
+    try { recognition.stop(); } catch (e) {}
+  }
+}
+
+micBtn.onclick = () => {
+  if (isListening) stopVoiceInput();
+  else startVoiceInput();
+};
 
 chatSearch.addEventListener('input', () => {
   chatSearchTerm = chatSearch.value;
