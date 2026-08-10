@@ -4419,46 +4419,10 @@ temperature: 0.5,
   });
 }
 
-const PRANAV_REPLIES = [
-  "Yo chat, should I respond? Oh, sorry Pranav, the chat said no.",
-  "HELLO PRANAV!!!!!!!!!!!",
-  "🏳‍🌈🏳‍⚧",
-];
-
-function handlePranavCannedReply(text) {
-  const chat = chats.find(c => c.id === currentChatId);
-  if (!chat) return;
-
-  if (chat.messages.length === 0) chat.title = generateTitle(text);
-  chat.messages.push({ role: 'user', content: text });
-  incrementDailyCount();
-  incrementTotalMessages();
-  updateMessageLimitUI();
-  saveChats();
-  renderChatList();
-
-  addMessage(text, true);
-  userInput.value = '';
-  userInput.style.height = 'auto';
-  hideSuggestions();
-  const welcome = document.getElementById('welcome-message');
-  if (welcome) welcome.style.display = 'none';
-
-  const reply = PRANAV_REPLIES[Math.floor(Math.random() * PRANAV_REPLIES.length)];
-  chat.messages.push({ role: 'assistant', content: reply });
-  saveChats();
-  addMessage(reply, false);
-}
-
 function handleSend() {
   const text = userInput.value.trim();
   if (!text || !currentChatId) return;
   checkSecretPhrase(text);
-
-  if (currentUser?.username === 'OG_PRANAV') {
-    handlePranavCannedReply(text);
-    return;
-  }
 
   if (text.toLowerCase().startsWith('/imagea ') || text.toLowerCase().startsWith('/imagine ')) {
     const remaining = IMAGE_COOLDOWN_MS - (Date.now() - lastImageGenTime);
