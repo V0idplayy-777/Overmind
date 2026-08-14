@@ -369,6 +369,7 @@ body.narrow-panels .admin-panel { max-width: 760px; }
     <div class="brand">🛡️ Overmind <span class="badge">Admin</span></div>
     <div style="display:flex; align-items:center; gap:8px;">
   <span class="who" id="who-label"></span>
+  <span class="who" id="aotw-label" style="margin-right:8px;"></span>
   <button class="btn" id="width-toggle-btn" title="Toggle panel width">Wide</button>
   <button class="btn" id="forgot-btn">?</button>
   <button class="btn" id="logout-btn">Log out</button>
@@ -580,6 +581,13 @@ Clear console output
           <strong>💾 Data Export</strong>
           <div class="help-text" style="margin:8px 0 12px;">Download a full JSON snapshot of users, chats, and config.</div>
           <button class="btn primary" id="owner-export-btn">Export Full Database Snapshot</button>
+        </div>
+
+        <div class="card" style="margin-top:20px;">
+          <strong>🏆 Admin of the Week</strong>
+          <div class="help-text" style="margin:8px 0 12px;">Choose which admin or owner is featured this week. Visible to all admins.</div>
+          <select id="aotw-select" class="select" style="margin-bottom:12px;"></select>
+          <button class="btn primary" id="aotw-save-btn">Set Admin of the Week</button>
         </div>
 
         <div style="margin-top:28px;text-align:center;">
@@ -1062,6 +1070,7 @@ function enterAdminApp() {
   subscribeAdminChat();
   updateNotifButtonVisibility();
   if (currentUser.isOwner) { initOwnerGames(); initOwnerTools(); }
+  loadAdminOfTheWeek();
 }
 
 // this comment is wireless
@@ -1085,6 +1094,7 @@ function loadEverything() {
   renderPopupButtonsEditor();
   loadAdminChatMessages();
   loadTodos();
+  loadAdminOfTheWeek();
 }
 
 async function loadMaintenanceToggle() {
@@ -2439,6 +2449,41 @@ document.getElementById('overmindx-input').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendOvermindXMessage(); }
 });
 document.getElementById('overmindx-clear-btn').onclick = clearOvermindXChat;
+
+async function loadAdminOfTheWeek() {
+  const { data } = await supabaseClient.from('config').select('value').eq('key', 'admin_of_the_week').single();
+  const username = data?.value || null;
+  const label = document.getElementById('aotw-label');
+  if (label) {
+    label.textContent = username ? `🏆 Admin of the Week: ${username}` : '';
+  }
+  if (currentUser?.isOwner) {
+    const select = document.getElementById('aotw-select');
+    if (!select) return;
+    const { data: users } = await supabaseClient.from('users').select('username, is_admin, is_owner').or('is_admin.eq.true,is_owner.eq.true').order('username');
+    select.innerHTML = '';
+    const none = document.createElement('option');
+    none.value = '';
+    none.textContent = '— None —';
+    select.appendChild(none);
+    (users || []).forEach(u => {
+      const opt = document.createElement('option');
+      opt.value = u.username;
+      opt.textContent = u.username + (u.is_owner ? ' 👑' : '');
+      if (u.username === username) opt.selected = true;
+      select.appendChild(opt);
+    });
+  }
+}
+
+document.getElementById('aotw-save-btn')?.addEventListener('click', async () => {
+  if (!currentUser?.isOwner) return;
+  const select = document.getElementById('aotw-select');
+  const value = select.value || null;
+  await supabaseClient.from('config').upsert({ key: 'admin_of_the_week', value: value }, { onConflict: 'key' });
+  loadAdminOfTheWeek();
+  showToast(value ? `Admin of the Week set to ${value}` : 'Admin of the Week cleared', '🏆');
+});
 
 window.onload = async () => {
   supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
