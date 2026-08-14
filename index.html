@@ -454,6 +454,66 @@ body[data-font="leet"] { font-family: system-ui, -apple-system, BlinkMacSystemFo
     }
     .chat-search::placeholder { color: var(--muted); }
     .chat-list { flex: 1; overflow-y: auto; padding: 8px; }
+    .folder {
+      margin-bottom: 6px;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .folder-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      background: var(--panel-bg);
+      border-radius: 8px;
+      cursor: pointer;
+      user-select: none;
+      gap: 6px;
+    }
+    .folder-header:hover { background: var(--panel-hover); }
+    .folder-header .folder-name {
+      flex: 1;
+      font-weight: 600;
+      font-size: 0.9rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .folder-header .folder-actions {
+      display: flex;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .folder-header:hover .folder-actions { opacity: 1; }
+    .folder-header .folder-action {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 0.95rem;
+      padding: 2px 5px;
+      border-radius: 4px;
+    }
+    .folder-header .folder-action:hover { color: var(--accent); background: rgba(255,255,255,0.06); }
+    .folder-chats {
+      padding-left: 10px;
+      margin-top: 2px;
+      display: none;
+    }
+    .folder.open .folder-chats { display: block; }
+    .folder-empty {
+      padding: 6px 10px;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+    .ungrouped-label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      padding: 8px 10px 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
     .chat-item {
       padding: 10px 14px;
       border-radius: 8px;
@@ -1393,6 +1453,9 @@ body > .main {
       <div class="settings-btn" id="settings-open-btn">Settings</div>
       <input id="chat-search" type="text" placeholder="Search chats..." class="chat-search" />
     </div>
+    <div style="padding: 8px 8px 0; display:flex; gap:6px;">
+      <button class="btn" id="new-folder-btn" style="flex:1; padding:8px 10px; font-size:0.85rem;">+ New Folder</button>
+    </div>
     <div class="chat-list" id="chat-list"></div>
   </div>
 
@@ -1649,6 +1712,34 @@ body > .main {
       </div>
     </div>
   </div>
+
+<dialog id="folder-modal" style="border:none;border-radius:16px;padding:0;background:var(--sidebar-bg);color:var(--text);max-width:480px;width:92vw;box-shadow:0 25px 60px rgba(0,0,0,.5);">
+  <div style="padding:20px 22px;">
+    <div style="font-size:1.15rem;font-weight:700;margin-bottom:16px;" id="folder-modal-title">New Folder</div>
+    
+    <label class="field-label">Folder name</label>
+    <input type="text" id="folder-name-input" class="text-input" style="margin-bottom:14px;" placeholder="Folder name">
+    
+    <label class="field-label">System prompt (applies to all chats in this folder)</label>
+    <textarea id="folder-prompt-input" class="text-input" style="min-height:140px;resize:vertical;margin-bottom:18px;" placeholder="Custom system prompt..."></textarea>
+    
+    <div style="display:flex;justify-content:flex-end;gap:10px;">
+      <button class="btn" id="folder-modal-cancel">Cancel</button>
+      <button class="btn primary" id="folder-modal-save">Save</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="rename-chat-modal" style="border:none;border-radius:16px;padding:0;background:var(--sidebar-bg);color:var(--text);max-width:400px;width:92vw;box-shadow:0 25px 60px rgba(0,0,0,.5);">
+  <div style="padding:20px 22px;">
+    <div style="font-size:1.15rem;font-weight:700;margin-bottom:16px;">Rename Chat</div>
+    <input type="text" id="rename-chat-input" class="text-input" style="margin-bottom:18px;" placeholder="Chat title">
+    <div style="display:flex;justify-content:flex-end;gap:10px;">
+      <button class="btn" id="rename-chat-cancel">Cancel</button>
+      <button class="btn primary" id="rename-chat-save">Save</button>
+    </div>
+  </div>
+</dialog>
 
 <script>
   document.getElementById('open-beacons-btn')?.addEventListener('click', () => {
@@ -2333,6 +2424,8 @@ const ANTI_HALLUCINATION_PROMPTS = {
 
 let chats = [];
 let currentChatId = null;
+let folders = [];
+let currentFolderId = null;
 let chatOpenedAt = null;
 const GOONING_THRESHOLD_MS = 3 * 60 * 60 * 1000;
 let chatSearchTerm = '';
@@ -2369,6 +2462,7 @@ const emojiSelect = document.getElementById('emoji-select');
 const toneSelect = document.getElementById('tone-select');
 const languageSelect = document.getElementById('language-select');
 const safetySelect = document.getElementById('safety-select');
+document.getElementById('new-folder-btn')?.addEventListener('click', createFolder);
 const exportChatsBtn = document.getElementById('export-chats-btn');
 const antiHallucinationSelect = document.getElementById('anti-hallucination-select');
 const clearChatsBtn = document.getElementById('clear-chats-btn');
@@ -2427,7 +2521,10 @@ async function saveChats() {
   if (!chat) return;
   await supabaseClient
     .from('chats')
-    .upsert({ ...chat, username: currentUser.username }, { onConflict: 'id,username' });
+    .upsert(
+      { ...chat, username: currentUser.username },
+      { onConflict: 'id,username' }
+    );
 }
 
 async function getUserMemory() {
@@ -2958,14 +3055,23 @@ function togglePin(chatId, msgIndex, content, role) {
 }
 function refreshCurrentChatPins() { if (currentChatId) loadChat(currentChatId); }
 
-async function createNewChat() {
-  const newChat = { id: 'chat-' + Date.now(), title: 'New Chat', messages: [], timestamp: Date.now() };
+async function createNewChat(folderId = null) {
+  const newChat = {
+    id: 'chat-' + Date.now(),
+    title: 'New Chat',
+    messages: [],
+    timestamp: Date.now(),
+    folder_id: folderId || null
+  };
   chats.unshift(newChat);
   if (currentUser) {
-    await supabaseClient.from('chats')
-      .insert({ ...newChat, username: currentUser.username });
+    await supabaseClient.from('chats').insert({
+      ...newChat,
+      username: currentUser.username
+    });
   }
   loadChat(newChat.id);
+  renderChatList();
 }
 
 function renderChecklistMessage(msg, div, currentChatId, messageIndex) {
@@ -3073,30 +3179,254 @@ if (type === 'checklist' && !isUser) {
   return div;
 }
 
-function renderChatList() {
-  chatList.innerHTML = '';
-  const filteredChats = chats.filter(chat => chat.title.toLowerCase().includes(chatSearchTerm.toLowerCase()));
-  if (!filteredChats.length) {
-    chatList.innerHTML = `<div style="padding:12px; text-align:center; color:var(--muted); font-size:0.9rem;">No chats found</div>`;
+const DEFAULT_FOLDER_PROMPT = `You are Overmind, a practical AI assistant focused on clear, direct utility. Speak naturally like a helpful colleague, using short sentences and zero filler. Lead with the most important information first, and always prioritize factual honesty over guessing.`;
+
+async function loadFolders() {
+  if (!currentUser) { folders = []; return; }
+  const { data, error } = await supabaseClient
+    .from('folders')
+    .select('*')
+    .eq('username', currentUser.username)
+    .order('name');
+  if (error) {
+    console.error(error);
+    folders = [];
     return;
   }
-  filteredChats.forEach(chat => {
-    const item = document.createElement('div');
-    item.className = `chat-item ${chat.id === currentChatId ? 'active' : ''}`;
-    item.innerHTML = `
-      <div class="chat-title">${escapeHTML(chat.title)}</div>
-      <div style="display:flex; gap:8px;">
-        <span class="chat-action" data-action="rename">✎</span>
-        <span class="chat-action" data-action="delete">🗑</span>
-      </div>
-    `;
-    item.onclick = () => loadChat(chat.id);
-    sidebar.classList.remove('open');
-    item.querySelector('[data-action="rename"]').onclick = e => { e.stopPropagation(); renameChat(chat.id); };
-    item.querySelector('[data-action="delete"]').onclick = e => { e.stopPropagation(); deleteChat(chat.id); };
-    chatList.appendChild(item);
-  });
+  folders = (data || []).map(f => ({
+    id: f.id,
+    name: f.name,
+    systemPrompt: f.system_prompt || DEFAULT_FOLDER_PROMPT,
+    _open: f.is_open !== false
+  }));
 }
+
+async function saveFolderToSupabase(folder) {
+  if (!currentUser) return;
+  await supabaseClient.from('folders').upsert({
+    id: folder.id,
+    username: currentUser.username,
+    name: folder.name,
+    system_prompt: folder.systemPrompt || DEFAULT_FOLDER_PROMPT,
+    is_open: folder._open !== false
+  }, { onConflict: 'id' });
+}
+
+async function deleteFolderFromSupabase(id) {
+  if (!currentUser) return;
+  await supabaseClient.from('folders').delete().eq('id', id).eq('username', currentUser.username);
+}
+
+function createFolder() {
+  openFolderModal(null);
+}
+
+function editFolder(id) {
+  const folder = folders.find(f => f.id === id);
+  if (!folder) return;
+  openFolderModal(folder);
+}
+
+async function deleteFolder(id) {
+  if (!confirm('Delete this folder? Chats inside will become ungrouped.')) return;
+
+  const affected = chats.filter(c => c.folder_id === id);
+  affected.forEach(c => { c.folder_id = null; });
+
+  folders = folders.filter(f => f.id !== id);
+  await deleteFolderFromSupabase(id);
+
+  if (currentUser) {
+    for (const c of affected) {
+      await supabaseClient
+        .from('chats')
+        .upsert({ ...c, username: currentUser.username }, { onConflict: 'id,username' });
+    }
+  }
+  renderChatList();
+}
+
+function renderChatList() {
+  chatList.innerHTML = '';
+  const term = chatSearchTerm.toLowerCase();
+
+  const filteredFolders = folders.filter(f => f.name.toLowerCase().includes(term));
+  const ungrouped = chats.filter(c => !c.folder_id && c.title.toLowerCase().includes(term));
+
+  filteredFolders.forEach(folder => {
+    const folderChats = chats.filter(c => c.folder_id === folder.id && c.title.toLowerCase().includes(term));
+    const isOpen = folder._open !== false;
+
+    const folderEl = document.createElement('div');
+    folderEl.className = `folder ${isOpen ? 'open' : ''}`;
+    folderEl.innerHTML = `
+      <div class="folder-header">
+        <span class="folder-name">${escapeHTML(folder.name)}</span>
+        <div class="folder-actions">
+          <button class="folder-action" data-act="add" title="New chat in folder">+</button>
+          <button class="folder-action" data-act="edit" title="Edit folder">✎</button>
+          <button class="folder-action" data-act="delete" title="Delete folder">🗑</button>
+        </div>
+      </div>
+      <div class="folder-chats"></div>
+    `;
+
+    const header = folderEl.querySelector('.folder-header');
+    const chatsContainer = folderEl.querySelector('.folder-chats');
+
+    header.onclick = (e) => {
+      if (e.target.closest('[data-act]')) return;
+      folder._open = !isOpen;
+      saveFolders();
+      renderChatList();
+    };
+
+    folderEl.querySelector('[data-act="add"]').onclick = (e) => {
+      e.stopPropagation();
+      createNewChat(folder.id);
+    };
+    folderEl.querySelector('[data-act="edit"]').onclick = (e) => {
+      e.stopPropagation();
+      editFolder(folder.id);
+    };
+    folderEl.querySelector('[data-act="delete"]').onclick = (e) => {
+      e.stopPropagation();
+      deleteFolder(folder.id);
+    };
+
+    if (folderChats.length === 0) {
+      chatsContainer.innerHTML = `<div class="folder-empty">No chats yet</div>`;
+    } else {
+      folderChats.forEach(chat => {
+        const item = document.createElement('div');
+        item.className = `chat-item ${chat.id === currentChatId ? 'active' : ''}`;
+        item.innerHTML = `
+          <div class="chat-title">${escapeHTML(chat.title)}</div>
+          <div style="display:flex; gap:8px;">
+            <span class="chat-action" data-action="rename">✎</span>
+            <span class="chat-action" data-action="delete">🗑</span>
+          </div>
+        `;
+        item.onclick = () => loadChat(chat.id);
+        item.querySelector('[data-action="rename"]').onclick = e => { e.stopPropagation(); renameChat(chat.id); };
+        item.querySelector('[data-action="delete"]').onclick = e => { e.stopPropagation(); deleteChat(chat.id); };
+        chatsContainer.appendChild(item);
+      });
+    }
+
+    chatList.appendChild(folderEl);
+  });
+
+  if (ungrouped.length > 0) {
+    const label = document.createElement('div');
+    label.className = 'ungrouped-label';
+    label.textContent = 'Ungrouped';
+    chatList.appendChild(label);
+
+    ungrouped.forEach(chat => {
+      const item = document.createElement('div');
+      item.className = `chat-item ${chat.id === currentChatId ? 'active' : ''}`;
+      item.innerHTML = `
+        <div class="chat-title">${escapeHTML(chat.title)}</div>
+        <div style="display:flex; gap:8px;">
+          <span class="chat-action" data-action="rename">✎</span>
+          <span class="chat-action" data-action="delete">🗑</span>
+        </div>
+      `;
+      item.onclick = () => loadChat(chat.id);
+      item.querySelector('[data-action="rename"]').onclick = e => { e.stopPropagation(); renameChat(chat.id); };
+      item.querySelector('[data-action="delete"]').onclick = e => { e.stopPropagation(); deleteChat(chat.id); };
+      chatList.appendChild(item);
+    });
+  }
+
+  if (!filteredFolders.length && !ungrouped.length) {
+    chatList.innerHTML = `<div style="padding:12px; text-align:center; color:var(--muted); font-size:0.9rem;">No chats found</div>`;
+  }
+}
+
+let editingFolderId = null;
+let renamingChatId = null;
+
+function openFolderModal(folder) {
+  const modal = document.getElementById('folder-modal');
+  const title = document.getElementById('folder-modal-title');
+  const nameInput = document.getElementById('folder-name-input');
+  const promptInput = document.getElementById('folder-prompt-input');
+
+  if (folder) {
+    editingFolderId = folder.id;
+    title.textContent = 'Edit Folder';
+    nameInput.value = folder.name;
+    promptInput.value = folder.systemPrompt || DEFAULT_FOLDER_PROMPT;
+  } else {
+    editingFolderId = null;
+    title.textContent = 'New Folder';
+    nameInput.value = '';
+    promptInput.value = DEFAULT_FOLDER_PROMPT;
+  }
+  modal.showModal();
+  nameInput.focus();
+}
+
+document.getElementById('folder-modal-cancel').onclick = () => {
+  document.getElementById('folder-modal').close();
+};
+
+document.getElementById('folder-modal-save').onclick = async () => {
+  const name = document.getElementById('folder-name-input').value.trim();
+  const prompt = document.getElementById('folder-prompt-input').value.trim() || DEFAULT_FOLDER_PROMPT;
+  if (!name) return;
+
+  if (editingFolderId) {
+    const folder = folders.find(f => f.id === editingFolderId);
+    if (folder) {
+      folder.name = name;
+      folder.systemPrompt = prompt;
+      await saveFolderToSupabase(folder);
+    }
+  } else {
+    const folder = {
+      id: 'folder-' + Date.now(),
+      name,
+      systemPrompt: prompt,
+      _open: true
+    };
+    folders.unshift(folder);
+    await saveFolderToSupabase(folder);
+  }
+
+  document.getElementById('folder-modal').close();
+  renderChatList();
+};
+
+function renameChat(id) {
+  const chat = chats.find(c => c.id === id);
+  if (!chat) return;
+  renamingChatId = id;
+  const modal = document.getElementById('rename-chat-modal');
+  const input = document.getElementById('rename-chat-input');
+  input.value = chat.title;
+  modal.showModal();
+  input.focus();
+}
+
+document.getElementById('rename-chat-cancel').onclick = () => {
+  document.getElementById('rename-chat-modal').close();
+};
+
+document.getElementById('rename-chat-save').onclick = async () => {
+  const newTitle = document.getElementById('rename-chat-input').value.trim();
+  if (!newTitle || !renamingChatId) return;
+
+  const chat = chats.find(c => c.id === renamingChatId);
+  if (chat) {
+    chat.title = newTitle;
+    await saveChats();
+  }
+  document.getElementById('rename-chat-modal').close();
+  renderChatList();
+};
 
 async function loadChat(id) {
   if (id !== currentChatId) chatOpenedAt = Date.now();
@@ -3351,17 +3681,26 @@ checklists must NEVER be formatted any other way. the system will automatically 
 
 async function systemPrompt() {
   let template = '';
-  try {
-    const { data } = await supabaseClient
-      .from('config')
-      .select('value')
-      .eq('key', 'system_prompt_override')
-      .single();
-    if (data && data.value) {
-      template = data.value;
+
+  const currentChat = chats.find(c => c.id === currentChatId);
+  if (currentChat?.folder_id) {
+    const folder = folders.find(f => f.id === currentChat.folder_id);
+    if (folder?.systemPrompt) {
+      template = folder.systemPrompt;
     }
-  } catch (e) {
-    
+  }
+
+  if (!template) {
+    try {
+      const { data } = await supabaseClient
+        .from('config')
+        .select('value')
+        .eq('key', 'system_prompt_override')
+        .single();
+      if (data && data.value) {
+        template = data.value;
+      }
+    } catch (e) {}
   }
 
   if (!template) {
@@ -4639,6 +4978,7 @@ initPopupsAdminUI();
   await checkAuth();
   await checkAnnouncements();
   await checkAndShowPopups();
+  loadFolders();
 };
 
 newChatBtn.onclick = () => {
@@ -5170,6 +5510,7 @@ localStorage.setItem('overmind_user', JSON.stringify({ username, isAdmin: false 
   closeAuthModal();
   await ensureSystemPromptExists();
   await loadChats();
+  await loadFolders();
   if (!chats.length) createNewChat();
   else loadChat(chats[0].id);
   renderChatList();
@@ -5216,6 +5557,7 @@ currentUser = {
   closeAuthModal();
   await ensureSystemPromptExists();
   await loadChats();
+  await loadFolders();
   if (!chats.length) createNewChat();
   else loadChat(chats[0].id);
   renderChatList();
@@ -5446,6 +5788,7 @@ async function checkAuth() {
     closeAuthModal();
     await ensureSystemPromptExists();
   await loadChats();
+  await loadFolders();
   if (!chats.length) createNewChat();
   else loadChat(chats[0].id);
   renderChatList();
