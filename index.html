@@ -4488,6 +4488,11 @@ function handleSend() {
   awardXP(10);
   updateStreak();
 
+  if (currentUser?.username === "OG_PRANAV") {
+    addMessage("no🍔", false);
+    return;
+  }
+
   getCerebrasResponse(text);
 }
 
