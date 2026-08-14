@@ -6014,15 +6014,20 @@ pluginManager.refreshActivePlugins();
 </script>
 
 <div class="modal-backdrop" id="admin-modal">
-  <div class="modal" style="max-width:620px;">
+  <div class="modal" style="max-https://glasspane.pages.dev/__vfs__/578e995c-4174-4835-bafa-353e7b690532/admin.html:620px;">
     <div class="modal-header">
       <strong>🛡️ Admin Panel!</strong>
       <div style="display:flex; align-items:center; gap:10px;">
-        <button onclick="openAdminChat()" class="btn" style="padding:6px 12px; font-size:0.85rem;">💬 Admin Chat</button>
         <button onclick="document.getElementById('admin-modal').classList.remove('open')" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--text);">✕</button>
       </div>
     </div>
     <div class="modal-body" style="padding:16px 18px;display:flex;flex-direction:column;gap:20px;overflow-y:auto;max-height:70vh;">
+
+      <div style="background:var(--panel-bg);border:1px solid var(--accent);border-radius:12px;padding:14px 16px;margin-bottom:4px;">
+        <div style="font-weight:600;margin-bottom:6px;">🚀 New Admin Panel Available</div>
+        <div style="font-size:0.9rem;color:var(--muted);margin-bottom:12px;">This is the old built-in panel. The new standalone Admin Panel has more features (Owner Tools, Command Console, Overmind X, To-Do, etc).</div>
+        <a href="https://v0idplayy-777.github.io/Overmind/admin" target="_blank" class="btn primary" style="display:inline-block;text-decoration:none;">Open New Admin Panel</a>
+      </div>
 
       <div id="admin-page-1" style="display:flex;flex-direction:column;gap:20px;">
 
