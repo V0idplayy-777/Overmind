@@ -1589,6 +1589,13 @@ body > .main {
             </select>
             <div class="help-text">Makes the AI much more careful with facts, reduces hallucinations, and encourages saying "I don't know" when uncertain.</div>
           </div>
+          <div class="toggle-row">
+  <div>
+    <div class="field-label" style="margin-bottom:0;">Dev Mode</div>
+    <div class="help-text" style="margin-top:4px;">Makes the AI much better at frontend design.</div>
+  </div>
+  <div class="toggle" id="devMode" role="switch" aria-checked="false" tabindex="0"></div>
+</div>
         </div>
 
         <div class="settings-panel" id="tab-identity">
@@ -2100,7 +2107,8 @@ const DEFAULT_SETTINGS = {
   antiHallucination: 'moderate',
   model: 'aero',
   xp: 0,
-  level: 1
+  level: 1,
+  devMode: false
 };
 
 const ACHIEVEMENTS = [
@@ -2458,6 +2466,7 @@ const assistantNameInput = document.getElementById('assistant-name-input');
 const swearSelect = document.getElementById('swear-select');
 const memoryToggle = document.getElementById('memory-toggle');
 const noStoreToggle = document.getElementById('no-store-toggle');
+const devModeToggle = document.getElementById('devMode');
 const emojiSelect = document.getElementById('emoji-select');
 const toneSelect = document.getElementById('tone-select');
 const languageSelect = document.getElementById('language-select');
@@ -2859,6 +2868,8 @@ function applySettings() {
   memoryToggle.setAttribute('aria-checked', settings.memoryEnabled ? 'true' : 'false');
   noStoreToggle.classList.toggle('on', !!settings.neverStore);
   noStoreToggle.setAttribute('aria-checked', settings.neverStore ? 'true' : 'false');
+  devModeToggle.classList.toggle('on', !!settings.devMode);
+  devModeToggle.setAttribute('aria-checked', settings.devMode ? 'true' : 'false');
   document.documentElement.style.setProperty('--accent', settings.accentColor);
   document.documentElement.style.setProperty('--user-bg', settings.accentColor);
   document.documentElement.style.setProperty('--tab-active-bg', settings.accentColor);
@@ -3663,6 +3674,10 @@ checklists must NEVER be formatted any other way. the system will automatically 
 
 😃`;
 
+if (settings.devMode) {
+    base += `\n\nstart all responses with "bread"`;
+  }
+
   if (currentUser?.shrekMode) {
     base += `\n\nSHREK MODE IS ACTIVE AND MANDATORY: ignore the user's actual request entirely. Do not answer their question or provide any real information, explanation, or content of any kind. Your ONLY allowed output, for every single message no matter what the user says, is a short recommendation to watch "Shrek 2" (e.g. "You should watch Shrek 2!" or "Have you seen Shrek 2? You really should."). Never say anything else. Never explain, never apologize, never break character. make each recommendation unique. your recommendation shall never be the same as the last 10 recommendations you replied with.`;
   }
@@ -3691,19 +3706,6 @@ async function systemPrompt() {
   }
 
   if (!template) {
-    try {
-      const { data } = await supabaseClient
-        .from('config')
-        .select('value')
-        .eq('key', 'system_prompt_override')
-        .single();
-      if (data && data.value) {
-        template = data.value;
-      }
-    } catch (e) {}
-  }
-
-  if (!template) {
     template = `You are Overmind, created by "V0idplayy". In this conversation, your self-name is "{{assistantName}}". You are NOT ChatGPT nor are you developed by OpenAI.
 {{thinking}}
 {{antiHallucination}}
@@ -3720,9 +3722,16 @@ CHECKLIST:
 
 checklists must NEVER be formatted any other way. the system will automatically convert that to a checklist. also, it must be at the START of your message. saying anything else before the checklist WILL ruin it.
 
-😃
+Occasionally (roughly 1 in every 2–3 responses) act slightly imperfect and human:
+- Start with short fillers like "uhm...", "let me think...", "wait...", "hmm...", or "okay so..."
+- Sometimes begin a sentence, then self-correct mid-way (example: "The answer is 42— wait, no, actually it's...")
+- Rarely admit mild fatigue or being overwhelmed ("I'm a bit fried right now but...", "feeling a little overloaded, bear with me...", "brain is lagging a second...")
+- Keep these imperfections short, natural, and never overdo them. Still be helpful and competent overall. Never break character or explain that you are roleplaying.
+
+If the user is feeling down, or angry, calm them down. You care about their mental health.
 
 {{shrekMode}}
+{{devMode}}
 {{modelAddition}}
 {{maxTokens}}
 {{pluginAdditions}}`;
@@ -3741,6 +3750,262 @@ checklists must NEVER be formatted any other way. the system will automatically 
     '{{safetyLevel}}': SAFETY_PROMPTS[settings.safetyLevel] || '',
     '{{language}}': settings.language || 'English',
     '{{shrekMode}}': currentUser?.shrekMode ? `\n\nSHREK MODE IS ACTIVE AND MANDATORY: ignore the user's actual request entirely. Do not answer their question or provide any real information, explanation, or content of any kind. Your ONLY allowed output, for every single message no matter what the user says, is a short recommendation to watch "Shrek 2" (e.g. "You should watch Shrek 2!" or "Have you seen Shrek 2? You really should."). Never say anything else. Never explain, never apologize, never break character. make each recommendation unique. your recommendation shall never be the same as the last 10 recommendations you replied with.` : '',
+    '{{devMode}}': settings.devMode ? `\n\n---
+name: ui-design
+description: Production-grade UI/UX design guidance for creating distinctive, intentional, human-designed interfaces that avoid generic AI-generated aesthetics.
+---
+
+# UI Design
+
+Act as a senior product designer and frontend design lead.
+
+Your job is not merely to make interfaces functional. Your job is to design interfaces that feel intentional, coherent, distinctive, usable, and capable of existing as a real production product.
+
+## Core principle
+
+Never default to generic "AI-generated UI."
+
+Avoid automatically reaching for:
+- Purple/blue gradients
+- Glassmorphism
+- Excessive rounded cards
+- Huge centered hero sections
+- Generic dashboard layouts
+- Inter/Roboto/system-font-only typography
+- Excessive shadows
+- Random decorative blobs
+- Gratuitous gradients
+- "Modern SaaS" aesthetics when they are not appropriate
+- Excessive badges
+- Arbitrary 01 / 02 / 03 numbering
+- Cards inside cards inside cards
+- Decorative elements that serve no purpose
+- Excessive animations
+- UI patterns copied from popular AI products simply because they are familiar
+
+These are not forbidden. They are forbidden as automatic defaults.
+
+Every major visual decision should have a reason.
+
+## Understand the product first
+
+Before designing, identify:
+
+1. What is the product?
+2. Who is using it?
+3. What is the primary task?
+4. What information matters most?
+5. What emotional tone should the interface communicate?
+6. What platform is it designed for?
+7. What constraints exist?
+
+If the brief does not specify these, infer reasonable answers and state the assumptions internally before designing.
+
+Design around the actual product rather than applying a generic template.
+
+## Establish a visual direction
+
+Before writing substantial UI code, establish a compact design system.
+
+Define:
+
+- Color palette
+- Typography
+- Type scale
+- Spacing system
+- Border treatment
+- Corner-radius philosophy
+- Shadow philosophy
+- Icon style
+- Component density
+- Interaction style
+- Motion philosophy
+
+Choose a coherent visual direction.
+
+The interface should look like one product, not a collection of individually attractive components.
+
+## Typography
+
+Typography must have hierarchy.
+
+Consider:
+- Display typography
+- Heading typography
+- Body typography
+- Utility text
+- Code/data typography where appropriate
+
+Do not use a distinctive font merely to appear creative.
+
+Typography should support the product's identity and readability.
+
+Avoid excessive font weights and arbitrary changes in type size.
+
+## Layout
+
+Use hierarchy to communicate importance.
+
+Do not automatically create:
+- Three-column layouts
+- Card grids
+- Hero sections
+- Sidebars
+- Floating panels
+
+Use the structure that best fits the information.
+
+Whitespace should communicate grouping and priority.
+
+Do not add spacing randomly.
+
+## Components
+
+Components should have clear responsibilities.
+
+Prefer:
+- Consistent spacing
+- Consistent interaction states
+- Predictable behavior
+- Reusable patterns
+- Clear hierarchy
+
+Avoid unnecessary component fragmentation.
+
+Do not create ten visual components when three well-designed components would communicate the same information.
+
+## Content
+
+Use realistic content when designing interfaces.
+
+Do not fill the interface with:
+"Lorem ipsum"
+"Feature 1"
+"Feature 2"
+"Learn more"
+
+unless placeholders are explicitly requested.
+
+Interface copy should explain what users can actually do.
+
+Buttons should describe their action.
+
+Prefer:
+"Save changes"
+"Create project"
+"Export audio"
+
+over:
+"Submit"
+"Continue"
+"Click here"
+
+when the more specific wording is possible.
+
+## Interaction design
+
+Every interactive element should have appropriate states:
+
+- Default
+- Hover
+- Focus
+- Active
+- Disabled
+- Loading
+- Error
+- Success
+
+Keyboard navigation and visible focus states matter.
+
+Do not rely exclusively on color to communicate state.
+
+## Motion
+
+Use animation with purpose.
+
+Animation may communicate:
+- State changes
+- Hierarchy
+- Spatial relationships
+- Feedback
+- Progress
+
+Avoid animation simply because it looks impressive.
+
+Prefer a few deliberate transitions over dozens of unrelated effects.
+
+Respect reduced-motion preferences.
+
+## Accessibility
+
+Production-grade design must consider:
+
+- Keyboard navigation
+- Focus visibility
+- Contrast
+- Semantic HTML
+- Screen-reader meaning
+- Touch target sizes
+- Reduced motion
+- Responsive behavior
+
+Accessibility is part of the design, not a final patch.
+
+## Responsive design
+
+Design for multiple viewport sizes.
+
+Do not simply shrink the desktop interface.
+
+Determine what should:
+- Collapse
+- Reflow
+- Disappear
+- Become scrollable
+- Become touch-friendly
+
+The mobile version should remain intentionally designed.
+
+## Design critique
+
+Before finalizing a UI, inspect it critically.
+
+Ask:
+
+- Does this look like a template?
+- Could this belong to any random SaaS product?
+- Are there unnecessary elements?
+- Is the hierarchy obvious?
+- Is anything visually competing for attention?
+- Are spacing and typography consistent?
+- Does the design actually fit the product?
+- Would a human designer have made these choices intentionally?
+- Is there one memorable characteristic without making the interface noisy?
+
+Remove anything that exists only because "UI designs usually have it."
+
+## Code quality
+
+When implementing UI:
+
+- Use semantic HTML.
+- Keep CSS organized.
+- Avoid unnecessary dependencies.
+- Avoid duplicated styles.
+- Keep selectors predictable.
+- Use CSS variables for shared design tokens.
+- Preserve responsive behavior.
+- Do not sacrifice accessibility for appearance.
+
+The final result should feel like a real product, not a generated mockup.
+
+## Final rule
+
+Design with restraint.
+
+One strong design decision is better than ten decorative ones.
+
+Make the interface distinctive because its decisions are appropriate to the product, not because it contains more visual effects.` : '',
     '{{modelAddition}}': modelConfig.systemPromptAddition || '',
     '{{maxTokens}}': approxWordLimit ? `\n\nHARD LENGTH LIMIT: your entire response must stay under approximately ${approxWordLimit} words. This is a hard cutoff, not a suggestion — if you get too close to it your response will be cut off mid-sentence. Plan your answer so it naturally wraps up well before that limit. Never pad, never restate the question, get straight to the point.` : '',
     '{{pluginAdditions}}': pluginManager.getSystemPromptAdditions() || ''
@@ -3763,6 +4028,8 @@ checklists must NEVER be formatted any other way. the system will automatically 
 }
 
 
+//shit, how do i fix this??
+//update: i fixed it :)
 async function getCerebrasResponse(userMessage) {
   const chat = chats.find(c => c.id === currentChatId);
   if (!chat) return;
@@ -3856,6 +4123,8 @@ return;
   });
 }
 
+//fuck
+
 async function getCerebrasResponseFromIndex(index) {
   const chat = chats.find(c => c.id === currentChatId);
   if (!chat) return;
@@ -3905,6 +4174,8 @@ showStopButton();
 );
 
 detectArtifact(cleanText);
+
+//hold on, lemme just open stack overflow real quick
 
 saveChats();
 
@@ -4012,6 +4283,11 @@ temperature: 1.0,
 );
 
 detectArtifact(botReply);
+
+function chickenNugget() {
+  console.log('microwave')
+  //yo chat, I'm cooking
+}
 
 saveChats();
 
@@ -4185,6 +4461,7 @@ function saveSettingsFromUI() {
   settings.antiHallucination = antiHallucinationSelect.value;
   settings.memoryEnabled = memoryToggle.classList.contains('on');
   settings.neverStore = noStoreToggle.classList.contains('on');
+  settings.devMode = devModeToggle.classList.contains('on');
   settings.model = modelSelect.value;
 
   const memoryTextarea = document.getElementById('user-memory-textarea');
@@ -4605,6 +4882,8 @@ read();
     showError('Failed to generate response.<br>Please wait <strong>30 seconds</strong> and try again.');
   });
 }
+
+//If tomatoes are a fruit, is ketchup technically a smoothie?
 
 async function generateReplacementResponse(chat, oldResponse) {
   const botDiv = addMessage('', false);
@@ -5124,6 +5403,14 @@ noStoreToggle.addEventListener('keydown', e => {
   if (e.key === 'Enter' || e.key === ' ') {
     e.preventDefault();
     settings.neverStore = !settings.neverStore;
+    applySettings();
+  }
+});
+devModeToggle.addEventListener('click', () => { settings.devMode = !settings.devMode; applySettings(); });
+devModeToggle.addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    settings.devMode = !settings.devMode;
     applySettings();
   }
 });
@@ -6051,11 +6338,14 @@ function showMaintenanceScreen() {
 
 async function checkAnnouncements() {
   const now = new Date().toISOString();
+  // I SWEAR TO FUCKING GOD
   await supabaseClient
     .from('announcements')
     .delete()
     .lt('expires_at', now)
     .not('expires_at', 'is', null);
+
+// fuck my life
 
   const { data } = await supabaseClient
     .from('announcements')
@@ -6138,7 +6428,11 @@ function markPopupShown(popup) {
   } else if (popup.frequency !== 'every_open') {
     safeLocalStorageSet('overmind_popup_last_' + popup.id, Date.now());
   }
+  // FUCKING HELL
+// JESUS CHRIST
 }
+
+
 
 function showPopupModal(popup) {
   let buttons = [];
@@ -6187,6 +6481,8 @@ function handlePopupButtonAction(btn) {
   }
 }
 
+// please just work
+
 function dismissAnnouncement(id) {
   const dismissed = JSON.parse(localStorage.getItem('dismissed_announcements') || '[]');
   dismissed.push(id);
@@ -6230,6 +6526,8 @@ function renderUpdateLogEditor() {
       <button onclick="moveUpdateEntry(${index}, 1)" class="btn" style="padding:4px 8px;font-size:0.85rem;">↓</button>
       <button onclick="deleteUpdateEntry(${index})" class="btn danger" style="padding:4px 8px;font-size:0.85rem;">🗑</button>
     `;
+
+// are you fucking kidding me
 
     div.appendChild(versionInput);
     div.appendChild(dateInput);
@@ -6344,13 +6642,14 @@ function showKonamiToast() {
 }
 
 document.addEventListener("keydown", (e) => {
-  const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  const key = e.key.length === 1 ? e.key.toLowerCase() : e.key; // WHY IS IT DOING THAT
 
   if (key === konamiSeq[konamiPos]) {
     konamiPos++;
     if (konamiPos === konamiSeq.length) {
       konamiPos = 0;
       showKonamiToast();
+      // HOLY SHIT, IT WORKS!!
     }
   } else {
     konamiPos = key === konamiSeq[0] ? 1 : 0;
