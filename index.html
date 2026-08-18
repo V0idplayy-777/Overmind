@@ -2181,7 +2181,7 @@ const MODELS = {
   aero: {
     name: 'Aero',
     description: 'High intelligence, great at coding',
-    apiModel: 'zai-glm-4.7',
+    apiModel: 'glm-4.7-flash',
     systemPromptAddition: '',
     maxTokens: null,
     temperature: null,
@@ -2200,7 +2200,7 @@ const MODELS = {
 
 function getSelectedApiModel() {
   const modelConfig = MODELS[settings.model] || MODELS.aero;
-  return modelConfig.apiModel || 'zai-glm-4.7';
+  return modelConfig.apiModel || 'glm-4.7-flash';
 }
 
 async function loadUpdateLog() {
@@ -3556,7 +3556,7 @@ function compressChatHistory(chat) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${COMPRESSION_API_KEY}` },
     body: JSON.stringify({
-      model: 'zai-glm-4.7',
+      model: 'glm-4.7-flash',
       messages: [
         { role: 'system', content: 'You are a precise summarization assistant.' },
         { role: 'user', content: compressionPrompt }
@@ -3636,7 +3636,7 @@ function getModelGenerationParams() {
   const thinking = modelConfig.forceThinking || settings.thinking;
   const temperature = modelConfig.temperature ?? (thinking === 'fast' ? 0.4 : thinking === 'step' ? 0.8 : 0.65);
   const max_tokens = modelConfig.maxTokens ?? (thinking === 'fast' ? 45000 : 50000);
-  const apiModel = modelConfig.apiModel || 'zai-glm-4.7';
+  const apiModel = modelConfig.apiModel || 'glm-4.7-flash';
   return { temperature, max_tokens, apiModel };
 }
 
@@ -4054,7 +4054,7 @@ async function getCerebrasResponse(userMessage) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CEREBRAS_API_KEY}` },
     body: JSON.stringify({
-      model: 'zai-glm-4.7',
+      model: 'glm-4.7-flash',
       messages: [{ role: 'system', content: await systemPrompt() }, ...contextMessages],
       temperature: settings.thinking === 'fast' ? 0.4 : settings.thinking === 'step' ? 0.8 : 0.65,
       max_tokens: settings.thinking === 'fast' ? 45000 : 50000,
@@ -4250,7 +4250,7 @@ showStopButton();
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CEREBRAS_API_KEY}` },
     body: JSON.stringify({
-      model: 'zai-glm-4.7',
+      model: 'glm-4.7-flash',
       messages: [
         { role: 'system', content: await systemPrompt() },
         { role: 'system', content: `Previous response:\n\n${oldResponse}\n\nGenerate a noticeably different response.` },
@@ -4358,7 +4358,7 @@ async function summarizeChat() {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CEREBRAS_API_KEY}` },
     body: JSON.stringify({
-      model: 'zai-glm-4.7',
+      model: 'glm-4.7-flash',
       messages: [
         { role: 'system', content: await systemPrompt() },
         { role: 'user', content: `${summaryPrompt}\n\n---\n\nConversation:\n${conversationText}` }
