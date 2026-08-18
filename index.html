@@ -2069,9 +2069,9 @@ async function fetchSystemPromptOverride() {
   return null;
 }
 
-const CEREBRAS_API_KEY = 'csk-m42v9ed8x6fjhe9366kktc4j5nthtr6ykr38858vnxcdjcr5';
+const CEREBRAS_API_KEY = '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';
 const COMPRESSION_API_KEY = 'csk-r5jcn4y36yw4w6y44dmcf6tktfy966ffw5tmkvepxkn6myrm';
-const API_URL = 'https://api.cerebras.ai/v1/chat/completions';
+const API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const CF_IMAGE_URL = 'https://overmind-image-proxy.nburfootfowke.workers.dev/';
 
 const VAPID_PUBLIC_KEY = 'BHUUxaIddNepnGfJ8YKk9I_RVQ-T01oVY9J3jnToYi2_ctwIncj9gcrFqRXyvgrRK3lquodw3-NlPRYi7pf57W8';
@@ -2181,7 +2181,7 @@ const MODELS = {
   aero: {
     name: 'Aero',
     description: 'The speed demon. It responds instantly at ~1,850 tokens per second and can see images. It is a fast, conversational model.',
-    apiModel: 'gemma-4-31b',
+    apiModel: 'openai/gpt-oss-20b',
     systemPromptAddition: '',
     maxTokens: null,
     temperature: null,
