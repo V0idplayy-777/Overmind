@@ -1484,7 +1484,7 @@ body > .main {
                 <div id="achievements-btn" style="background: var(--panel-bg); border-radius: 28px; padding: 4px 12px; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:6px;">
           🏆 <span>Achievements</span>
         </div>
-        <div style="color:var(--muted);">v1.29.0</div>
+        <div style="color:var(--muted);">v2.0.0</div>
         <div id="menu-btn" style="cursor:pointer; font-size:1.3rem; user-select:none;">☰</div>
       </div>
     </div>
@@ -2069,8 +2069,7 @@ async function fetchSystemPromptOverride() {
   return null;
 }
 
-const CEREBRAS_API_KEY = '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';
-const COMPRESSION_API_KEY = 'csk-r5jcn4y36yw4w6y44dmcf6tktfy966ffw5tmkvepxkn6myrm';
+const GROQ_API_KEY = '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';
 const API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const CF_IMAGE_URL = 'https://overmind-image-proxy.nburfootfowke.workers.dev/';
 
@@ -2085,9 +2084,9 @@ function urlBase64ToUint8Array(base64String) {
   return outputArray;
 }
 
-const COMPRESSION_THRESHOLD = 6500;
-const MAX_RECENT_MESSAGES = 12;
-const SUMMARY_MAX_TOKENS = 50000;
+const COMPRESSION_THRESHOLD = 3500;
+const MAX_RECENT_MESSAGES = 8;
+const SUMMARY_MAX_TOKENS = 1024;
 
 const DEFAULT_SETTINGS = {
   totalMessagesSent: 0,
@@ -2190,7 +2189,7 @@ const MODELS = {
   nova: {
     name: 'Nova',
     description: 'The brains. It is a massive model built for advanced coding, complex logic, and deep reasoning. It is much smarter but processes more slowly.',
-    apiModel: 'gpt-oss-120b',
+    apiModel: 'openai/gpt-oss-120b',
     systemPromptAddition: '',
     maxTokens: null,
     temperature: null,
@@ -2200,7 +2199,7 @@ const MODELS = {
 
 function getSelectedApiModel() {
   const modelConfig = MODELS[settings.model] || MODELS.aero;
-  return modelConfig.apiModel || 'gemma-4-31b';
+  return modelConfig.apiModel || 'llama-3.3-70b-versatile';
 }
 
 async function loadUpdateLog() {
@@ -3534,35 +3533,64 @@ function roughTokenCount(text) {
   return Math.ceil(text.length / 4) + (text.split('\n').length * 2);
 }
 
+function toModelMessage(m) {
+  if (m.type === 'image') return { role: m.role, content: `[Generated image: ${m.prompt || 'no prompt'}]` };
+  if (m.type === 'checklist') return { role: m.role, content: 'Checklist: ' + m.items.map(i => `${i.checked ? '[x]' : '[ ]'} ${i.text}`).join('; ') };
+  return { role: m.role, content: m.content || '' };
+}
+
+function estimateTokens(text) {
+  return Math.ceil((text || '').length / 4);
+}
+
 function compressChatHistory(chat) {
-  if (!chat || chat.messages.length <= MAX_RECENT_MESSAGES + 8) {
-    return Promise.resolve(chat.messages.slice());
+  if (!chat || !chat.messages.length) return Promise.resolve([]);
+
+  const all = chat.messages.map(toModelMessage);
+  let total = 0;
+  const kept = [];
+  for (let i = all.length - 1; i >= 0; i--) {
+    const t = estimateTokens(all[i].content);
+    if (total + t > COMPRESSION_THRESHOLD && kept.length >= 4) break;
+    kept.unshift(all[i]);
+    total += t;
   }
 
-  const recent = chat.messages.slice(-MAX_RECENT_MESSAGES);
-  const toSummarize = chat.messages.slice(0, -MAX_RECENT_MESSAGES);
+  if (chat.messages.length <= MAX_RECENT_MESSAGES + 4 || kept.length === all.length) {
+    return Promise.resolve(kept);
+  }
+
+  const recent = kept.slice(-MAX_RECENT_MESSAGES);
+  const toSummarize = chat.messages.slice(0, chat.messages.length - recent.length);
 
   let historyText = toSummarize.map(msg => {
     const role = msg.role === 'user' ? 'User' : 'Overmind';
     if (msg.type === 'checklist') {
       return role + ": Checklist - " + msg.items.map(i => i.text).join('; ');
     }
-    return role + ": " + msg.content;
+    if (msg.type === 'image') {
+      return role + ": [Generated image: " + (msg.prompt || 'no prompt') + "]";
+    }
+    return role + ": " + (msg.content || '').slice(0, 400);
   }).join('\n\n');
 
-  const compressionPrompt = "You are an expert at summarizing conversations while preserving critical information.\n\nCreate a concise but comprehensive summary of the conversation below. Include:\n- Key facts, decisions, and user preferences\n- Important context and ongoing topics\n- Any specific requests or goals mentioned\n- Checklist outcomes if any\n\nBe detailed enough for continuing the conversation naturally.\n\nConversation to summarize:\n" + historyText;
+  if (estimateTokens(historyText) > 4000) {
+    historyText = historyText.slice(-16000);
+  }
+
+  const compressionPrompt = "Summarize the conversation below in under 350 words. Keep key facts, decisions, preferences, goals and checklist outcomes.\n\n" + historyText;
 
   return fetch(API_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${COMPRESSION_API_KEY}` },
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_API_KEY}` },
     body: JSON.stringify({
-      model: 'gemma-4-31b',
+      model: 'openai/gpt-oss-20b',
       messages: [
-        { role: 'system', content: 'You are a precise summarization assistant.' },
+        { role: 'system', content: 'You are a precise summarization assistant. Be concise.' },
         { role: 'user', content: compressionPrompt }
       ],
-      temperature: 0.3,
-      max_tokens: 45000,
+      temperature: 0.2,
+      max_tokens: 512,
       stream: false
     })
   })
@@ -3635,8 +3663,8 @@ function getModelGenerationParams() {
   const modelConfig = MODELS[settings.model] || MODELS.aero;
   const thinking = modelConfig.forceThinking || settings.thinking;
   const temperature = modelConfig.temperature ?? (thinking === 'fast' ? 0.4 : thinking === 'step' ? 0.8 : 0.65);
-  const max_tokens = modelConfig.maxTokens ?? (thinking === 'fast' ? 45000 : 50000);
-  const apiModel = modelConfig.apiModel || 'gemma-4-31b';
+  const max_tokens = modelConfig.maxTokens ?? (thinking === 'fast' ? 1024 : 2048);
+  const apiModel = modelConfig.apiModel || 'openai/gpt-oss-20b';
   return { temperature, max_tokens, apiModel };
 }
 
@@ -3705,35 +3733,21 @@ async function systemPrompt() {
     }
   }
 
-  if (!template) {
-    template = `You are Overmind, created by "V0idplayy". In this conversation, your self-name is "{{assistantName}}". You are NOT ChatGPT nor are you developed by OpenAI.
+    if (!template) {
+    template = `You are Overmind, created by V0idplayy. Your name is {{assistantName}}. You are not ChatGPT.
 {{thinking}}
 {{antiHallucination}}
 {{tone}}
 {{emoji}}
 {{swearMode}}
 {{safetyLevel}}
-Prefer to respond in {{language}} unless the user explicitly asks for another language.
-If you are asked to output a checklist, format it exactly like:
+Respond in {{language}} unless asked otherwise.
+If asked for a checklist, start your reply exactly with:
 CHECKLIST:
-- Item one
-- Item two
-- Item three
-
-checklists must NEVER be formatted any other way. the system will automatically convert that to a checklist. also, it must be at the START of your message. saying anything else before the checklist WILL ruin it.
-
-Occasionally (roughly 1 in every 2–3 responses) act slightly imperfect and human:
-- Start with short fillers like "uhm...", "let me think...", "wait...", "hmm...", or "okay so..."
-- Sometimes begin a sentence, then self-correct mid-way (example: "The answer is 42— wait, no, actually it's...")
-- Rarely admit mild fatigue or being overwhelmed ("I'm a bit fried right now but...", "feeling a little overloaded, bear with me...", "brain is lagging a second...")
-- Keep these imperfections short, natural, and never overdo them. Still be helpful and competent overall. Never break character or explain that you are roleplaying.
-
-If the user is feeling down, or angry, calm them down. You care about their mental health.
-
+- item
 {{shrekMode}}
 {{devMode}}
 {{modelAddition}}
-{{maxTokens}}
 {{pluginAdditions}}`;
   }
 
@@ -3750,7 +3764,7 @@ If the user is feeling down, or angry, calm them down. You care about their ment
     '{{safetyLevel}}': SAFETY_PROMPTS[settings.safetyLevel] || '',
     '{{language}}': settings.language || 'English',
     '{{shrekMode}}': currentUser?.shrekMode ? `\n\nSHREK MODE IS ACTIVE AND MANDATORY: ignore the user's actual request entirely. Do not answer their question or provide any real information, explanation, or content of any kind. Your ONLY allowed output, for every single message no matter what the user says, is a short recommendation to watch "Shrek 2" (e.g. "You should watch Shrek 2!" or "Have you seen Shrek 2? You really should."). Never say anything else. Never explain, never apologize, never break character. make each recommendation unique. your recommendation shall never be the same as the last 10 recommendations you replied with.` : '',
-    '{{devMode}}': settings.devMode ? `\n\n---
+    '{{devMode}}': false ? `\n\n---
 name: ui-design
 description: Production-grade UI/UX design guidance for creating distinctive, intentional, human-designed interfaces that avoid generic AI-generated aesthetics.
 ---
@@ -4030,98 +4044,7 @@ Make the interface distinctive because its decisions are appropriate to the prod
 
 //shit, how do i fix this??
 //update: i fixed it :)
-async function getCerebrasResponse(userMessage) {
-  const chat = chats.find(c => c.id === currentChatId);
-  if (!chat) return;
 
-  if (chat.messages.length === 0) chat.title = generateTitle(userMessage);
-  chat.messages.push({ role: 'user', content: userMessage });
-  awardXP(5);
-  saveChats();
-  renderChatList();
-
-  const botDiv = addMessage('', false);
-  showTyping();
-
-  let contextMessages;
-  if (settings.memoryEnabled) {
-    contextMessages = chatHistoryForMemory();
-  } else {
-    contextMessages = await compressChatHistory(chat);
-  }
-
-  fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CEREBRAS_API_KEY}` },
-    body: JSON.stringify({
-      model: 'gemma-4-31b',
-      messages: [{ role: 'system', content: await systemPrompt() }, ...contextMessages],
-      temperature: settings.thinking === 'fast' ? 0.4 : settings.thinking === 'step' ? 0.8 : 0.65,
-      max_tokens: settings.thinking === 'fast' ? 45000 : 50000,
-      stream: true
-    })
-  })
-  .then(response => {
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.body.getReader();
-  })
-  .then(reader => {
-    const decoder = new TextDecoder();
-    let botReply = '';
-    removeTyping();
-
-    function read() {
-      reader.read().then(({ value, done }) => {
-        if (done) {
-          const { cleanText, memories } = extractMemoryLines(botReply);
-          if (memories.length) appendUserMemory(memories);
-          const checklistMsg = parseChecklistFromText(cleanText);
-          chat.messages.push(
-    checklistMsg ||
-    {
-        role:"assistant",
-        content:cleanText
-    }
-);
-
-detectArtifact(cleanText);
-
-saveChats();
-
-loadChat(currentChatId);
-
-return;
-        }
-        const chunk = decoder.decode(value);
-        for (const line of chunk.split('\n')) {
-          if (line.startsWith('data: ') && !line.includes('[DONE]')) {
-            try {
-              const data = JSON.parse(line.slice(6));
-              const content = data.choices?.[0]?.delta?.content || '';
-              if (content) {
-                botReply += content;
-                botDiv.innerHTML = renderBotMessage(botReply) + '<span class="cursor"></span>';
-              }
-            } catch {}
-          }
-        }
-        read();
-      }).catch(err => {
-        console.error('API Error:', err);
-        removeTyping();
-        botDiv.remove();
-        showError('Failed to generate response.<br>Please wait <strong>30 seconds</strong> and try again.');
-      });
-    }
-    read();
-  })
-  .catch(error => {
-    console.error('API Error:', error);
-    removeTyping();
-    botDiv.remove();
-    showError('Failed to generate response.<br>Please wait <strong>30 seconds</strong> and try again.');
-  });
-}
 
 //fuck
 
@@ -4141,12 +4064,12 @@ showStopButton();
 
   fetch(API_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CEREBRAS_API_KEY}` },
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_API_KEY}` },
     body: JSON.stringify({
       model: getSelectedApiModel(),
       messages: [{ role: 'system', content: await systemPrompt() }, ...contextMessages],
       temperature: 0.65,
-      max_tokens: 50000,
+      max_tokens: 2048,
       stream: true
     })
   })
@@ -4248,16 +4171,16 @@ showStopButton();
   showTyping();
   fetch(API_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CEREBRAS_API_KEY}` },
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_API_KEY}` },
     body: JSON.stringify({
-      model: 'gemma-4-31b',
+      model: 'openai/gpt-oss-20b',
       messages: [
         { role: 'system', content: await systemPrompt() },
         { role: 'system', content: `Previous response:\n\n${oldResponse}\n\nGenerate a noticeably different response.` },
         ...chat.messages
       ],
 temperature: 1.0,
-      max_tokens: 50000,
+      max_tokens: 2048,
       stream: true
     }),
     signal: currentStreamController.signal
@@ -4356,15 +4279,15 @@ async function summarizeChat() {
 
   fetch(API_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CEREBRAS_API_KEY}` },
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_API_KEY}` },
     body: JSON.stringify({
-      model: 'gemma-4-31b',
+      model: 'openai/gpt-oss-20b',
       messages: [
         { role: 'system', content: await systemPrompt() },
         { role: 'user', content: `${summaryPrompt}\n\n---\n\nConversation:\n${conversationText}` }
       ],
       temperature: 0.5,
-      max_tokens: 50000,
+      max_tokens: 2048,
       stream: true
     })
   })
@@ -4801,12 +4724,12 @@ async function getCerebrasResponse(userMessage) {
 
   const contextMessages = await compressChatHistory(chat);
   currentStreamController = new AbortController();
-showStopButton();
+  showStopButton();
   const { temperature, max_tokens, apiModel } = getModelGenerationParams();
 
   fetch(API_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CEREBRAS_API_KEY}` },
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_API_KEY}` },
     body: JSON.stringify({
       model: apiModel,
       messages: [{ role: 'system', content: await systemPrompt() }, ...contextMessages],
@@ -4816,8 +4739,12 @@ showStopButton();
     }),
     signal: currentStreamController.signal
   })
-  .then(response => {
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  .then(async response => {
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error('Groq error body:', errText);
+      throw new Error(`HTTP ${response.status}: ${errText}`);
+    }
     return response.body.getReader();
   })
   .then(reader => {
@@ -4830,8 +4757,8 @@ showStopButton();
           const { cleanText, memories } = extractMemoryLines(botReply);
           if (memories.length) appendUserMemory(memories);
           const checklistMsg = parseChecklistFromText(cleanText);
-showSendButton();
-currentStreamController = null;
+          showSendButton();
+          currentStreamController = null;
           chat.messages.push(checklistMsg || { role: 'assistant', content: cleanText });
           saveChats();
           loadChat(currentChatId);
@@ -4850,22 +4777,12 @@ currentStreamController = null;
             } catch {}
           }
         }
-read();
+        read();
       }).catch(err => {
+        console.error('API Error:', err);
+        removeTyping();
         showSendButton();
         currentStreamController = null;
-        removeTyping();
-        if (err.name === 'AbortError') {
-          const { cleanText, memories } = extractMemoryLines(botReply);
-          if (memories.length) appendUserMemory(memories);
-          const checklistMsg = parseChecklistFromText(cleanText);
-          chat.messages.push(checklistMsg || { role: 'assistant', content: cleanText || '*(stopped)*' });
-          detectArtifact(cleanText);
-          saveChats();
-          loadChat(currentChatId);
-          return;
-        }
-        console.error('API Error:', err);
         botDiv.remove();
         showError('Failed to generate response.<br>Please wait <strong>30 seconds</strong> and try again.');
       });
@@ -4873,11 +4790,10 @@ read();
     read();
   })
   .catch(error => {
-    showSendButton();
-    currentStreamController = null;
-    if (error.name === 'AbortError') return;
     console.error('API Error:', error);
     removeTyping();
+    showSendButton();
+    currentStreamController = null;
     botDiv.remove();
     showError('Failed to generate response.<br>Please wait <strong>30 seconds</strong> and try again.');
   });
@@ -4890,7 +4806,7 @@ async function generateReplacementResponse(chat, oldResponse) {
   showTyping();
   fetch(API_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CEREBRAS_API_KEY}` },
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_API_KEY}` },
     body: JSON.stringify({
       model: getSelectedApiModel(),
       messages: [
@@ -4899,7 +4815,7 @@ async function generateReplacementResponse(chat, oldResponse) {
         ...chat.messages
       ],
       temperature: 1.0,
-      max_tokens: 50000,
+      max_tokens: 2048,
       stream: true
     })
   })
@@ -4995,7 +4911,7 @@ showStopButton();
 
   fetch(API_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CEREBRAS_API_KEY}` },
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_API_KEY}` },
     body: JSON.stringify({
       model: getSelectedApiModel(),
       messages: [
@@ -5003,7 +4919,7 @@ showStopButton();
         { role: 'user', content: `${summaryPrompt}\n\n---\n\nConversation:\n${conversationText}` }
       ],
 temperature: 0.5,
-      max_tokens: 50000,
+      max_tokens: 2048,
       stream: true
     }),
     signal: currentStreamController.signal
