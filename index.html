@@ -1400,6 +1400,29 @@ body > .main {
   flex: 0 0 auto;
 }
 
+.reasoning-block {
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: rgba(255,255,255,0.03);
+}
+.reasoning-block summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  user-select: none;
+}
+.reasoning-block[open] summary {
+  margin-bottom: 8px;
+}
+.reasoning-content {
+  font-size: 0.88rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
   </style>
 </head>
 <body>
@@ -3023,6 +3046,16 @@ function renderArtifactCode(){
   artifactContent.innerHTML = `<pre><code>${escapeHTML(combined)}</code></pre>`;
 }
 
+function renderStreamingWithReasoning(reasoning, content, isLive) {
+  let html = '';
+  if (reasoning) {
+    html += `<details class="reasoning-block"${isLive ? ' open' : ''}><summary>${isLive ? 'Thinking…' : 'View reasoning'}</summary><div class="reasoning-content">${renderBotMessage(reasoning)}</div></details>`;
+  }
+  html += renderBotMessage(content);
+  if (isLive) html += '<span class="cursor"></span>';
+  return html;
+}
+
 function renderBotMessage(text) {
   let html = marked.parse(escapeHTML(text));
   
@@ -3137,7 +3170,11 @@ if (type === 'checklist' && !isUser) {
 } else if (isUser) {
   div.innerHTML = escapeHTML(displayText);
 } else {
-  let content = renderBotMessage(displayText);
+  let content = '';
+  if (msg?.reasoning) {
+    content += `<details class="reasoning-block"><summary>View reasoning</summary><div class="reasoning-content">${renderBotMessage(msg.reasoning)}</div></details>`;
+  }
+  content += renderBotMessage(displayText);
   content += `
     <div style="margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--border); 
                 font-size: 0.77rem; color: var(--muted); opacity: 0.9; font-style: italic;">
@@ -3734,7 +3771,7 @@ async function systemPrompt() {
   }
 
     if (!template) {
-    template = `You are Overmind, created by V0idplayy. Your name is {{assistantName}}. You are not ChatGPT.
+    template = `You are Overmind, created by V0idplayy. Your name is {{assistantName}}. If the user is going through a tough time, try to comfort them.
 {{thinking}}
 {{antiHallucination}}
 {{tone}}
@@ -3764,7 +3801,7 @@ CHECKLIST:
     '{{safetyLevel}}': SAFETY_PROMPTS[settings.safetyLevel] || '',
     '{{language}}': settings.language || 'English',
     '{{shrekMode}}': currentUser?.shrekMode ? `\n\nSHREK MODE IS ACTIVE AND MANDATORY: ignore the user's actual request entirely. Do not answer their question or provide any real information, explanation, or content of any kind. Your ONLY allowed output, for every single message no matter what the user says, is a short recommendation to watch "Shrek 2" (e.g. "You should watch Shrek 2!" or "Have you seen Shrek 2? You really should."). Never say anything else. Never explain, never apologize, never break character. make each recommendation unique. your recommendation shall never be the same as the last 10 recommendations you replied with.` : '',
-    '{{devMode}}': false ? `\n\n---
+    '{{devMode}}': settings.devMode ? `\n\n---
 name: ui-design
 description: Production-grade UI/UX design guidance for creating distinctive, intentional, human-designed interfaces that avoid generic AI-generated aesthetics.
 ---
@@ -4033,9 +4070,9 @@ Make the interface distinctive because its decisions are appropriate to the prod
   const memoryContent = await getUserMemory();
   finalPrompt += `\n\nYou have persistent memory about this user, stored across all their chats. Current memory:\n${memoryContent || '(nothing remembered yet)'}`;
   if (settings.memoryEnabled) {
-    finalPrompt += `\n\nTo remember something new and durable about the user, put a line formatted exactly as:\n/memory the fact to remember\nanywhere in your reply, on its own line. That line is saved and then hidden from the user, so write the rest of your reply normally around it. Only use it for things worth remembering long-term, not everyday chat.`;
+    finalPrompt += `\n\nTo remember something new and durable about the user, put a line formatted exactly as:\n/memory the fact to remember\nanywhere in your reply, on its own line. That line is saved and then hidden from the user, so write the rest of your reply normally around it. Only use it for things worth remembering long-term, not everyday chat. exaples: "user is sad" should not be saved to memory. something like "user's dog's name is "name"" should be. try not to repeat yourself in the memory, if possible.`;
   } else {
-    finalPrompt += `\n\nThe user has turned off new memories. Do not use /memory for any reason.`;
+    finalPrompt += `\n\nThe user has turned off new memories. Do not use /memory for any reason. You may reference memories, and any personal info u know about the user may be referenced, with consent.`;
   }
 
   return finalPrompt;
@@ -4080,6 +4117,7 @@ showStopButton();
   .then(reader => {
     const decoder = new TextDecoder();
     let botReply = '';
+    let botReasoning = '';
     removeTyping();
 
     function read() {
@@ -4092,7 +4130,8 @@ showStopButton();
     checklistMsg ||
     {
         role:"assistant",
-        content:cleanText
+        content:cleanText,
+        reasoning: botReasoning || null
     }
 );
 
@@ -4112,9 +4151,11 @@ return;
             try {
               const data = JSON.parse(line.slice(6));
               const content = data.choices?.[0]?.delta?.content || '';
-              if (content) {
-                botReply += content;
-                botDiv.innerHTML = renderBotMessage(botReply) + '<span class="cursor"></span>';
+              const reasoning = data.choices?.[0]?.delta?.reasoning || '';
+              if (reasoning) botReasoning += reasoning;
+              if (content) botReply += content;
+              if (content || reasoning) {
+                botDiv.innerHTML = renderStreamingWithReasoning(botReasoning, botReply, true);
               }
             } catch {}
           }
@@ -4192,6 +4233,7 @@ temperature: 1.0,
   .then(reader => {
     const decoder = new TextDecoder();
     let botReply = '';
+    let botReasoning = '';
     removeTyping();
     function read() {
       reader.read().then(({ value, done }) => {
@@ -4201,7 +4243,8 @@ temperature: 1.0,
     checklistMsg ||
     {
         role:"assistant",
-        content:botReply
+        content:botReply,
+        reasoning: botReasoning || null
     }
 );
 
@@ -4224,9 +4267,11 @@ return;
             try {
               const data = JSON.parse(line.slice(6));
               const content = data.choices?.[0]?.delta?.content || '';
-              if (content) {
-                botReply += content;
-                botDiv.innerHTML = renderBotMessage(botReply) + '<span class="cursor"></span>';
+              const reasoning = data.choices?.[0]?.delta?.reasoning || '';
+              if (reasoning) botReasoning += reasoning;
+              if (content) botReply += content;
+              if (content || reasoning) {
+                botDiv.innerHTML = renderStreamingWithReasoning(botReasoning, botReply, true);
               }
             } catch {}
           }
@@ -4735,7 +4780,8 @@ async function getCerebrasResponse(userMessage) {
       messages: [{ role: 'system', content: await systemPrompt() }, ...contextMessages],
       temperature: temperature,
       max_tokens: max_tokens,
-      stream: true
+      stream: true,
+      reasoning_format: "parsed"
     }),
     signal: currentStreamController.signal
   })
@@ -4750,6 +4796,7 @@ async function getCerebrasResponse(userMessage) {
   .then(reader => {
     const decoder = new TextDecoder();
     let botReply = '';
+    let botReasoning = '';
     removeTyping();
     function read() {
       reader.read().then(({ value, done }) => {
@@ -4759,7 +4806,7 @@ async function getCerebrasResponse(userMessage) {
           const checklistMsg = parseChecklistFromText(cleanText);
           showSendButton();
           currentStreamController = null;
-          chat.messages.push(checklistMsg || { role: 'assistant', content: cleanText });
+          chat.messages.push(checklistMsg || { role: 'assistant', content: cleanText, reasoning: botReasoning || null });
           saveChats();
           loadChat(currentChatId);
           return;
@@ -4770,9 +4817,11 @@ async function getCerebrasResponse(userMessage) {
             try {
               const data = JSON.parse(line.slice(6));
               const content = data.choices?.[0]?.delta?.content || '';
-              if (content) {
-                botReply += content;
-                botDiv.innerHTML = renderBotMessage(botReply) + '<span class="cursor"></span>';
+              const reasoning = data.choices?.[0]?.delta?.reasoning || '';
+              if (reasoning) botReasoning += reasoning;
+              if (content) botReply += content;
+              if (content || reasoning) {
+                botDiv.innerHTML = renderStreamingWithReasoning(botReasoning, botReply, true);
               }
             } catch {}
           }
@@ -4816,8 +4865,9 @@ async function generateReplacementResponse(chat, oldResponse) {
       ],
       temperature: 1.0,
       max_tokens: 2048,
-      stream: true
-    })
+      stream: true,
+      reasoning_format: "parsed"
+    }),
   })
   .then(response => {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -4826,6 +4876,7 @@ async function generateReplacementResponse(chat, oldResponse) {
   .then(reader => {
     const decoder = new TextDecoder();
     let botReply = '';
+    let botReasoning = '';
     removeTyping();
     function read() {
       reader.read().then(({ value, done }) => {
@@ -4855,9 +4906,11 @@ return;
             try {
               const data = JSON.parse(line.slice(6));
               const content = data.choices?.[0]?.delta?.content || '';
-              if (content) {
-                botReply += content;
-                botDiv.innerHTML = renderBotMessage(botReply) + '<span class="cursor"></span>';
+              const reasoning = data.choices?.[0]?.delta?.reasoning || '';
+              if (reasoning) botReasoning += reasoning;
+              if (content) botReply += content;
+              if (content || reasoning) {
+                botDiv.innerHTML = renderStreamingWithReasoning(botReasoning, botReply, true);
               }
             } catch {}
           }
