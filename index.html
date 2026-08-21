@@ -2092,8 +2092,7 @@ async function fetchSystemPromptOverride() {
   return null;
 }
 
-const GROQ_API_KEY = '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';
-const API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+const API_URL = 'https://overmind-proxy.nburfootfowke.workers.dev';
 const CF_IMAGE_URL = 'https://overmind-image-proxy.nburfootfowke.workers.dev/';
 
 const VAPID_PUBLIC_KEY = 'BHUUxaIddNepnGfJ8YKk9I_RVQ-T01oVY9J3jnToYi2_ctwIncj9gcrFqRXyvgrRK3lquodw3-NlPRYi7pf57W8';
@@ -3619,7 +3618,7 @@ function compressChatHistory(chat) {
 
   return fetch(API_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_API_KEY}` },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: 'openai/gpt-oss-20b',
       messages: [
@@ -4101,7 +4100,7 @@ showStopButton();
 
   fetch(API_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_API_KEY}` },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: getSelectedApiModel(),
       messages: [{ role: 'system', content: await systemPrompt() }, ...contextMessages],
@@ -4212,7 +4211,7 @@ showStopButton();
   showTyping();
   fetch(API_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_API_KEY}` },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: 'openai/gpt-oss-20b',
       messages: [
@@ -4324,7 +4323,7 @@ async function summarizeChat() {
 
   fetch(API_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_API_KEY}` },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: 'openai/gpt-oss-20b',
       messages: [
@@ -4774,7 +4773,7 @@ async function getCerebrasResponse(userMessage) {
 
   fetch(API_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_API_KEY}` },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: apiModel,
       messages: [{ role: 'system', content: await systemPrompt() }, ...contextMessages],
@@ -4855,7 +4854,7 @@ async function generateReplacementResponse(chat, oldResponse) {
   showTyping();
   fetch(API_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_API_KEY}` },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: getSelectedApiModel(),
       messages: [
@@ -4964,7 +4963,7 @@ showStopButton();
 
   fetch(API_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_API_KEY}` },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: getSelectedApiModel(),
       messages: [
