@@ -959,6 +959,30 @@ body[data-font="leet"] { font-family: system-ui, -apple-system, BlinkMacSystemFo
       opacity: 0.7;
     }
 
+    .message.ad-wrapper {
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+.ad-card {
+  display: block;
+  max-width: 320px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--panel-bg);
+  text-decoration: none;
+  color: var(--text);
+  box-shadow: 0 8px 24px var(--shadow);
+  transition: transform 0.15s ease;
+}
+.ad-card:hover { transform: translateY(-2px); border-color: var(--accent); }
+.ad-badge { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); padding: 8px 12px 0; }
+.ad-header { font-weight: 600; padding: 4px 12px 8px; }
+.ad-image { width: 100%; max-height: 140px; object-fit: cover; display: block; }
+.ad-body { padding: 10px 12px 12px; font-size: 0.88rem; color: var(--muted); line-height: 1.4; }
+
 .artifact-panel{
     width:0;
     overflow:hidden;
@@ -2113,6 +2137,7 @@ const SUMMARY_MAX_TOKENS = 1024;
 const DEFAULT_SETTINGS = {
   totalMessagesSent: 0,
   totalImagesGenerated: 0,
+  adResponseCount: 0,
   theme: 'dark',
   font: 'system',
   accentColor: '#22c55e',
@@ -2579,6 +2604,32 @@ async function appendUserMemory(newFacts) {
   const existing = await getUserMemory();
   const updated = (existing ? existing + '\n' : '') + newFacts.join('\n');
   await saveUserMemory(updated);
+}
+
+async function getRandomAd() {
+  const { data } = await supabaseClient.from('ads').select('*').eq('active', true);
+  if (!data || !data.length) return null;
+  return data[Math.floor(Math.random() * data.length)];
+}
+
+async function maybeInjectAd(chat) {
+  settings.adResponseCount = (settings.adResponseCount || 0) + 1;
+  if (settings.adResponseCount < 7) {
+    saveSettings();
+    return;
+  }
+  settings.adResponseCount = 0;
+  saveSettings();
+  const ad = await getRandomAd();
+  if (!ad) return;
+  chat.messages.push({
+    role: 'assistant',
+    type: 'ad',
+    header: ad.header,
+    body: ad.body,
+    image: ad.image_url,
+    link: ad.link_url
+  });
 }
 
 function loadPins() { pinnedMessages = safeLocalStorageGet('overmind_pins', []); }
@@ -3160,12 +3211,15 @@ function addMessage(textOrMsg, isUser, messageIndex = null) {
 const role = msg?.role || (isUser ? 'user' : 'assistant');
 const pinned = (messageIndex !== null && currentChatId && isMessagePinned(currentChatId, messageIndex));
 
-div.className = `message ${isUser ? 'user' : 'bot'}${pinned ? ' pinned' : ''}`;
+div.className = `message ${isUser ? 'user' : 'bot'}${type === 'ad' ? ' ad-wrapper' : ''}${pinned ? ' pinned' : ''}`;
 
 if (type === 'checklist' && !isUser) {
   renderChecklistMessage(msg, div, currentChatId, messageIndex);
 } else if (type === 'image' && !isUser) {
       div.innerHTML = `<img src="${escapeHTML(text)}" alt="${escapeHTML(msg.prompt || 'Generated image')}" style="max-width:100%;border-radius:10px;display:block;cursor:zoom-in;" onclick="openImageLightbox('${escapeHTML(text)}')">`;
+} else if (type === 'ad' && !isUser) {
+  const adImg = msg.image ? `<img class="ad-image" src="${escapeHTML(msg.image)}" alt="${escapeHTML(msg.header || 'Ad')}">` : '';
+  div.innerHTML = `<a class="ad-card" href="${escapeHTML(msg.link || '#')}" target="_blank" rel="noopener noreferrer sponsored"><div class="ad-badge">Sponsored</div>${adImg}<div class="ad-header">${escapeHTML(msg.header || '')}</div><div class="ad-body">${escapeHTML(msg.body || '')}</div></a>`;
 } else if (isUser) {
   div.innerHTML = escapeHTML(displayText);
 } else {
@@ -3185,7 +3239,7 @@ if (type === 'checklist' && !isUser) {
 
   wrapper.appendChild(div);
 
-  if (messageIndex !== null) {
+  if (messageIndex !== null && type !== 'ad') {
     const actions = document.createElement('div');
     actions.className = 'message-actions';
 
@@ -4806,8 +4860,10 @@ async function getCerebrasResponse(userMessage) {
           showSendButton();
           currentStreamController = null;
           chat.messages.push(checklistMsg || { role: 'assistant', content: cleanText, reasoning: botReasoning || null });
-          saveChats();
-          loadChat(currentChatId);
+          maybeInjectAd(chat).catch(() => {}).then(() => {
+            saveChats();
+            loadChat(currentChatId);
+          });
           return;
         }
         const chunk = decoder.decode(value);
