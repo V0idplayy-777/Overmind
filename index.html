@@ -1796,6 +1796,48 @@ body > .main {
 </dialog>
 
 <script>
+/* ==========================================
+   MATHLAB KEYBOARD BRIDGE
+========================================== */
+
+document.addEventListener("keydown", event => {
+
+    /*
+     * Don't trigger when the player is typing
+     * into a text field.
+     */
+
+    const tag =
+        document.activeElement?.tagName;
+
+    if (
+        tag === "INPUT" ||
+        tag === "TEXTAREA" ||
+        tag === "SELECT"
+    ) {
+        return;
+    }
+
+
+    /*
+     * Send M to MathLab.
+     */
+
+    if (event.key.toLowerCase() === "m") {
+
+        window.parent.postMessage(
+            {
+                source: "mathlab-game",
+                type: "keyboard",
+                key: "m"
+            },
+            "*"
+        );
+
+    }
+
+});
+  
   document.getElementById('open-beacons-btn')?.addEventListener('click', () => {
     window.location.href = 'beacons.html';
   });
