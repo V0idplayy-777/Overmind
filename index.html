@@ -1531,7 +1531,7 @@ body > .main {
                 <div id="achievements-btn" style="background: var(--panel-bg); border-radius: 28px; padding: 4px 12px; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:6px;">
           🏆 <span>Achievements</span>
         </div>
-        <div style="color:var(--muted);">v2.0.0</div>
+        <div style="color:var(--muted);">v2.1.0</div>
         <div id="menu-btn" style="cursor:pointer; font-size:1.3rem; user-select:none;">☰</div>
       </div>
     </div>
@@ -2193,7 +2193,7 @@ const DEFAULT_SETTINGS = {
   memoryEnabled: true,
   neverStore: false,
   antiHallucination: 'moderate',
-  model: 'aero',
+  model: 'aero2',
   xp: 0,
   level: 1,
   devMode: false
@@ -2275,6 +2275,17 @@ const MODELS = {
     temperature: null,
     forceThinking: null
   },
+
+  aero2: {
+    name: 'Aero 2.0',
+    description: 'An experimental evolution of Aero. Uses less tokens.',
+    apiModel: 'openai/gpt-oss-20b',
+    systemPromptAddition: 'You are NOT made by OpenAI, are not built from GPT 4, and have no connection to ChatGPT',
+    maxTokens: null,
+    temperature: 0.3,
+    forceThinking: false
+  },
+
   nova: {
     name: 'Nova',
     description: 'The brains. It is a massive model built for advanced coding, complex logic, and deep reasoning. It is much smarter but processes more slowly.',
@@ -2282,8 +2293,18 @@ const MODELS = {
     systemPromptAddition: '',
     maxTokens: null,
     temperature: null,
+    forceThinking: true
+  },
+
+    prism: {
+    name: 'Prism',
+    description: 'A creative, imaginative model built for brainstorming, storytelling, and playful ideas. Prioritizes fun, colorful, inventive responses over strict professionalism.',
+    apiModel: 'openai/gpt-oss-20b',
+    systemPromptAddition: 'You are Prism. Lean playful, imaginative, and creative — prioritize fun, vivid, inventive responses over formal or corporate tone. Take creative risks and let personality shine through.',
+    maxTokens: null,
+    temperature: 0.9,
     forceThinking: null
-  }
+  },
 };
 
 function getSelectedApiModel() {
