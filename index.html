@@ -1447,6 +1447,24 @@ body > .main {
   line-height: 1.5;
 }
 
+#custom-theme-json {
+  background: var(--panel-bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+#custom-themes-list .theme-item {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:10px 14px;
+  background:var(--panel-bg);
+  border-radius:10px;
+  gap:8px;
+  border-left:4px solid var(--accent);
+}
+
   </style>
 </head>
 <body>
@@ -1531,7 +1549,7 @@ body > .main {
                 <div id="achievements-btn" style="background: var(--panel-bg); border-radius: 28px; padding: 4px 12px; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:6px;">
           🏆 <span>Achievements</span>
         </div>
-        <div style="color:var(--muted);">v2.1.0</div>
+        <div style="color:var(--muted);">v2.0.0</div>
         <div id="menu-btn" style="cursor:pointer; font-size:1.3rem; user-select:none;">☰</div>
       </div>
     </div>
@@ -1561,7 +1579,7 @@ body > .main {
           <button class="settings-tab" data-tab="behavior">Behavior</button>
           <button class="settings-tab" data-tab="identity">Identity</button>
           <button class="settings-tab" data-tab="language">Language</button>
-          
+          <button class="settings-tab" data-tab="customthemes">Custom Themes</button>
           <button class="settings-tab" data-tab="poll">Poll</button>
           <button class="settings-tab" data-tab="privacy">Privacy</button>
         </div>
@@ -1709,6 +1727,67 @@ body > .main {
 </div>
           </div>
         </div>
+        <div class="settings-panel" id="tab-customthemes">
+  <div>
+    <label class="field-label" for="custom-theme-name">Theme name</label>
+    <input class="text-input" id="custom-theme-name" type="text" placeholder="e.g. My Dark Theme" />
+  </div>
+  <div>
+    <label class="field-label" for="custom-theme-json">CSS variables (JSON)</label>
+    <textarea class="text-input" id="custom-theme-json" rows="10" style="font-family:monospace;resize:vertical;" placeholder='{"--bg":"#0a0a0a","--text":"#e2e8f0",…}'></textarea>
+    <div class="help-text">Paste a JSON object with any CSS custom properties you want to override. Use the same variable names as the built‑in themes.</div>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">
+    <button class="btn primary" id="custom-theme-save-btn">Save Theme</button>
+    <button class="btn" id="custom-theme-load-current-btn">Load current theme</button>
+  </div>
+  <hr style="border-color:var(--border);margin:16px 0;" />
+  <div>
+    <label class="field-label">Saved themes</label>
+    <div id="custom-themes-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+  </div>
+    <hr style="border-color:var(--border);margin:16px 0;" />
+  <div>
+    <div class="field-label" style="font-size:1rem;font-weight:600;color:var(--text);margin-bottom:6px;">Guide</div>
+    <div class="help-text" style="line-height:1.6;">
+      <strong>1. Name your theme</strong> – Type a unique name in the “Theme name” field.<br>
+      <strong>2. Copy current theme</strong> – Click <strong>“Load current theme”</strong> to get all variables pre‑filled.<br>
+      <strong>3. Edit the JSON</strong> – Change any values. Here are <strong>all 26 variables</strong> you can customise (with example values from the dark theme):<br><br>
+      <pre style="background:var(--panel-bg);padding:12px;border-radius:10px;font-size:0.82rem;line-height:1.5;overflow-x:auto;border:1px solid var(--border);margin:8px 0;">
+{
+  "--bg": "#0a0a0a",
+  "--sidebar-bg": "#111113",
+  "--main-bg": "#1a1b1e",
+  "--topbar-bg": "#1a1b1e",
+  "--panel-bg": "#27272a",
+  "--panel-hover": "#3f3f46",
+  "--border": "#27272a",
+  "--text": "#e2e8f0",
+  "--muted": "#a1a1aa",
+  "--bot-bg": "#27272a",
+  "--user-bg": "#22c55e",
+  "--user-text": "#000",
+  "--error-bg": "#991b1b",
+  "--error-text": "#fecaca",
+  "--error-border": "#f87171",
+  "--accent": "#22c55e",
+  "--input-text": "#e2e8f0",
+  "--input-placeholder": "#9ca3af",
+  "--shadow": "rgba(0,0,0,0.25)",
+  "--tab-bg": "#1f2023",
+  "--tab-active-bg": "#22c55e",
+  "--tab-active-text": "#000",
+  "--update-highlight": "#2a2f36",
+  "--pinned-glow": "rgba(34, 197, 94, 0.4)",
+  "--pinned-border": "#22c55e",
+  "--pinned-bg": "rgba(34, 197, 94, 0.1)"
+}</pre>
+      <strong>4. Save & apply</strong> – Click <strong>“Save Theme”</strong>. Your theme appears in the dropdown and is applied instantly.<br>
+      <strong>5. Manage</strong> – Use the <strong>Apply</strong>, <strong>Edit</strong>, or <strong>Delete</strong> buttons on any saved theme below.<br><br>
+      <em>Tip:</em> You don’t have to include every variable – missing ones fall back to the default dark theme values. Use colours, hex codes, or rgba() for shadows and glows.
+    </div>
+  </div>
+</div>
                 <div class="settings-panel" id="tab-plugins">
           <div id="plugins-list" style="display:flex;flex-direction:column;gap:12px;"></div>
         </div>
@@ -2912,6 +2991,7 @@ document.addEventListener('click', function(e) {
 
 function populateCosmeticSelects() {
   const unlocked = getUnlockedCosmetics();
+  const customThemes = loadCustomThemes();
 
   accentSelect.innerHTML = '';
   ALL_ACCENTS.forEach(val => {
@@ -2930,6 +3010,13 @@ function populateCosmeticSelects() {
     opt.value = val;
     opt.textContent = THEME_LABELS[val] + (isUnlocked ? '' : ' 🔒');
     opt.disabled = !isUnlocked;
+    themeSelect.appendChild(opt);
+  });
+
+  Object.keys(customThemes).forEach(name => {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name + ' (custom)';
     themeSelect.appendChild(opt);
   });
 
@@ -2987,7 +3074,18 @@ function applySettings() {
     if (!unlocked.fonts.includes(settings.font)) settings.font = 'system';
   }
   accentSelect.value = settings.accentColor;
-  document.body.dataset.theme = settings.theme;
+  const theme = settings.theme;
+const customThemes = loadCustomThemes();
+if (customThemes[theme]) {
+  document.body.dataset.theme = 'custom';
+  const vars = customThemes[theme];
+  Object.keys(vars).forEach(key => {
+    document.documentElement.style.setProperty(key, vars[key]);
+  });
+} else {
+  document.body.dataset.theme = theme;
+  document.documentElement.style.cssText = '';
+}
   document.body.dataset.font = settings.font;
   themeSelect.value = settings.theme;
   fontSelect.value = settings.font;
@@ -3014,6 +3112,131 @@ function applySettings() {
   populateModelSelect();
   modelSelect.value = settings.model || 'aero';
   modelDescription.textContent = MODELS[modelSelect.value]?.description || '';
+}
+
+function loadCustomThemes() {
+  return safeLocalStorageGet('overmind_custom_themes', {});
+}
+
+function saveCustomThemes(themes) {
+  safeLocalStorageSet('overmind_custom_themes', themes);
+}
+function renderCustomThemesList() {
+  const container = document.getElementById('custom-themes-list');
+  if (!container) return;
+  const themes = loadCustomThemes();
+  const themeNames = Object.keys(themes);
+  if (!themeNames.length) {
+    container.innerHTML = '<div class="help-text">No custom themes saved yet.</div>';
+    return;
+  }
+  container.innerHTML = '';
+  themeNames.forEach(name => {
+    const item = document.createElement('div');
+    item.className = 'theme-item';
+    const isActive = settings.theme === name;
+    if (isActive) item.style.borderLeftColor = 'var(--accent)';
+    item.innerHTML = `
+      <div>
+        <strong>${escapeHTML(name)}</strong>
+        ${isActive ? ' <span style="font-size:0.8rem;color:var(--accent);">(active)</span>' : ''}
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn" style="padding:4px 10px;font-size:0.8rem;" data-apply-theme="${escapeHTML(name)}">Apply</button>
+        <button class="btn" style="padding:4px 10px;font-size:0.8rem;" data-edit-theme="${escapeHTML(name)}">Edit</button>
+        <button class="btn danger" style="padding:4px 10px;font-size:0.8rem;" data-delete-theme="${escapeHTML(name)}">Delete</button>
+      </div>
+    `;
+    container.appendChild(item);
+
+    item.querySelector('[data-apply-theme]').addEventListener('click', () => {
+      applyCustomTheme(name);
+    });
+    item.querySelector('[data-edit-theme]').addEventListener('click', () => {
+      editCustomTheme(name);
+    });
+    item.querySelector('[data-delete-theme]').addEventListener('click', () => {
+      deleteCustomTheme(name);
+    });
+  });
+}
+
+function applyCustomTheme(name) {
+  const themes = loadCustomThemes();
+  const vars = themes[name];
+  if (!vars) return;
+  settings.theme = name;
+  document.body.dataset.theme = 'custom';
+  Object.keys(vars).forEach(key => {
+    document.documentElement.style.setProperty(key, vars[key]);
+  });
+  saveSettings();
+  themeSelect.value = name;
+  renderCustomThemesList();
+}
+
+function deleteCustomTheme(name) {
+  if (!confirm(`Delete theme "${name}"?`)) return;
+  const themes = loadCustomThemes();
+  delete themes[name];
+  saveCustomThemes(themes);
+  if (settings.theme === name) {
+    settings.theme = 'dark';
+    document.body.dataset.theme = 'dark';
+    document.documentElement.style.cssText = '';
+    saveSettings();
+  }
+  populateCosmeticSelects();
+  renderCustomThemesList();
+  applySettings();
+}
+
+function editCustomTheme(name) {
+  const themes = loadCustomThemes();
+  const vars = themes[name];
+  if (!vars) return;
+  document.getElementById('custom-theme-name').value = name;
+  document.getElementById('custom-theme-json').value = JSON.stringify(vars, null, 2);
+}
+
+function saveCustomThemeFromUI() {
+  const nameInput = document.getElementById('custom-theme-name');
+  const jsonInput = document.getElementById('custom-theme-json');
+  const name = nameInput.value.trim();
+  if (!name) { alert('Please enter a theme name.'); return; }
+  let vars;
+  try {
+    vars = JSON.parse(jsonInput.value);
+    if (typeof vars !== 'object' || Array.isArray(vars)) throw new Error('Must be a JSON object.');
+  } catch (e) {
+    alert('Invalid JSON: ' + e.message);
+    return;
+  }
+  const themes = loadCustomThemes();
+  themes[name] = vars;
+  saveCustomThemes(themes);
+  populateCosmeticSelects();
+  renderCustomThemesList();
+  applyCustomTheme(name);
+  nameInput.value = '';
+  jsonInput.value = '';
+}
+
+function loadCurrentThemeToEditor() {
+  const currentTheme = settings.theme;
+  const themes = loadCustomThemes();
+  let vars = themes[currentTheme];
+  if (!vars) {
+    const root = getComputedStyle(document.documentElement);
+    const varNames = ['--bg','--sidebar-bg','--main-bg','--topbar-bg','--panel-bg','--panel-hover','--border','--text','--muted','--bot-bg','--user-bg','--user-text','--error-bg','--error-text','--error-border','--accent','--input-text','--input-placeholder','--shadow','--tab-bg','--tab-active-bg','--tab-active-text','--update-highlight','--pinned-glow','--pinned-border','--pinned-bg'];
+    vars = {};
+    varNames.forEach(v => {
+      const val = root.getPropertyValue(v).trim();
+      if (val) vars[v] = val;
+    });
+  }
+  document.getElementById('custom-theme-json').value = JSON.stringify(vars, null, 2);
+  document.getElementById('custom-theme-name').value = currentTheme === 'custom' ? '' : currentTheme + '-copy';
 }
 
 function detectArtifact(text){
@@ -4522,6 +4745,7 @@ function parseChecklistInput() {
 
 function openSettings() {
   applySettings();
+  renderCustomThemesList();
   document.getElementById('bsod-overlay').style.display = 'none';
   settingsModal.classList.add('open');
   const memoryTextarea = document.getElementById('user-memory-textarea');
@@ -5340,6 +5564,9 @@ initPopupsAdminUI();
   document.getElementById('admin-chat-modal').addEventListener('click', e => {
     if (e.target === document.getElementById('admin-chat-modal')) closeAdminChat();
   });
+
+document.getElementById('custom-theme-save-btn').addEventListener('click', saveCustomThemeFromUI);
+document.getElementById('custom-theme-load-current-btn').addEventListener('click', loadCurrentThemeToEditor);
 
   await checkAuth();
   await checkAnnouncements();
