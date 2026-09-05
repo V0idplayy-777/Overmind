@@ -1,0 +1,403 @@
+/* --------------------------------------------------
+   GLOBAL FOUNDATIONS & MOTION BEHAVIOR
+-------------------------------------------------- */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  /* NATIVE SMOOTH SCROLL SPEED CONTROL
+     Cubic-bezier timing cannot be injected directly into 'scroll-behavior: smooth',
+     but modern browsers optimize this native scroll layout engine to match 
+     the operating system's natural physics for a fast, elegant fluid scroll. */
+  scroll-behavior: smooth;
+
+  /* EXACT STICKY HEADER OFFSET CALCULATION
+     Our sticky navbar height is exactly 70px. By setting scroll-padding-top to 90px, 
+     we build in a perfect 20px structural breathing room (air gap) above section titles. */
+  scroll-padding-top: 90px; 
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: #0f0f11;
+  color: #ffffff;
+  overflow-x: hidden;
+}
+
+
+/* --------------------------------------------------
+   1. STICKY NAVBAR LAYOUT
+-------------------------------------------------- */
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 70px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 2rem;
+  background-color: rgba(15, 15, 17, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  z-index: 1000;
+}
+
+.logo {
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.nav-list {
+  display: flex;
+  list-style: none;
+  gap: 2rem;
+}
+
+.nav-item {
+  position: relative;
+}
+
+.nav-socials { display: none; }
+
+.nav-link {
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 500;
+  position: relative;
+  padding: 0.4rem 0;
+  transition: color 0.3s ease;
+  z-index: 2;
+}
+
+.nav-link:hover { color: #00adb5; }
+
+.nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: #00adb5;
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.nav-link:hover::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+/* Pure-CSS Menu Closer Hack: Hidden overlay labels expand over links only on mobile open state */
+.close-trigger {
+  display: none;
+}
+
+.menu-toggle { display: none; }
+
+.hamburger {
+  display: none;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 26px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.hamburger .bar {
+  height: 2px;
+  width: 100%;
+  background-color: #fff;
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
+
+/* --------------------------------------------------
+   2. HERO INTERACTION AREA & STARK BUTTONS
+-------------------------------------------------- */
+.hero-section {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 2rem;
+  text-align: center;
+}
+
+.hero-content { max-width: 650px; }
+.hero-title { font-size: 3rem; font-weight: 800; line-height: 1.15; margin-bottom: 1rem; }
+.hero-subtitle { font-size: 1.15rem; color: rgba(255, 255, 255, 0.6); line-height: 1.6; margin-bottom: 2.5rem; }
+
+.hero-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.95rem 2.25rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  text-decoration: none;
+  border-radius: 0px; 
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.btn-primary { background-color: #ffffff; color: #0f0f11; border: 1px solid #ffffff; }
+.btn-primary:hover { background-color: #e0e0e0; border-color: #e0e0e0; }
+.btn-secondary { background-color: transparent; color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.3); }
+.btn-secondary:hover { border-color: #ffffff; background-color: rgba(255, 255, 255, 0.05); }
+
+/* --------------------------------------------------
+   NEW: ASYMMETRIC "LEARN MORE" SECTION
+-------------------------------------------------- */
+.about-section {
+  padding: 8rem 2rem;
+  background-color: #0f0f11;
+  display: flex;
+  justify-content: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.about-container {
+  width: 100%;
+  max-width: 1100px;
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* Two clean deliberate columns */
+  gap: 4rem;
+}
+
+.about-tagline {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #00adb5;
+  margin-bottom: 1rem;
+}
+
+.about-title {
+  font-size: 2.25rem;
+  font-weight: 800;
+  line-height: 1.2;
+  color: #ffffff;
+}
+
+.about-body-block p {
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.6);
+  line-height: 1.7;
+  margin-bottom: 1.5rem;
+}
+
+.about-body-block .about-highlight {
+  color: #ffffff;
+  font-weight: 500;
+  border-left: 2px solid #00adb5;
+  padding-left: 1.25rem;
+  margin-top: 2rem;
+}
+
+/* --------------------------------------------------
+   3. TRUST LOGO PANEL STYLES
+-------------------------------------------------- */
+.trust-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 4rem 2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background-color: #0c0c0e;
+}
+
+.trust-label { font-size: 0.75rem; font-weight: 700; letter-spacing: 2px; color: rgba(255, 255, 255, 0.35); }
+.logo-grid { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 4rem; }
+.logo-item { font-size: 1rem; font-weight: 700; letter-spacing: 1.5px; color: rgba(255, 255, 255, 0.25); transition: color 0.2s ease; }
+.logo-item:hover { color: rgba(255, 255, 255, 0.6); }
+
+/* --------------------------------------------------
+   4. ACCORDION FAQ LOGIC STYLES
+-------------------------------------------------- */
+.faq-section { padding: 8rem 2rem; background-color: #0f0f11; display: flex; justify-content: center; }
+.faq-inner { width: 100%; max-width: 750px; }
+.section-title { font-size: 2.25rem; font-weight: 800; text-align: center; margin-bottom: 4rem; letter-spacing: -0.5px; }
+.faq-container { display: flex; flex-direction: column; }
+.faq-item { border-bottom: 1px solid rgba(255, 255, 255, 0.08); overflow: hidden; }
+.faq-question { display: flex; justify-content: space-between; align-items: center; padding: 2rem 0; font-size: 1.15rem; font-weight: 600; color: rgba(255, 255, 255, 0.9); cursor: pointer; list-style: none; }
+.faq-question::-webkit-details-marker { display: none; }
+.faq-icon { position: relative; width: 14px; height: 14px; flex-shrink: 0; }
+.faq-icon::before, .faq-icon::after { content: ''; position: absolute; background-color: rgba(255, 255, 255, 0.6); transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+.faq-icon::before { top: 6px; left: 0; width: 14px; height: 2px; }
+.faq-icon::after { top: 0; left: 6px; width: 2px; height: 14px; }
+.faq-question:hover .faq-icon::before, .faq-question:hover .faq-icon::after { background-color: #00adb5; }
+.faq-item[open] .faq-question { color: #00adb5; }
+.faq-item[open] .faq-icon::after { transform: rotate(90deg); opacity: 0; }
+.faq-item[open] .faq-icon::before { transform: rotate(180deg); background-color: #00adb5; }
+.faq-answer { max-height: 0; overflow: hidden; padding-bottom: 0; color: rgba(255, 255, 255, 0.6); font-size: 1.05rem; line-height: 1.6; }
+.faq-item[open] .faq-answer { max-height: 300px; padding-bottom: 2rem; }
+
+/* --------------------------------------------------
+   5. MINIMAL GRID FOOTER & SOCIALS
+-------------------------------------------------- */
+.site-footer { background-color: #0c0c0e; border-top: 1px solid rgba(255, 255, 255, 0.05); padding: 5rem 2rem 2rem 2rem; display: flex; flex-direction: column; align-items: center; }
+.footer-container { width: 100%; max-width: 1100px; display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 4rem; padding-bottom: 4rem; }
+.footer-col { display: flex; flex-direction: column; }
+.footer-logo { font-size: 1.2rem; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 1.25rem; }
+.footer-tagline { font-size: 0.95rem; color: rgba(255, 255, 255, 0.5); line-height: 1.6; max-width: 320px; }
+.footer-socials { display: flex; gap: 1.25rem; margin-top: 1.5rem; }
+.footer-social-icon svg { width: 18px; height: 18px; fill: rgba(255, 255, 255, 0.35); transition: fill 0.2s ease, transform 0.2s ease; }
+.footer-social-icon:hover svg { fill: #00adb5; transform: translateY(-2px); }
+.footer-heading { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: rgba(255, 255, 255, 0.3); margin-bottom: 1.5rem; }
+.footer-links { list-style: none; display: flex; flex-direction: column; gap: 0.85rem; }
+.footer-links a { font-size: 0.95rem; color: rgba(255, 255, 255, 0.6); text-decoration: none; transition: color 0.2s ease; }
+.footer-links a:hover { color: #00adb5; }
+.footer-bottom { width: 100%; max-width: 1100px; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 2rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; color: rgba(255, 255, 255, 0.4); }
+.footer-legal { display: flex; gap: 2rem; }
+.footer-legal a { color: rgba(255, 255, 255, 0.4); text-decoration: none; transition: color 0.2s ease; }
+.footer-legal a:hover { color: rgba(255, 255, 255, 0.8); }
+
+/* --------------------------------------------------
+   6. RESPONSIVE MEDIA BREAKPOINTS
+-------------------------------------------------- */
+@media (max-width: 768px) {
+  .hamburger { display: flex; }
+  .about-container { grid-template-columns: 1fr; gap: 2rem; }
+  .about-section { padding: 5rem 1.5rem; }
+
+  .nav-menu {
+    position: fixed;
+    top: 70px;
+    left: -100%;
+    width: 100%;
+    height: calc(100vh - 70px);
+    background-color: rgba(12, 12, 14, 0.93);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 3.5rem 0;
+    transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* When mobile drawer opens, expand transparent overlay labels directly over buttons */
+  .menu-toggle:checked ~ .nav-menu .close-trigger {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1; /* Sits exactly over the link layer to catch tap event and toggle checkbox state
+    */
+    cursor: pointer;
+  }
+
+  .nav-list { flex-direction: column; align-items: center; gap: 2.2rem; }
+  .nav-link { font-size: 1.4rem; }
+
+  .nav-item, .nav-socials {
+    opacity: 0;
+    transform: translateY(15px);
+    transition: opacity 0.35s ease, transform 0.35s ease;
+  }
+
+  .nav-socials { display: flex; justify-content: center; gap: 2.5rem; }
+  .nav-socials svg { width: 22px; height: 22px; fill: rgba(255, 255, 255, 0.5); transition: fill 0.2s; }
+  .nav-socials .social-icon:hover svg { fill: #00adb5; transform: translateY(-2px); }
+
+  .menu-toggle:checked ~ .nav-menu { left: 0; }
+  .menu-toggle:checked ~ .nav-menu .nav-item:nth-child(1) { transition-delay: 0.15s;
+  opacity: 1; transform: translateY(0); }
+  .menu-toggle:checked ~ .nav-menu .nav-item:nth-child(2) { transition-delay: 0.25s;
+  opacity: 1; transform: translateY(0); }
+  .menu-toggle:checked ~ .nav-menu .nav-item:nth-child(3) { transition-delay: 0.35s;
+  opacity: 1; transform: translateY(0); }
+  .menu-toggle:checked ~ .nav-menu .nav-item:nth-child(4) { transition-delay: 0.45s;
+  opacity: 1; transform: translateY(0); }
+  .menu-toggle:checked ~ .nav-menu .nav-socials { transition-delay: 0.55s; opacity: 1;
+  transform: translateY(0); }
+
+  .menu-toggle:checked ~ .hamburger .bar:nth-child(1) { transform: translateY(8px)
+  rotate(45deg); }
+  .menu-toggle:checked ~ .hamburger .bar:nth-child(2) { opacity: 0; transform: scaleX(0); }
+  .menu-toggle:checked ~ .hamburger .bar:nth-child(3) { transform: translateY(-8px)
+  rotate(-45deg); }
+
+  .footer-container { grid-template-columns: 1fr; gap: 2.5rem; padding-bottom: 2.5rem; }
+  .footer-tagline { max-width: 100%; }
+  .footer-bottom { flex-direction: column; align-items: flex-start; gap: 1.25rem; }
+  .footer-legal { gap: 1.5rem; }
+}
+
+/* --------------------------------------------------
+   PURE CSS SNAP-GLIDE MOVEMENT (NO JS)
+-------------------------------------------------- */
+
+/* Master Keyframe Vector Profile */
+@keyframes structuralGlideUp {
+  0% {
+    opacity: 0;
+    transform: translateY(45px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Base Pre-Animation Configuration */
+.about-header-block,
+.about-body-block,
+.logo-grid,
+.faq-item {
+  opacity: 0; /* Hidden initially until the keyframe fires */
+  animation-name: structuralGlideUp;
+  animation-duration: 0.8s;
+  /* Premium human-made curve: rapid pop out, slow architectural landing */
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1); 
+  animation-fill-mode: forwards; /* Locks element at 100% visibility when done */
+}
+
+/* --------------------------------------------------
+   STAGGERED TIMELINE DELAYS (Cascades down the page)
+-------------------------------------------------- */
+
+/* Learn More Header Block */
+.about-header-block {
+  animation-delay: 0.2s;
+}
+
+/* Learn More Body Block */
+.about-body-block {
+  animation-delay: 0.4s;
+}
+
+/* Trust Bar Logo Panel Grid */
+.logo-grid {
+  animation-delay: 0.6s;
+}
+
+/* FAQ Questions Row Blocks */
+.faq-item:nth-child(1) { animation-delay: 0.8s; }
+.faq-item:nth-child(2) { animation-delay: 1.0s; }
+.faq-item:nth-child(3) { animation-delay: 1.2s; }
