@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nova Notes — overAuth demo site</title>
+<link rel="icon" href="favicon.ico">
+<meta name="robots" content="noindex">
+<style>
+  /* Deliberately NOT Overmind's look — this page pretends to be somebody else's
+     website, to prove the widget drops into any design. */
+  :root {
+    --ink: #1b1d29;
+    --paper: #fdfcf7;
+    --card: #ffffff;
+    --line: #e6e2d6;
+    --brand: #5b57d8;
+    --muted: #6d6f7e;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    background: var(--paper); color: var(--ink); line-height: 1.6;
+  }
+  header {
+    display: flex; align-items: center; gap: 14px; padding: 16px 26px;
+    border-bottom: 2px solid var(--ink); background: var(--card); flex-wrap: wrap;
+  }
+  .logo { font-weight: 700; font-size: 1.25rem; letter-spacing: -.4px; }
+  .logo span { color: var(--brand); }
+  nav { display: flex; gap: 16px; margin-left: 12px; font-size: .92rem; }
+  nav a { color: var(--muted); text-decoration: none; }
+  nav a:hover { color: var(--ink); }
+  .right { margin-left: auto; display: flex; align-items: center; gap: 12px; font-family: system-ui, sans-serif; }
+  .who { font-size: .86rem; color: var(--muted); }
+  .who b { color: var(--ink); }
+
+  main { max-width: 1000px; margin: 0 auto; padding: 34px 24px 80px; }
+  h1 { font-size: 2.1rem; letter-spacing: -.6px; margin-bottom: 8px; }
+  .sub { color: var(--muted); max-width: 620px; margin-bottom: 30px; }
+
+  .split { display: grid; grid-template-columns: 1.2fr .8fr; gap: 26px; align-items: start; }
+  .panel {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 22px;
+    box-shadow: 0 1px 0 rgba(27,29,41,.04);
+  }
+  .panel h2 { font-size: 1.05rem; margin-bottom: 12px; font-family: system-ui, sans-serif; }
+  .panel p { font-size: .93rem; color: var(--muted); font-family: system-ui, sans-serif; }
+
+  .banner {
+    font-family: system-ui, sans-serif; font-size: .85rem; background: #fff8e1;
+    border: 1px solid #f0e2b0; border-radius: 10px; padding: 12px 14px; margin-bottom: 24px; color: #6b5a12;
+  }
+  .banner a { color: #6b5a12; }
+  .banner b { font-weight: 700; }
+
+  .notes { display: grid; gap: 10px; margin-top: 14px; font-family: system-ui, sans-serif; }
+  .note {
+    border: 1px dashed var(--line); border-radius: 8px; padding: 10px 12px; font-size: .9rem;
+    background: #fffef9; display: flex; justify-content: space-between; gap: 10px;
+  }
+  .note time { color: var(--muted); font-size: .78rem; }
+  .locked { filter: blur(4px); user-select: none; }
+
+  textarea, input[type=text] {
+    width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .8rem; background: #fffef9; color: var(--ink);
+  }
+  button.go {
+    font-family: system-ui, sans-serif; background: var(--brand); color: #fff; border: 0;
+    border-radius: 8px; padding: 9px 15px; font-weight: 700; font-size: .86rem; cursor: pointer; margin-top: 10px;
+  }
+  button.ghost {
+    font-family: system-ui, sans-serif; background: transparent; color: var(--muted);
+    border: 1px solid var(--line); border-radius: 8px; padding: 8px 13px; font-size: .84rem; cursor: pointer; margin-top: 10px; margin-left: 8px;
+  }
+  pre {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .78rem; background: #14151c;
+    color: #d8dbe6; padding: 14px; border-radius: 8px; overflow: auto; line-height: 1.6;
+  }
+  .kv { font-family: system-ui, sans-serif; font-size: .85rem; display: grid; gap: 6px; margin-top: 10px; }
+  .kv div { display: flex; gap: 8px; }
+  .kv span:first-child { color: var(--muted); min-width: 108px; }
+  .badge {
+    display: inline-block; font-family: system-ui, sans-serif; font-size: .7rem; font-weight: 700;
+    letter-spacing: .08em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px;
+    background: #eceafe; color: var(--brand); border: 1px solid #dcd9fb;
+  }
+  @media (max-width: 820px) { .split { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Nova<span>Notes</span></div>
+  <nav>
+    <a href="#notes">Notes</a>
+    <a href="#about">About</a>
+    <a href="#dev">Developer</a>
+  </nav>
+  <div class="right">
+    <span class="who" id="who">Not signed in</span>
+    <div id="header-button"></div>
+  </div>
+</header>
+
+<main>
+  <div class="banner">
+    <b>This is a pretend third-party website</b> — it is not Overmind. It exists so you can see what
+    <b>overAuth 1.0</b> looks like on someone else's site. Open it from the console with
+    <a href="overauth.html">“Open live demo”</a> so your key is passed in, or paste a key below.
+    <span id="origin-note"></span>
+  </div>
+
+  <h1>Your notes, one login away.</h1>
+  <p class="sub">
+    Nova Notes doesn't have its own accounts. It lets you in with your Overmind account instead —
+    that's overAuth.
+  </p>
+
+  <div class="split">
+    <div>
+      <div class="panel" id="notes">
+        <h2>Members-only notes <span class="badge" id="state-badge">locked</span></h2>
+        <p>Sign in and this list unblurs. Nothing is stored anywhere — it's a demo.</p>
+        <div class="notes locked" id="note-list">
+          <div class="note"><span>Buy oat milk (again)</span><time>today</time></div>
+          <div class="note"><span>Ship the overAuth snippet</span><time>today</time></div>
+          <div class="note"><span>Tell mum the wifi password is not “password”</span><time>yesterday</time></div>
+        </div>
+        <div id="signed-out-extra" style="margin-top:18px;">
+          <h2 style="font-size:.98rem;">Sign in</h2>
+          <p style="margin-bottom:12px;">This card is rendered by <code>overauth.js</code> from Overmind's domain.</p>
+          <div id="overmind-login"></div>
+        </div>
+        <div id="signed-in-extra" style="display:none;margin-top:18px;">
+          <h2 style="font-size:.98rem;">Session</h2>
+          <div class="kv" id="session-kv"></div>
+          <button class="ghost" id="signout-btn">Sign out of Nova Notes</button>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:22px;" id="dev">
+        <h2>Raw response from overAuth</h2>
+        <p style="margin-bottom:10px;">Exactly what <code>OvermindAuth.signIn()</code> resolved to on this page.</p>
+        <pre id="raw">No login attempt yet.</pre>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel">
+        <h2>Your overAuth key</h2>
+        <p style="margin-bottom:10px;">
+          Passed in with <code>?key=oav1_…</code>, or paste one from
+          <a href="overauth.html">the developer console</a>. Stored in this browser only.
+        </p>
+        <textarea id="key-input" rows="6" spellcheck="false" placeholder="oav1_..."></textarea>
+        <button class="go" id="use-key">Use this key</button>
+        <button class="ghost" id="clear-key">Clear</button>
+        <div class="kv" id="key-info"></div>
+      </div>
+
+      <div class="panel" style="margin-top:22px;" id="about">
+        <h2>The code on this page</h2>
+        <pre id="page-code"></pre>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script src="overauth.js"></script>
+<script>
+(function () {
+  var STORAGE = 'overauth.demo.key';
+
+  function qs(name) {
+    var m = new RegExp('[?&]' + name + '=([^&]*)').exec(location.search);
+    return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : '';
+  }
+
+  var key = qs('key') || localStorage.getItem(STORAGE) || '';
+  if (qs('key')) localStorage.setItem(STORAGE, qs('key'));
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  $('origin-note').textContent = ' This page reports its origin as ' + location.origin + '.';
+  $('page-code').textContent =
+'<!-- the whole integration -->\n' +
+'<div id="overmind-login"></div>\n\n' +
+'<script src="https://v0idplayy-777.github.io/Overmind/overauth.js"\n' +
+'        data-key="oav1_…"\n' +
+'        data-container="#overmind-login"\n' +
+'        data-theme="light"><\/script>\n\n' +
+'// plus a button in the header\n' +
+'OvermindAuth.renderButton("#header-button", { theme: "light" });\n\n' +
+'OvermindAuth.onAuthChange(function (event) {\n' +
+'  if (event.type === "SIGNED_IN") unlockSite(event.user.username);\n' +
+'  if (event.type === "SIGNED_OUT") lockSite();\n' +
+'});';
+
+  function showKeyInfo() {
+    var box = $('key-info');
+    if (!key) { box.innerHTML = '<div><span>status</span><span>no key set</span></div>'; return; }
+    var p = OvermindAuth.parseKey(key);
+    box.innerHTML =
+      '<div><span>valid</span><span>' + (p.signatureValid ? 'yes' : 'NO — tampered or not issued by Overmind') + '</span></div>' +
+      '<div><span>key id</span><span>' + (p.keyId || '—') + '</span></div>' +
+      '<div><span>owner</span><span>' + (p.owner || '—') + '</span></div>' +
+      '<div><span>name</span><span>' + (p.name || '—') + '</span></div>' +
+      '<div><span>origins</span><span>' + (p.origins || []).join(', ') + '</span></div>' +
+      '<div><span>scopes</span><span>' + (p.scopes || []).join(', ') + '</span></div>' +
+      '<div><span>expires</span><span>' + (p.expiresAt ? new Date(p.expiresAt).toLocaleString() : 'never') + '</span></div>' +
+      '<div><span>origin ok</span><span>' + (OvermindAuth.originAllowed(p.origins || [], location.origin) ? 'yes' : 'NO — add ' + location.origin + ' to the key') + '</span></div>';
+  }
+
+  function unlockSite(username, result) {
+    $('note-list').classList.remove('locked');
+    $('state-badge').textContent = 'unlocked';
+    $('signed-out-extra').style.display = 'none';
+    $('signed-in-extra').style.display = 'block';
+    $('who').innerHTML = 'Signed in as <b>' + username + '</b>';
+    $('session-kv').innerHTML =
+      '<div><span>username</span><span><b>' + username + '</b></span></div>' +
+      '<div><span>mode</span><span>' + (result && result.mode ? result.mode : '—') + '</span></div>' +
+      '<div><span>session token</span><span style="word-break:break-all;">' + ((result && result.session_token) ? result.session_token.slice(0, 24) + '…' : 'none (local mode)') + '</span></div>' +
+      '<div><span>expires</span><span>' + ((result && result.session_expires_at) ? new Date(result.session_expires_at).toLocaleString() : '—') + '</span></div>';
+    if (result) $('raw').textContent = JSON.stringify(result, null, 2);
+  }
+
+  function lockSite() {
+    $('note-list').classList.add('locked');
+    $('state-badge').textContent = 'locked';
+    $('signed-out-extra').style.display = 'block';
+    $('signed-in-extra').style.display = 'none';
+    $('who').textContent = 'Not signed in';
+  }
+
+  OvermindAuth.onAuthChange(function (event) {
+    if (event.type === 'SIGNED_IN') unlockSite(event.user.username, event.result);
+    if (event.type === 'SIGNED_OUT') lockSite();
+  });
+
+  function boot() {
+    $('key-input').value = key;
+    showKeyInfo();
+    if (!key) {
+      $('overmind-login').innerHTML =
+        '<p style="font-family:system-ui,sans-serif;font-size:.9rem;color:#6d6f7e;">' +
+        'No key yet. Create one in <a href="overauth.html">the overAuth console</a>, then click ' +
+        '“Open live demo”, or paste it on the right.</p>';
+      return;
+    }
+    OvermindAuth.init({ key: key }).then(function (info) {
+      if (!info.ok) {
+        $('raw').textContent = JSON.stringify(info, null, 2);
+        $('overmind-login').innerHTML =
+          '<p style="font-family:system-ui,sans-serif;font-size:.9rem;color:#b91c1c;">' + info.message + '</p>';
+        return;
+      }
+      OvermindAuth.mount('#overmind-login', {
+        theme: 'light',
+        accent: '#5b57d8',
+        title: 'Sign in to Nova Notes',
+        description: 'Use your Overmind account — no new password needed.',
+        onSuccess: function (result) { $('raw').textContent = JSON.stringify(result, null, 2); }
+      });
+      OvermindAuth.renderButton('#header-button', { theme: 'light', accent: '#5b57d8' });
+
+      return OvermindAuth.getSession();
+    }).then(function (session) {
+      if (session && session.ok) unlockSite(session.user.username, session);
+    });
+  }
+
+  $('use-key').addEventListener('click', function () {
+    key = $('key-input').value.trim();
+    localStorage.setItem(STORAGE, key);
+    location.search = '?key=' + encodeURIComponent(key);
+  });
+  $('clear-key').addEventListener('click', function () {
+    localStorage.removeItem(STORAGE);
+    location.search = '';
+  });
+  $('signout-btn').addEventListener('click', function () { OvermindAuth.signOut(); });
+
+  boot();
+})();
+</script>
+</body>
+</html>

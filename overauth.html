@@ -1,0 +1,1771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>overAuth 1.0 — Sign in with Overmind for your site</title>
+<meta name="description" content="Create an overAuth 1.0 key, drop two lines of JavaScript into your site, and let your users log in with their Overmind account.">
+<link rel="icon" href="favicon.ico">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --panel: #131417;
+    --panel-2: #1a1b1e;
+    --panel-3: #212226;
+    --border: #2a2b30;
+    --border-soft: #212226;
+    --text: #e6e8ec;
+    --muted: #9aa0aa;
+    --accent: #22c55e;
+    --accent-dim: rgba(34, 197, 94, .14);
+    --danger: #f87171;
+    --warn: #fbbf24;
+    --info: #60a5fa;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    --radius: 14px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; scroll-padding-top: 88px; }
+
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: var(--accent); }
+  ::selection { background: var(--accent); color: #05130a; }
+
+  /* ---------- top bar ---------- */
+  .topbar {
+    position: sticky; top: 0; z-index: 50;
+    display: flex; align-items: center; gap: 18px;
+    padding: 14px 22px;
+    background: rgba(10, 10, 10, .82);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border-soft);
+    flex-wrap: wrap;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; letter-spacing: .2px; }
+  .brand-mark {
+    width: 30px; height: 30px; border-radius: 9px; background: var(--accent);
+    color: #05130a; display: flex; align-items: center; justify-content: center; font-weight: 900;
+  }
+  .brand small {
+    display: block; font-size: .62rem; letter-spacing: .18em; text-transform: uppercase;
+    color: var(--muted); font-weight: 600;
+  }
+  .topnav { display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap; }
+  .topnav a {
+    color: var(--muted); text-decoration: none; font-size: .88rem; font-weight: 600;
+    padding: 7px 12px; border-radius: 9px; transition: .18s;
+  }
+  .topnav a:hover { color: var(--text); background: var(--panel-2); }
+  .chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: .76rem; font-weight: 700; padding: 6px 11px; border-radius: 999px;
+    border: 1px solid var(--border); background: var(--panel-2); color: var(--muted);
+    white-space: nowrap;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: 0 0 auto; }
+  .chip.ok    { color: #86efac; border-color: rgba(34,197,94,.4); background: var(--accent-dim); }
+  .chip.ok .dot { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+  .chip.warn  { color: #fde68a; border-color: rgba(251,191,36,.35); background: rgba(251,191,36,.1); }
+  .chip.warn .dot { background: var(--warn); }
+  .chip.bad   { color: #fecaca; border-color: rgba(248,113,113,.35); background: rgba(248,113,113,.1); }
+  .chip.bad .dot { background: var(--danger); }
+
+  /* ---------- layout ---------- */
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 22px 90px; }
+
+  .hero { padding: 54px 0 34px; }
+  .kicker {
+    display: inline-block; font-size: .72rem; letter-spacing: .2em; text-transform: uppercase;
+    color: var(--accent); background: var(--accent-dim); border: 1px solid rgba(34,197,94,.3);
+    padding: 6px 12px; border-radius: 999px; font-weight: 800; margin-bottom: 18px;
+  }
+  h1 { font-size: clamp(2rem, 5vw, 3rem); line-height: 1.1; font-weight: 800; letter-spacing: -.5px; }
+  h1 .grad { color: var(--accent); }
+  .lede { color: var(--muted); font-size: 1.06rem; max-width: 640px; margin-top: 14px; }
+
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 30px 0 8px; }
+  .step {
+    background: var(--panel); border: 1px solid var(--border-soft); border-radius: var(--radius);
+    padding: 16px 18px;
+  }
+  .step b { display: flex; align-items: center; gap: 9px; font-size: .95rem; }
+  .step .n {
+    width: 22px; height: 22px; border-radius: 7px; background: var(--panel-3); color: var(--accent);
+    display: inline-flex; align-items: center; justify-content: center; font-size: .78rem; font-weight: 800;
+    border: 1px solid var(--border);
+  }
+  .step p { color: var(--muted); font-size: .86rem; margin-top: 7px; }
+
+  .grid { display: grid; grid-template-columns: 340px 1fr; gap: 20px; align-items: start; margin-top: 34px; }
+  .col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--border-soft); border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .card-head {
+    display: flex; align-items: center; gap: 10px; justify-content: space-between; flex-wrap: wrap;
+    padding: 15px 18px; border-bottom: 1px solid var(--border-soft); background: var(--panel-2);
+  }
+  .card-head h2 { font-size: .98rem; font-weight: 750; letter-spacing: .1px; }
+  .card-head .sub { font-size: .78rem; color: var(--muted); font-weight: 500; }
+  .card-body { padding: 18px; }
+  .card-body.tight { padding: 14px 18px; }
+
+  /* ---------- form controls ---------- */
+  label.fld { display: block; font-size: .78rem; color: var(--muted); margin: 0 0 6px; font-weight: 600; }
+  .fld-group { margin-bottom: 14px; }
+  input[type=text], input[type=password], input[type=date], select, textarea {
+    width: 100%; background: #0f1012; color: var(--text);
+    border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px;
+    font-size: .92rem; font-family: inherit; outline: none; transition: border-color .15s;
+  }
+  textarea { font-family: var(--mono); font-size: .84rem; resize: vertical; line-height: 1.6; }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  input::placeholder, textarea::placeholder { color: #6b7280; }
+  .hint { font-size: .76rem; color: var(--muted); margin-top: 6px; }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    background: var(--panel-3); color: var(--text); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 15px; font-size: .88rem; font-weight: 700;
+    font-family: inherit; cursor: pointer; transition: .16s; text-decoration: none;
+  }
+  .btn:hover { border-color: #3f4046; background: #26272c; }
+  .btn:active { transform: translateY(1px); }
+  .btn.primary { background: var(--accent); border-color: transparent; color: #05130a; }
+  .btn.primary:hover { filter: brightness(1.08); background: var(--accent); }
+  .btn.danger { background: transparent; border-color: rgba(248,113,113,.4); color: #fca5a5; }
+  .btn.danger:hover { background: rgba(248,113,113,.12); border-color: rgba(248,113,113,.6); }
+  .btn.sm { padding: 6px 11px; font-size: .8rem; border-radius: 9px; }
+  .btn.block { width: 100%; }
+  .btn[disabled] { opacity: .5; cursor: progress; }
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .checks { display: flex; flex-direction: column; gap: 8px; }
+  .check { display: flex; gap: 9px; align-items: flex-start; font-size: .86rem; color: var(--text); cursor: pointer; }
+  .check input { margin-top: 3px; accent-color: var(--accent); }
+  .check span small { display: block; color: var(--muted); font-size: .76rem; }
+
+  /* ---------- alerts ---------- */
+  .alert {
+    border-radius: 12px; padding: 12px 14px; font-size: .86rem; line-height: 1.5;
+    border: 1px solid var(--border); background: var(--panel-2); color: var(--text);
+    display: flex; gap: 10px; align-items: flex-start;
+  }
+  .alert + .alert { margin-top: 10px; }
+  .alert.ok   { border-color: rgba(34,197,94,.35);  background: var(--accent-dim); color: #bbf7d0; }
+  .alert.warn { border-color: rgba(251,191,36,.35); background: rgba(251,191,36,.09); color: #fde68a; }
+  .alert.bad  { border-color: rgba(248,113,113,.35);background: rgba(248,113,113,.09); color: #fecaca; }
+  .alert.info { border-color: rgba(96,165,250,.35); background: rgba(96,165,250,.09); color: #bfdbfe; }
+  .alert .ico { flex: 0 0 auto; font-weight: 800; }
+  .alert a { color: inherit; }
+
+  /* ---------- key reveal ---------- */
+  .keybox {
+    background: #0b0c0e; border: 1px solid rgba(34,197,94,.35); border-radius: 12px; padding: 14px;
+  }
+  .keybox .k {
+    font-family: var(--mono); font-size: .8rem; word-break: break-all; color: #86efac;
+    background: rgba(34,197,94,.07); border-radius: 8px; padding: 10px 12px; line-height: 1.6;
+    max-height: 132px; overflow: auto;
+  }
+
+  /* ---------- code ---------- */
+  .code {
+    position: relative; background: #0b0c0e; border: 1px solid var(--border);
+    border-radius: 12px; overflow: hidden;
+  }
+  .code pre {
+    padding: 14px 16px; overflow: auto; font-family: var(--mono); font-size: .8rem;
+    line-height: 1.65; color: #d7dbe2; max-height: 420px; tab-size: 2;
+  }
+  .code .copy {
+    position: absolute; top: 9px; right: 9px;
+  }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .tab {
+    background: var(--panel-2); border: 1px solid var(--border); color: var(--muted);
+    padding: 7px 13px; border-radius: 9px; font-size: .82rem; font-weight: 700; cursor: pointer;
+    font-family: inherit; transition: .16s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { background: var(--accent-dim); border-color: rgba(34,197,94,.45); color: #86efac; }
+  .pane { display: none; }
+  .pane.active { display: block; }
+
+  /* ---------- key list ---------- */
+  .keyrow {
+    border: 1px solid var(--border-soft); border-radius: 12px; background: var(--panel-2);
+    padding: 13px 14px; margin-bottom: 10px;
+  }
+  .keyrow:last-child { margin-bottom: 0; }
+  .keyrow.paused { opacity: .62; }
+  .keyrow-top { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .keyrow-name { font-weight: 750; font-size: .93rem; }
+  .keyrow-id { font-family: var(--mono); font-size: .72rem; color: var(--muted); }
+  .keyrow-meta { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 8px; font-size: .78rem; color: var(--muted); }
+  .keyrow-meta b { color: var(--text); font-weight: 650; }
+  .keyrow-actions { display: flex; gap: 7px; margin-top: 11px; flex-wrap: wrap; }
+  .pill {
+    font-size: .68rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+    padding: 3px 8px; border-radius: 999px; border: 1px solid var(--border);
+    background: var(--panel-3); color: var(--muted);
+  }
+  .pill.live   { color: #86efac; border-color: rgba(34,197,94,.4); background: var(--accent-dim); }
+  .pill.paused { color: #fde68a; border-color: rgba(251,191,36,.4); background: rgba(251,191,36,.1); }
+  .pill.dead   { color: #fecaca; border-color: rgba(248,113,113,.4); background: rgba(248,113,113,.1); }
+  .pill.local  { color: #bfdbfe; border-color: rgba(96,165,250,.4); background: rgba(96,165,250,.1); }
+  .origins { font-family: var(--mono); font-size: .74rem; color: #a5b4fc; word-break: break-all; }
+
+  .empty { text-align: center; padding: 26px 16px; color: var(--muted); font-size: .88rem; }
+
+  /* ---------- tester ---------- */
+  .verdict { display: none; margin-bottom: 12px; }
+  .verdict.show { display: block; }
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .stat { background: var(--panel-2); border: 1px solid var(--border-soft); border-radius: 12px; padding: 12px 14px; }
+  .stat .v { font-size: 1.4rem; font-weight: 800; letter-spacing: -.5px; }
+  .stat .l { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; font-weight: 700; margin-top: 2px; }
+
+  /* ---------- docs ---------- */
+  .docs { margin-top: 60px; }
+  .docs h2 { font-size: 1.5rem; font-weight: 800; letter-spacing: -.3px; margin-bottom: 6px; }
+  .docs h3 { font-size: 1.02rem; margin: 26px 0 10px; font-weight: 750; }
+  .docs p, .docs li { color: #c8ccd4; font-size: .92rem; }
+  .docs ul { padding-left: 20px; }
+  .docs li { margin-bottom: 6px; }
+  code.inl {
+    font-family: var(--mono); font-size: .82em; background: var(--panel-2);
+    border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px; color: #a7f3d0;
+  }
+  table.ref { width: 100%; border-collapse: collapse; font-size: .85rem; margin-top: 8px; }
+  table.ref th, table.ref td { text-align: left; padding: 9px 11px; border-bottom: 1px solid var(--border-soft); vertical-align: top; }
+  table.ref th { color: var(--muted); font-size: .74rem; text-transform: uppercase; letter-spacing: .09em; }
+  table.ref td:first-child { font-family: var(--mono); font-size: .8rem; color: #a7f3d0; white-space: nowrap; }
+  table.ref tr:last-child td { border-bottom: 0; }
+
+  details.faq { border: 1px solid var(--border-soft); border-radius: 12px; background: var(--panel); padding: 0; margin-bottom: 8px; }
+  details.faq summary { cursor: pointer; padding: 13px 16px; font-weight: 650; font-size: .9rem; list-style: none; }
+  details.faq summary::-webkit-details-marker { display: none; }
+  details.faq summary::before { content: "+ "; color: var(--accent); font-weight: 800; }
+  details.faq[open] summary::before { content: "– "; }
+  details.faq .a { padding: 0 16px 14px; color: var(--muted); font-size: .88rem; }
+
+  /* ---------- modal ---------- */
+  .backdrop {
+    position: fixed; inset: 0; background: rgba(4,5,7,.7); backdrop-filter: blur(4px);
+    display: none; align-items: center; justify-content: center; z-index: 100; padding: 18px;
+  }
+  .backdrop.open { display: flex; }
+  .modal {
+    width: min(560px, 100%); background: var(--panel); border: 1px solid var(--border);
+    border-radius: 16px; max-height: 88vh; display: flex; flex-direction: column; overflow: hidden;
+  }
+  .modal-head { padding: 15px 18px; border-bottom: 1px solid var(--border-soft); display: flex; justify-content: space-between; align-items: center; background: var(--panel-2); }
+  .modal-head strong { font-size: .98rem; }
+  .modal-body { padding: 18px; overflow: auto; }
+  .modal-foot { padding: 14px 18px; border-top: 1px solid var(--border-soft); display: flex; gap: 8px; justify-content: flex-end; }
+  .x { background: transparent; border: 0; color: var(--muted); font-size: 1.2rem; cursor: pointer; }
+
+  .toast {
+    position: fixed; bottom: 22px; left: 50%; transform: translate(-50%, 20px);
+    background: var(--panel-3); border: 1px solid var(--border); color: var(--text);
+    padding: 11px 18px; border-radius: 11px; font-size: .87rem; font-weight: 650;
+    opacity: 0; pointer-events: none; transition: .22s; z-index: 200; box-shadow: 0 14px 40px rgba(0,0,0,.5);
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  footer.foot {
+    border-top: 1px solid var(--border-soft); margin-top: 60px; padding: 24px 0 0;
+    color: var(--muted); font-size: .84rem; display: flex; gap: 12px; flex-wrap: wrap; justify-content: space-between;
+  }
+
+  .hidden { display: none !important; }
+
+  @media (max-width: 940px) {
+    .grid { grid-template-columns: 1fr; }
+    .steps { grid-template-columns: 1fr; }
+    .stat-grid { grid-template-columns: repeat(2, 1fr); }
+    .topnav { margin-left: 0; width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark">O</div>
+    <div>
+      Overmind
+      <small>overAuth 1.0 · developers</small>
+    </div>
+  </div>
+  <div id="backend-chip" class="chip" title="Status of the overAuth backend in your Supabase project">
+    <span class="dot"></span><span id="backend-chip-text">checking backend…</span>
+  </div>
+  <nav class="topnav">
+    <a href="index.html">Home</a>
+    <a href="chat.html">Chat app</a>
+    <a href="#create">Create key</a>
+    <a href="#code">Get the code</a>
+    <a href="#tester">Test</a>
+    <a href="#docs">Docs</a>
+  </nav>
+</header>
+
+<div class="wrap">
+
+  <section class="hero">
+    <span class="kicker">overAuth 1.0</span>
+    <h1>Let your users sign in<br><span class="grad">with their Overmind account.</span></h1>
+    <p class="lede">
+      Sign in below with your Overmind account, create an overAuth key, and paste two lines of
+      JavaScript into your own website. Your visitors can then log in with the username and password
+      they already have on Overmind — no new accounts, no password database, no backend to write.
+    </p>
+
+    <div class="steps">
+      <div class="step">
+        <b><span class="n">1</span> Sign in</b>
+        <p>Use your normal Overmind username and password. That's the account the keys belong to.</p>
+      </div>
+      <div class="step">
+        <b><span class="n">2</span> Create a key</b>
+        <p>Name it, choose which websites may use it, and copy the <code class="inl">oav1_…</code> key.</p>
+      </div>
+      <div class="step">
+        <b><span class="n">3</span> Paste the snippet</b>
+        <p>Drop the script tag into your site. You get a login widget or a
+           <code class="inl">signIn()</code> call that checks the username and password for you.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="grid">
+
+    <!-- ============ LEFT COLUMN ============ -->
+    <div class="col">
+
+      <!-- Sign in -->
+      <section class="card" id="signin-card">
+        <div class="card-head">
+          <div>
+            <h2>Developer sign in</h2>
+            <div class="sub">Your Overmind account</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div id="signin-form">
+            <div class="fld-group">
+              <label class="fld" for="dev-username">Overmind username</label>
+              <input type="text" id="dev-username" placeholder="username" autocomplete="username" spellcheck="false">
+            </div>
+            <div class="fld-group">
+              <label class="fld" for="dev-password">Password</label>
+              <input type="password" id="dev-password" placeholder="••••••••" autocomplete="current-password">
+            </div>
+            <div id="signin-error" class="alert bad hidden" style="margin-bottom:12px;"></div>
+            <button class="btn primary block" id="signin-btn" onclick="devSignIn()">Sign in with Overmind</button>
+            <p class="hint" style="text-align:center;margin-top:12px;">
+              No account? <a href="chat.html" target="_blank" rel="noopener">Create one on Overmind</a>
+            </p>
+            <p class="hint" style="text-align:center;margin-top:6px;">
+              For security you sign in again when you close this tab.
+            </p>
+          </div>
+
+          <div id="signin-done" class="hidden">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+              <div class="brand-mark" id="dev-avatar" style="width:42px;height:42px;border-radius:50%;font-size:1.1rem;">?</div>
+              <div style="min-width:0;">
+                <div style="font-weight:750;" id="dev-name">—</div>
+                <div class="hint" style="margin-top:0;" id="dev-sub">Signed in</div>
+              </div>
+            </div>
+            <div class="stat-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:14px;">
+              <div class="stat"><div class="v" id="stat-keys">0</div><div class="l">Keys</div></div>
+              <div class="stat"><div class="v" id="stat-uses">0</div><div class="l">Logins</div></div>
+            </div>
+            <div class="btn-row">
+              <button class="btn sm" onclick="refreshAll()">↻ Refresh</button>
+              <button class="btn sm danger" onclick="devSignOut()">Sign out</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Backend setup -->
+      <section class="card" id="setup-card">
+        <div class="card-head">
+          <div>
+            <h2>Backend</h2>
+            <div class="sub">One-time setup in Supabase</div>
+          </div>
+          <span class="chip" id="setup-chip"><span class="dot"></span><span id="setup-chip-text">…</span></span>
+        </div>
+        <div class="card-body">
+          <div id="setup-msg"></div>
+          <div class="btn-row" style="margin-top:12px;">
+            <button class="btn sm" onclick="openSqlModal()">View setup SQL</button>
+            <button class="btn sm" onclick="checkBackend(true)">Re-check</button>
+            <a class="btn sm" href="supabase/overauth.sql" target="_blank" rel="noopener">Open file</a>
+          </div>
+        </div>
+      </section>
+
+      <!-- How verification works -->
+      <section class="card">
+        <div class="card-head"><h2>What your visitor's login does</h2></div>
+        <div class="card-body tight">
+          <ol style="padding-left:18px;color:var(--muted);font-size:.85rem;display:flex;flex-direction:column;gap:8px;">
+            <li>Your page calls <code class="inl">OvermindAuth.signIn(user, pass)</code>.</li>
+            <li>The password is hashed with SHA-256 in the browser — the plain password never touches your server.</li>
+            <li>The key id, the key hash, the username, the password hash and your origin go to the
+                <code class="inl">overauth_verify</code> function in your Supabase project.</li>
+            <li>Overmind checks the key (active? expired? origin allowed?) then the account
+                (exists? password matches? banned?).</li>
+            <li>You get <code class="inl">{ ok: true, user: { username } }</code> plus a session token you can
+                re-validate later.</li>
+          </ol>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ============ RIGHT COLUMN ============ -->
+    <div class="col">
+
+      <!-- Create key -->
+      <section class="card" id="create">
+        <div class="card-head">
+          <div>
+            <h2>Create an overAuth 1.0 key</h2>
+            <div class="sub">Keys are scoped to your Overmind account</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div id="create-locked" class="alert info">
+            <span class="ico">→</span>
+            <div>Sign in on the left to create a key.</div>
+          </div>
+
+          <div id="create-form" class="hidden">
+            <div class="fld-group">
+              <label class="fld" for="key-name">Key name</label>
+              <input type="text" id="key-name" placeholder="e.g. My blog — production" maxlength="60">
+            </div>
+
+            <div class="fld-group">
+              <label class="fld" for="key-origins">Allowed websites (one per line)</label>
+              <textarea id="key-origins" rows="3" placeholder="https://example.com" spellcheck="false"></textarea>
+              <div class="btn-row" style="margin-top:8px;">
+                <button class="btn sm" onclick="addOrigin('*')">+ Any site (*)</button>
+                <button class="btn sm" onclick="addOrigin(location.origin)">+ This page's origin</button>
+                <button class="btn sm" onclick="addOrigin('http://localhost:*')">+ localhost (any port)</button>
+                <button class="btn sm" onclick="addOrigin('https://*.example.com')">+ wildcard subdomains</button>
+              </div>
+              <p class="hint">
+                Only these origins may use the key. Use <code class="inl">*</code> while you're experimenting,
+                then lock it down.
+              </p>
+            </div>
+
+            <div class="fld-group">
+              <label class="fld">Scopes — what your site gets back</label>
+              <div class="checks">
+                <label class="check">
+                  <input type="checkbox" id="scope-profile" checked>
+                  <span>profile <small>The username and when the account was created.</small></span>
+                </label>
+                <label class="check">
+                  <input type="checkbox" id="scope-sessions" checked>
+                  <span>sessions <small>Issue a session token so visitors stay logged in and you can re-validate it later.</small></span>
+                </label>
+                <label class="check">
+                  <input type="checkbox" id="scope-admin">
+                  <span>admin_flag <small>Also return whether the visitor is an Overmind admin.</small></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="fld-group">
+              <label class="fld" for="key-expiry">Expires</label>
+              <select id="key-expiry">
+                <option value="">Never</option>
+                <option value="7">In 7 days</option>
+                <option value="30" selected>In 30 days</option>
+                <option value="90">In 90 days</option>
+                <option value="365">In 1 year</option>
+              </select>
+            </div>
+
+            <div id="create-error" class="alert bad hidden" style="margin-bottom:12px;"></div>
+            <button class="btn primary block" id="create-btn" onclick="createKey()">Create key</button>
+          </div>
+
+          <!-- revealed once -->
+          <div id="key-reveal" class="hidden" style="margin-top:16px;">
+            <div class="alert warn" style="margin-bottom:12px;">
+              <span class="ico">!</span>
+              <div>
+                <b>Copy this key now.</b> Overmind only stores a SHA-256 hash of it, so the console can
+                never show it to you again (a copy is also kept in this browser for convenience).
+              </div>
+            </div>
+            <div class="keybox">
+              <div class="k" id="reveal-key">—</div>
+              <div class="btn-row" style="margin-top:12px;">
+                <button class="btn sm primary" onclick="copyText(document.getElementById('reveal-key').textContent)">Copy key</button>
+                <button class="btn sm" onclick="downloadKey()">Download .txt</button>
+                <button class="btn sm" onclick="useInTester(document.getElementById('reveal-key').textContent)">Test it →</button>
+                <button class="btn sm" onclick="openDemo(document.getElementById('reveal-key').textContent)">Open live demo</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Keys -->
+      <section class="card" id="keys">
+        <div class="card-head">
+          <div>
+            <h2>Your keys</h2>
+            <div class="sub" id="keys-sub">Not signed in</div>
+          </div>
+          <button class="btn sm hidden" id="keys-refresh" onclick="loadKeys()">↻</button>
+        </div>
+        <div class="card-body">
+          <div id="keys-list"><div class="empty">Sign in to see your keys.</div></div>
+        </div>
+      </section>
+
+      <!-- Code -->
+      <section class="card" id="code">
+        <div class="card-head">
+          <div>
+            <h2>Add it to your site</h2>
+            <div class="sub">Pick a key, copy the snippet, paste it in</div>
+          </div>
+          <select id="snippet-key" style="width:auto;max-width:230px;font-size:.82rem;" onchange="renderSnippets()"></select>
+        </div>
+        <div class="card-body">
+          <div class="tabs">
+            <button class="tab active" data-pane="pane-widget" onclick="showPane(this)">Drop-in widget</button>
+            <button class="tab" data-pane="pane-api" onclick="showPane(this)">Your own form</button>
+            <button class="tab" data-pane="pane-rest" onclick="showPane(this)">REST / any language</button>
+            <button class="tab" data-pane="pane-node" onclick="showPane(this)">Node / backend</button>
+          </div>
+
+          <div class="pane active" id="pane-widget">
+            <p class="hint" style="margin-bottom:10px;">
+              A ready-made, themed login card. Two pastes and you're done — the widget handles the form,
+              errors, the signed-in state and sign-out.
+            </p>
+            <div class="code">
+              <button class="btn sm copy" onclick="copyPane('pane-widget')">Copy</button>
+              <pre id="snippet-widget"></pre>
+            </div>
+          </div>
+
+          <div class="pane" id="pane-api">
+            <p class="hint" style="margin-bottom:10px;">
+              Keep your own HTML form and just call <code class="inl">OvermindAuth.signIn()</code> —
+              it resolves to <code class="inl">{ ok, user, reason }</code>.
+            </p>
+            <div class="code">
+              <button class="btn sm copy" onclick="copyPane('pane-api')">Copy</button>
+              <pre id="snippet-api"></pre>
+            </div>
+          </div>
+
+          <div class="pane" id="pane-rest">
+            <p class="hint" style="margin-bottom:10px;">
+              No JavaScript required — the same check as a plain HTTPS call you can make from PHP, Python,
+              Go, a Cloudflare Worker, anything.
+            </p>
+            <div class="code">
+              <button class="btn sm copy" onclick="copyPane('pane-rest')">Copy</button>
+              <pre id="snippet-rest"></pre>
+            </div>
+          </div>
+
+          <div class="pane" id="pane-node">
+            <p class="hint" style="margin-bottom:10px;">
+              Server-side sessions: verify the login once, then re-validate the session token on every
+              request instead of asking for the password again.
+            </p>
+            <div class="code">
+              <button class="btn sm copy" onclick="copyPane('pane-node')">Copy</button>
+              <pre id="snippet-node"></pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tester -->
+      <section class="card" id="tester">
+        <div class="card-head">
+          <div>
+            <h2>Try it right here</h2>
+            <div class="sub">Runs the real overAuth flow with the key you pick</div>
+          </div>
+          <span class="chip" id="tester-mode"><span class="dot"></span><span>—</span></span>
+        </div>
+        <div class="card-body">
+          <div class="fld-group">
+            <label class="fld" for="test-key">Key</label>
+            <select id="test-key" onchange="renderSnippets()"></select>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="fld-group">
+              <label class="fld" for="test-user">Visitor username</label>
+              <input type="text" id="test-user" placeholder="an Overmind username" spellcheck="false">
+            </div>
+            <div class="fld-group">
+              <label class="fld" for="test-pass">Visitor password</label>
+              <input type="password" id="test-pass" placeholder="their password">
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end;">
+            <div class="fld-group" style="margin-bottom:0;">
+              <label class="fld" for="test-origin">Reported origin (pretend the request comes from…)</label>
+              <input type="text" id="test-origin" spellcheck="false">
+            </div>
+            <button class="btn primary" id="test-btn" onclick="runTest()">Run verify</button>
+          </div>
+
+          <div class="verdict" id="test-verdict" style="margin-top:14px;"></div>
+
+          <div style="margin-top:12px;">
+            <label class="fld">Raw response</label>
+            <div class="code"><pre id="test-output" style="max-height:280px;">Nothing yet. Pick a key, type a username and password, then hit “Run verify”.</pre></div>
+          </div>
+
+          <div class="btn-row" style="margin-top:12px;">
+            <button class="btn sm" onclick="openDemo(selectedKey())">Open the demo site with this key →</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Preview -->
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <h2>Widget preview</h2>
+            <div class="sub">Exactly what your visitors see</div>
+          </div>
+          <div class="btn-row">
+            <button class="btn sm" id="theme-toggle" onclick="togglePreviewTheme()">Light theme</button>
+          </div>
+        </div>
+        <div class="card-body" style="background:repeating-linear-gradient(45deg,#0d0e10,#0d0e10 12px,#101114 12px,#101114 24px);">
+          <div style="display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start;">
+            <div id="preview-card" style="flex:1 1 300px;min-width:280px;"></div>
+            <div id="preview-button" style="flex:0 0 auto;"></div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- ============ DOCS ============ -->
+  <section class="docs" id="docs">
+    <h2>overAuth 1.0 documentation</h2>
+    <p style="color:var(--muted);">Everything the SDK does, and the honest security notes.</p>
+
+    <h3>1 · Load the SDK</h3>
+    <div class="code">
+      <button class="btn sm copy" onclick="copyText(document.getElementById('doc-load').textContent)">Copy</button>
+      <pre id="doc-load">&lt;script src="https://v0idplayy-777.github.io/Overmind/overauth.js"&gt;&lt;/script&gt;</pre>
+    </div>
+    <p class="hint">No dependencies, ~13&nbsp;KB gzipped, works on http and https, and in Node 18+.</p>
+
+    <h3>2 · JavaScript API</h3>
+    <table class="ref">
+      <thead><tr><th>Call</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td>init(options)</td><td>Loads your key. <code class="inl">{ key, origin?, mode?, storage?, remember?, onAuthChange? }</code> → resolves with key info and whether the SQL backend is installed.</td></tr>
+        <tr><td>signIn(user, pass)</td><td><b>The one you want.</b> Checks the username/password, keeps the visitor signed in, returns the result object.</td></tr>
+        <tr><td>checkCredentials(user, pass)</td><td>Same check, but does not store a session — use it if you handle state yourself.</td></tr>
+        <tr><td>getSession()</td><td>Restores (and in DB mode re-validates) the stored session. Resolves to a result object or <code class="inl">null</code>.</td></tr>
+        <tr><td>signOut()</td><td>Clears the local session and revokes the token server-side.</td></tr>
+        <tr><td>currentUser()</td><td>The signed-in user object, or <code class="inl">null</code>.</td></tr>
+        <tr><td>onAuthChange(cb)</td><td>Fires on <code class="inl">SIGNED_IN</code>, <code class="inl">SIGNED_OUT</code>, <code class="inl">SESSION_RESTORED</code>, <code class="inl">ERROR</code>. Returns an unsubscribe function.</td></tr>
+        <tr><td>mount(target, opts)</td><td>Renders the login card into a selector/element.</td></tr>
+        <tr><td>renderButton(target, opts)</td><td>Renders a “Continue with Overmind” button that opens the card in a modal.</td></tr>
+        <tr><td>backendStatus()</td><td>Resolves <code class="inl">'ready'</code> or <code class="inl">'missing'</code> — whether <code class="inl">supabase/overauth.sql</code> is installed.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>3 · The result object</h3>
+    <div class="code">
+      <button class="btn sm copy" onclick="copyText(document.getElementById('doc-result').textContent)">Copy</button>
+      <pre id="doc-result">// success
+{
+  "ok": true,
+  "mode": "db",                     // "db" = SQL backend, "local" = no-SQL fallback
+  "user": { "username": "alice", "created_at": "2026-07-29T05:03:15" },
+  "key":  { "key_id": "oak_1a2b3c4d5e6f7a8b", "name": "My blog — production" },
+  "session_token": "8fQk…",         // re-validate it later with overauth_session()
+  "session_expires_at": "2026-10-05T12:00:00+00:00"
+}
+
+// failure
+{
+  "ok": false,
+  "reason": "invalid_credentials",  // machine-readable, see table below
+  "message": "Incorrect username or password."  // safe to show the visitor
+}</pre>
+    </div>
+
+    <table class="ref">
+      <thead><tr><th>reason</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td>invalid_credentials</td><td>No such Overmind account, or the password doesn't match.</td></tr>
+        <tr><td>account_banned</td><td>The account is banned on Overmind.</td></tr>
+        <tr><td>invalid_key</td><td>Key malformed, tampered with, not issued by Overmind, or revoked+deleted.</td></tr>
+        <tr><td>key_revoked</td><td>You paused or deleted the key in this console.</td></tr>
+        <tr><td>key_expired</td><td>Past the expiry date you picked.</td></tr>
+        <tr><td>origin_not_allowed</td><td>The site's origin isn't on the key's allow-list.</td></tr>
+        <tr><td>invalid_session</td><td>Session token unknown, revoked or expired.</td></tr>
+        <tr><td>missing_credentials</td><td>Empty username or password.</td></tr>
+        <tr><td>backend_error / network_error</td><td>Supabase returned an error, or couldn't be reached.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>4 · Widget options</h3>
+    <p>
+      As <code class="inl">data-*</code> attributes on the script tag, or as an options object in
+      <code class="inl">mount()</code>: <code class="inl">theme</code> (dark|light),
+      <code class="inl">accent</code>, <code class="inl">title</code>, <code class="inl">description</code>,
+      <code class="inl">buttonLabel</code>, <code class="inl">redirect</code>, <code class="inl">remember</code>,
+      <code class="inl">signup</code>, <code class="inl">onSuccess(result)</code>,
+      <code class="inl">onError(result)</code>, <code class="inl">onSignOut()</code>.
+    </p>
+
+    <h3>5 · Two modes</h3>
+    <ul>
+      <li><b>DB mode</b> — you ran <code class="inl">supabase/overauth.sql</code>. Keys are stored as hashes in
+          <code class="inl">overauth_keys</code>, so you can pause, edit, revoke and see usage counts. Visitors get
+          real session tokens you can re-validate from your own backend. <b>This is the mode you want.</b></li>
+      <li><b>Local mode</b> — nothing installed yet. The key is a signed, self-contained token; credentials are
+          checked straight against the Overmind <code class="inl">users</code> table. It works instantly, but keys
+          live in this browser, can't be revoked, and sessions are browser-only. Install the SQL to upgrade: the
+          console re-registers your local keys server-side (same key string) the next time you sign in, so nothing
+          on your site has to change.</li>
+    </ul>
+
+    <h3>6 · Security, honestly</h3>
+    <div class="alert warn"><span class="ico">!</span><div>
+      <b>Overmind stores passwords as unsalted SHA-256.</b> The hash is therefore password-equivalent: anyone who
+      holds it can log in as that user. Always serve your site over HTTPS, never log the hash, and never put it in a
+      URL. This is how the Overmind app itself already works — overAuth doesn't make it worse, but it does spread it
+      to more sites, so use one key per site and revoke what you don't need.
+    </div></div>
+    <ul style="margin-top:12px;">
+      <li>Only the <b>hash</b> of your key is stored server-side. Losing the raw key means creating a new one.</li>
+      <li>Overmind's Supabase <code class="inl">anon</code> key is public (it ships inside the web app), so all real
+          enforcement lives in RLS + the <code class="inl">SECURITY DEFINER</code> functions in
+          <code class="inl">overauth.sql</code>. Those tables have <b>no</b> anon policies.</li>
+      <li>Origin checking happens in the browser, so a determined attacker can spoof the
+          <code class="inl">Origin</code> value. Treat it as abuse prevention, not as authentication — for hard
+          enforcement, call <code class="inl">overauth_verify</code> from <i>your</i> server (see the REST tab).</li>
+      <li>There is no rate limiting built in. If you expect abuse, put a cache or a limit in front of your login
+          form, or add Supabase's rate-limit protection.</li>
+      <li>⚠️ Right now the <code class="inl">users</code> table lets anyone with the anon key read every row,
+          <b>including <code class="inl">password_hash</code></b>. That predates overAuth, but it means all Overmind
+          password hashes can be downloaded and cracked offline. See <code class="inl">supabase/harden-users-rls.sql</code>
+          for the fix.</li>
+    </ul>
+
+    <h3>7 · FAQ</h3>
+    <details class="faq">
+      <summary>Do my visitors need a new account?</summary>
+      <div class="a">No — that's the whole point. They use the username and password they already have on Overmind. Send people who don't have one to <a href="chat.html" target="_blank" rel="noopener">the Overmind app</a> to register.</div>
+    </details>
+    <details class="faq">
+      <summary>Can I use it on localhost?</summary>
+      <div class="a">Yes. Add <code class="inl">http://localhost:*</code> (or the exact <code class="inl">http://127.0.0.1:5173</code>) to the key's allowed origins.</div>
+    </details>
+    <details class="faq">
+      <summary>One key or one per site?</summary>
+      <div class="a">One per site. That way you can see which site logins come from, and revoking a compromised site doesn't break the others.</div>
+    </details>
+    <details class="faq">
+      <summary>How do I keep someone logged in?</summary>
+      <div class="a">The SDK does it for you: it stores the session token in your site's <code class="inl">localStorage</code> and <code class="inl">getSession()</code> re-validates it (at most once every 12&nbsp;hours). On your backend, call <code class="inl">overauth_session(p_token)</code> whenever you want to check it.</div>
+    </details>
+    <details class="faq">
+      <summary>Does it work without JavaScript on my server?</summary>
+      <div class="a">Yes — it's a plain HTTPS POST to Supabase. See the “REST / any language” and “Node / backend” tabs above.</div>
+    </details>
+    <details class="faq">
+      <summary>What happens if I delete a key?</summary>
+      <div class="a">Every login attempt with it returns <code class="inl">invalid_key</code>, and all sessions minted by it are revoked immediately.</div>
+    </details>
+    <details class="faq">
+      <summary>I ran the SQL but the chip still says “local mode”.</summary>
+      <div class="a">PostgREST caches the list of functions it exposes. Wait ~10 seconds and hit <b>Re-check</b>. If it's still stuck, run <code class="inl">notify pgrst, 'reload schema';</code> in the SQL editor (or restart the Supabase project) and check again.</div>
+    </details>
+    <details class="faq">
+      <summary>I lost a key. Can you show it to me again?</summary>
+      <div class="a">Only if you're on the same browser you created it with — the console keeps a private copy there (“copyable” pill). Overmind itself stores just a SHA-256 hash, so nobody can recover it. Otherwise, create a new key and delete the old one.</div>
+    </details>
+
+    <footer class="foot">
+      <div>overAuth 1.0 · built for Overmind · <a href="index.html">back home</a></div>
+      <div>SDK: <code class="inl">overauth.js</code> · Demo: <a href="overauth-demo.html">overauth-demo.html</a> · SQL: <code class="inl">supabase/overauth.sql</code></div>
+    </footer>
+  </section>
+</div>
+
+<!-- SQL modal -->
+<div class="backdrop" id="sql-modal">
+  <div class="modal" style="width:min(860px,100%);">
+    <div class="modal-head">
+      <strong>Install the overAuth backend (one time)</strong>
+      <button class="x" onclick="closeModal('sql-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert info" style="margin-bottom:12px;"><span class="ico">i</span><div>
+        Supabase dashboard → <b>SQL Editor</b> → <b>New query</b> → paste → <b>Run</b>.
+        Safe to run more than once. Nothing here touches your existing tables; it only adds
+        <code class="inl">overauth_keys</code>, <code class="inl">overauth_sessions</code> and the
+        <code class="inl">overauth_*</code> functions.
+      </div></div>
+      <div class="code"><pre id="sql-body" style="max-height:46vh;">Loading supabase/overauth.sql…</pre></div>
+    </div>
+    <div class="modal-foot">
+      <a class="btn sm" href="supabase/overauth.sql" target="_blank" rel="noopener">Open the file</a>
+      <button class="btn sm primary" onclick="copySql()">Copy all SQL</button>
+    </div>
+  </div>
+</div>
+
+<!-- edit key modal -->
+<div class="backdrop" id="edit-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <strong>Edit key</strong>
+      <button class="x" onclick="closeModal('edit-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="fld-group">
+        <label class="fld" for="edit-name">Name</label>
+        <input type="text" id="edit-name">
+      </div>
+      <div class="fld-group" style="margin-bottom:0;">
+        <label class="fld" for="edit-origins">Allowed websites (one per line)</label>
+        <textarea id="edit-origins" rows="5" spellcheck="false"></textarea>
+      </div>
+      <div id="edit-error" class="alert bad hidden" style="margin-top:12px;"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn sm" onclick="closeModal('edit-modal')">Cancel</button>
+      <button class="btn sm primary" onclick="saveEdit()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="overauth.js"></script>
+<script>
+/* =====================================================================
+   overAuth developer console
+   ===================================================================== */
+
+const SB_URL  = 'https://llmsljlcjugdpkhfklph.supabase.co';
+const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxsbXNsamxjanVnZHBraGZrbHBoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI2MjA4ODgsImV4cCI6MjA5ODE5Njg4OH0.weH2fYFj4qxEeyIUdQtn1hz7H2iyHeab6OPdJONXzmo';
+const SITE    = 'https://v0idplayy-777.github.io/Overmind';
+const U       = OvermindAuth.utils;
+
+const SESSION_STORE = 'overmind.dev.session';   // sessionStorage
+const VAULT_STORE   = 'overauth.console.vault'; // localStorage: raw keys created in this browser
+
+let dev = null;          // { username, passwordHash, isAdmin }
+let backend = 'unknown'; // 'ready' | 'missing' | 'error' | 'unknown'
+let dbKeys = [];         // keys from Supabase
+let vault = loadVault(); // raw keys remembered by this browser
+let editingKeyId = null;
+let previewTheme = 'dark';
+let previewWidget = null;
+let previewButton = null;
+
+/* ----------------------------- helpers ----------------------------- */
+
+const $ = (id) => document.getElementById(id);
+
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._h);
+  t._h = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function copyText(text) {
+  if (!text) return Promise.resolve(false);
+  const done = () => toast('Copied to clipboard');
+  if (navigator.clipboard && window.isSecureContext) {
+    return navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+  }
+  return Promise.resolve(fallbackCopy(text, done));
+}
+
+function fallbackCopy(text, done) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;top:-1000px;opacity:0;';
+  document.body.appendChild(ta);
+  ta.select();
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+  document.body.removeChild(ta);
+  if (ok) done(); else toast('Copy failed — select it manually');
+  return ok;
+}
+
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function fmtDate(v) {
+  if (!v) return '—';
+  const d = new Date(v);
+  if (isNaN(d)) return '—';
+  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function fmtAgo(v) {
+  if (!v) return 'never';
+  const s = Math.floor((Date.now() - new Date(v).getTime()) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return Math.floor(s / 60) + 'm ago';
+  if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+  return Math.floor(s / 86400) + 'd ago';
+}
+
+function openModal(id) { $(id).classList.add('open'); }
+function closeModal(id) { $(id).classList.remove('open'); }
+document.querySelectorAll('.backdrop').forEach(b => {
+  b.addEventListener('click', e => { if (e.target === b) b.classList.remove('open'); });
+});
+
+/* ----------------------------- vault ------------------------------- */
+/* Raw keys can only be shown once (the server keeps a hash), so the console
+   remembers the ones it created in this browser. Convenience, not security. */
+
+function loadVault() {
+  try { return JSON.parse(localStorage.getItem(VAULT_STORE) || '[]'); } catch (e) { return []; }
+}
+function saveVault() {
+  try { localStorage.setItem(VAULT_STORE, JSON.stringify(vault.slice(-50))); } catch (e) {}
+}
+function vaultGet(keyId) { return vault.find(v => v.keyId === keyId); }
+function vaultAdd(entry) {
+  vault = vault.filter(v => v.keyId !== entry.keyId);
+  vault.push(entry);
+  saveVault();
+}
+function vaultRemove(keyId) {
+  vault = vault.filter(v => v.keyId !== keyId);
+  saveVault();
+}
+
+/* ----------------------------- backend ----------------------------- */
+
+async function checkBackend(force) {
+  const chip = $('backend-chip'), chipText = $('backend-chip-text');
+  chip.className = 'chip'; chipText.textContent = 'checking backend…';
+  backend = await OvermindAuth.backendStatus(force);
+
+  const sChip = $('setup-chip'), sText = $('setup-chip-text'), msg = $('setup-msg');
+
+  if (backend === 'ready') {
+    chip.className = 'chip ok'; chipText.textContent = 'backend ready';
+    sChip.className = 'chip ok'; sText.textContent = 'installed';
+    msg.innerHTML = '<div class="alert ok"><span class="ico">✓</span><div>' +
+      '<b>overAuth 1.0 is installed.</b> Keys are stored as hashes in your Supabase project, so they can be ' +
+      'paused, edited, revoked — and visitors get real session tokens.</div></div>';
+  } else {
+    chip.className = 'chip warn'; chipText.textContent = 'local mode';
+    sChip.className = 'chip warn'; sText.textContent = 'not installed';
+    msg.innerHTML = '<div class="alert warn"><span class="ico">!</span><div>' +
+      '<b>Running in local mode.</b> overAuth already works — keys are signed, self-contained tokens and logins are ' +
+      'checked against the Overmind users table. But keys are stored in <i>this browser only</i>, can\'t be revoked, ' +
+      'and there are no server-side sessions.<br><br>' +
+      'To upgrade: run <code class="inl">supabase/overauth.sql</code> once in your Supabase SQL editor, then hit ' +
+      'Re-check. Any keys you made in local mode are registered server-side automatically the next time you ' +
+      'sign in here, so the sites using them keep working.</div></div>';
+  }
+  updateTesterMode();
+}
+
+async function openSqlModal() {
+  openModal('sql-modal');
+  const body = $('sql-body');
+  if (body.dataset.loaded) return;
+  try {
+    const res = await fetch('supabase/overauth.sql');
+    body.textContent = await res.text();
+    body.dataset.loaded = '1';
+  } catch (e) {
+    body.textContent = 'Could not load supabase/overauth.sql (' + e.message + '). Open it from the repository instead.';
+  }
+}
+function copySql() { copyText($('sql-body').textContent); }
+
+/* --------------------------- dev sign in --------------------------- */
+
+function saveDevSession() {
+  try { sessionStorage.setItem(SESSION_STORE, JSON.stringify(dev)); } catch (e) {}
+}
+function restoreDevSession() {
+  try {
+    const raw = sessionStorage.getItem(SESSION_STORE);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return (parsed && parsed.username && parsed.passwordHash) ? parsed : null;
+  } catch (e) { return null; }
+}
+
+async function devSignIn() {
+  const username = $('dev-username').value.trim();
+  const password = $('dev-password').value;
+  const err = $('signin-error');
+  err.classList.add('hidden');
+
+  if (!username || !password) return showSigninError('Enter your Overmind username and password.');
+
+  const btn = $('signin-btn');
+  btn.disabled = true; btn.textContent = 'Checking…';
+
+  const passwordHash = U.sha256Hex(password);
+  const q = 'select=username,is_admin,is_banned&username=eq.' + encodeURIComponent(username) +
+            '&password_hash=eq.' + encodeURIComponent(passwordHash) + '&limit=1';
+
+  try {
+    const res = await fetch(SB_URL + '/rest/v1/users?' + q, {
+      headers: { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON, 'Accept': 'application/json' }
+    });
+    const rows = await res.json();
+    if (!res.ok) throw new Error((rows && rows.message) || ('HTTP ' + res.status));
+    if (!Array.isArray(rows) || !rows.length) {
+      showSigninError('Incorrect username or password.');
+      return;
+    }
+    if (rows[0].is_banned) { showSigninError('That Overmind account is banned.'); return; }
+
+    dev = { username: rows[0].username, passwordHash, isAdmin: !!rows[0].is_admin };
+    $('dev-password').value = '';
+    saveDevSession();
+    await onSignedIn();
+  } catch (e) {
+    showSigninError('Could not reach Overmind: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Sign in with Overmind';
+  }
+}
+
+function showSigninError(msg) {
+  const err = $('signin-error');
+  err.textContent = msg;
+  err.classList.remove('hidden');
+}
+
+function devSignOut() {
+  dev = null;
+  dbKeys = [];
+  try { sessionStorage.removeItem(SESSION_STORE); } catch (e) {}
+  $('signin-form').classList.remove('hidden');
+  $('signin-done').classList.add('hidden');
+  $('create-locked').classList.remove('hidden');
+  $('create-form').classList.add('hidden');
+  $('key-reveal').classList.add('hidden');
+  $('keys-refresh').classList.add('hidden');
+  $('keys-sub').textContent = 'Not signed in';
+  $('keys-list').innerHTML = '<div class="empty">Sign in to see your keys.</div>';
+  toast('Signed out');
+}
+
+async function onSignedIn() {
+  $('signin-form').classList.add('hidden');
+  $('signin-done').classList.remove('hidden');
+  $('create-locked').classList.add('hidden');
+  $('create-form').classList.remove('hidden');
+  $('keys-refresh').classList.remove('hidden');
+
+  $('dev-name').textContent = dev.username;
+  $('dev-avatar').textContent = dev.username.charAt(0).toUpperCase();
+  $('dev-sub').textContent = dev.isAdmin ? 'Signed in · Overmind admin' : 'Signed in with Overmind';
+
+  // sensible starting point for the allow-list
+  if (!$('key-origins').value.trim()) $('key-origins').value = location.origin + '\nhttp://localhost:*';
+
+  await Promise.all([loadKeys(), loadStats()]);
+  renderSnippets();
+  mountPreview();
+}
+
+/* ------------------------------ keys ------------------------------- */
+
+function parseOrigins(text) {
+  return String(text || '').split(/[\n,]+/)
+    .map(s => s.trim().replace(/\/+$/, ''))
+    .filter(Boolean)
+    .filter((v, i, a) => a.indexOf(v) === i);
+}
+
+function addOrigin(value) {
+  const ta = $('key-origins');
+  const list = parseOrigins(ta.value);
+  if (list.indexOf(value) === -1) list.push(value);
+  ta.value = list.join('\n');
+  ta.focus();
+}
+
+function selectedScopes() {
+  const scopes = [];
+  if ($('scope-profile').checked) scopes.push('profile');
+  if ($('scope-sessions').checked) scopes.push('sessions');
+  if ($('scope-admin').checked) scopes.push('admin_flag');
+  return scopes.length ? scopes : ['profile'];
+}
+
+function expiryDate() {
+  const days = $('key-expiry').value;
+  if (!days) return null;
+  return new Date(Date.now() + Number(days) * 86400000).toISOString();
+}
+
+async function createKey() {
+  const err = $('create-error');
+  err.classList.add('hidden');
+
+  if (!dev) { toast('Sign in first'); return; }
+
+  const name = $('key-name').value.trim() || 'Untitled key';
+  const origins = parseOrigins($('key-origins').value);
+  if (!origins.length) {
+    err.textContent = 'Add at least one allowed website (or use * for any site).';
+    err.classList.remove('hidden');
+    return;
+  }
+  const scopes = selectedScopes();
+  const expiresAt = expiryDate();
+
+  const built = U.buildKey({
+    owner: dev.username,
+    origins: origins,
+    scopes: scopes,
+    name: name,
+    expiresAt: expiresAt,
+    mode: backend === 'ready' ? 'db' : 'local'
+  });
+
+  const btn = $('create-btn');
+  btn.disabled = true; btn.textContent = 'Creating…';
+
+  try {
+    if (backend === 'ready') {
+      const res = await U.rpc('overauth_issue_key', {
+        p_username: dev.username,
+        p_password_hash: dev.passwordHash,
+        p_name: name,
+        p_key_id: built.keyId,
+        p_key_hash: built.keyHash,
+        p_allowed_origins: origins,
+        p_scopes: scopes,
+        p_expires_at: expiresAt
+      });
+      if (res.missing) { backend = 'missing'; await checkBackend(true); }
+      else if (res.error || !res.data || !res.data.ok) {
+        const reason = (res.data && res.data.reason) || (res.error && res.error.message) || 'unknown error';
+        throw new Error(reason);
+      }
+    }
+
+    vaultAdd({
+      keyId: built.keyId,
+      key: built.key,
+      keyHash: built.keyHash,
+      name: name,
+      origins: origins,
+      scopes: scopes,
+      expiresAt: expiresAt,
+      owner: dev.username,
+      mode: backend === 'ready' ? 'db' : 'local',
+      createdAt: new Date().toISOString()
+    });
+
+    $('reveal-key').textContent = built.key;
+    $('key-reveal').classList.remove('hidden');
+    $('key-name').value = '';
+    toast('Key created');
+    $('key-reveal').scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    await loadKeys();
+    await loadStats();
+    selectKey(built.keyId);
+    renderSnippets();
+    mountPreview();
+  } catch (e) {
+    err.textContent = 'Could not create the key: ' + e.message;
+    err.classList.remove('hidden');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Create key';
+  }
+}
+
+async function rpcSafe(fn, params) {
+  const res = await U.rpc(fn, params);
+  if (res.missing) { backend = 'missing'; checkBackend(true); return null; }
+  if (res.error) throw new Error(res.error.message || JSON.stringify(res.error));
+  if (res.data && res.data.ok === false) throw new Error(res.data.reason || 'rejected');
+  return res.data;
+}
+
+/** Keys registered in Supabase, or null if the call failed. */
+async function fetchDbKeys() {
+  if (!dev || backend !== 'ready') return [];
+  try {
+    const data = await rpcSafe('overauth_list_keys', { p_username: dev.username, p_password_hash: dev.passwordHash });
+    return (data && data.keys) || [];
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * Local-mode keys only lived in this browser. Once the SQL backend exists,
+ * register them (same key string, same key id) so every site using them keeps
+ * working and they become pausable/revocable like any other key.
+ */
+async function migrateLocalKeys() {
+  if (!dev || backend !== 'ready' || !Array.isArray(dbKeys)) return 0;
+  const known = dbKeys.map(k => k.key_id);
+  const pending = vault.filter(v => v.key && v.owner === dev.username && known.indexOf(v.keyId) === -1);
+  if (!pending.length) return 0;
+
+  let moved = 0;
+  for (const v of pending) {
+    try {
+      await rpcSafe('overauth_issue_key', {
+        p_username: dev.username,
+        p_password_hash: dev.passwordHash,
+        p_name: v.name || 'Untitled key',
+        p_key_id: v.keyId,
+        p_key_hash: v.keyHash || U.sha256Hex(v.key),
+        p_allowed_origins: v.origins && v.origins.length ? v.origins : ['*'],
+        p_scopes: v.scopes && v.scopes.length ? v.scopes : ['profile', 'sessions'],
+        p_expires_at: v.expiresAt || null
+      });
+      v.mode = 'db';
+      moved++;
+    } catch (e) {
+      // leave it in the browser and try again next time
+    }
+  }
+  if (moved) {
+    saveVault();
+    toast(moved === 1 ? 'Local key registered server-side' : moved + ' local keys registered server-side');
+  }
+  return moved;
+}
+
+async function loadKeys() {
+  const list = $('keys-list');
+  if (!dev) return;
+
+  dbKeys = await fetchDbKeys();
+
+  // Keys created while in local mode only existed in this browser. Now that the
+  // backend is installed, register them so they keep working (same key string).
+  const moved = await migrateLocalKeys();
+  if (moved) dbKeys = await fetchDbKeys();
+
+  if (dbKeys === null) {
+    list.innerHTML = '<div class="alert bad"><span class="ico">!</span><div>Could not load your keys.</div></div>';
+    return;
+  }
+
+  // merge: DB rows first, then local-only keys (created in this browser while in local mode)
+  const merged = dbKeys.map(k => Object.assign({}, k, {
+    raw: (vaultGet(k.key_id) || {}).key || null,
+    source: 'db'
+  }));
+  const dbIds = dbKeys.map(k => k.key_id);
+  vault.filter(v => v.owner === dev.username && dbIds.indexOf(v.keyId) === -1)
+       .forEach(v => merged.push({
+         key_id: v.keyId, name: v.name, allowed_origins: v.origins, scopes: v.scopes,
+         is_active: true, expires_at: v.expiresAt, created_at: v.createdAt,
+         last_used_at: null, use_count: 0, expired: false, raw: v.key, source: 'local'
+       }));
+
+  merged.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+  renderKeys(merged);
+}
+
+function renderKeys(keys) {
+  const list = $('keys-list');
+  $('keys-sub').textContent = dev ? (keys.length + (keys.length === 1 ? ' key' : ' keys')) : 'Not signed in';
+
+  if (!keys.length) {
+    list.innerHTML = '<div class="empty">No keys yet — create your first one above.</div>';
+    syncKeySelects([]);
+    return;
+  }
+
+  list.innerHTML = keys.map(k => {
+    const paused = k.is_active === false;
+    const expired = k.expired || (k.expires_at && new Date(k.expires_at) < new Date());
+    const state = paused ? '<span class="pill paused">paused</span>'
+                : expired ? '<span class="pill dead">expired</span>'
+                : '<span class="pill live">live</span>';
+    const src = k.source === 'local' ? '<span class="pill local" title="Created in local mode; stored in this browser">local</span>' : '';
+    const raw = k.raw ? '<span class="pill" title="The raw key is remembered in this browser">copyable</span>' : '';
+
+    return '<div class="keyrow' + (paused ? ' paused' : '') + '" data-keyid="' + esc(k.key_id) + '">' +
+      '<div class="keyrow-top">' +
+        '<span class="keyrow-name">' + esc(k.name) + '</span>' + state + src + raw +
+        '<span class="keyrow-id" style="margin-left:auto;">' + esc(k.key_id) + '</span>' +
+      '</div>' +
+      '<div class="origins" style="margin-top:6px;">' + esc((k.allowed_origins || []).join('  ·  ')) + '</div>' +
+      '<div class="keyrow-meta">' +
+        '<span>created <b>' + fmtDate(k.created_at) + '</b></span>' +
+        '<span>expires <b>' + (k.expires_at ? fmtDate(k.expires_at) : 'never') + '</b></span>' +
+        '<span>last used <b>' + fmtAgo(k.last_used_at) + '</b></span>' +
+        '<span>logins <b>' + (k.use_count || 0) + '</b></span>' +
+      '</div>' +
+      '<div class="keyrow-actions">' +
+        (k.raw ? '<button class="btn sm" onclick="copyText(keyRaw(\'' + esc(k.key_id) + '\'))">Copy key</button>' : '') +
+        '<button class="btn sm" onclick="copySnippetFor(\'' + esc(k.key_id) + '\')">Copy snippet</button>' +
+        '<button class="btn sm" onclick="useInTester(keyRaw(\'' + esc(k.key_id) + '\'))">Test</button>' +
+        '<button class="btn sm" onclick="openDemo(keyRaw(\'' + esc(k.key_id) + '\'))">Demo site</button>' +
+        (k.source === 'db'
+          ? '<button class="btn sm" onclick="openEdit(\'' + esc(k.key_id) + '\')">Edit</button>' +
+            '<button class="btn sm" onclick="toggleKey(\'' + esc(k.key_id) + '\',' + (!paused) + ')">' + (paused ? 'Resume' : 'Pause') + '</button>' +
+            '<button class="btn sm danger" onclick="deleteKey(\'' + esc(k.key_id) + '\')">Delete</button>'
+          : '<button class="btn sm" onclick="openEdit(\'' + esc(k.key_id) + '\')">Edit</button>' +
+            '<button class="btn sm danger" onclick="deleteKey(\'' + esc(k.key_id) + '\')">Forget</button>') +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  syncKeySelects(keys);
+}
+
+let allKeysCache = [];
+function syncKeySelects(keys) {
+  allKeysCache = keys;
+  const opts = keys.length
+    ? keys.map(k => '<option value="' + esc(k.key_id) + '">' + esc(k.name) + ' — ' + esc(k.key_id) + '</option>').join('')
+    : '<option value="">No keys yet</option>';
+  ['snippet-key', 'test-key'].forEach(id => {
+    const sel = $(id);
+    if (!sel) return;
+    const prev = sel.value;
+    sel.innerHTML = opts;
+    if (prev && keys.some(k => k.key_id === prev)) sel.value = prev;
+  });
+}
+
+function keyById(keyId) { return allKeysCache.find(k => k.key_id === keyId); }
+function keyRaw(keyId) {
+  const k = keyById(keyId);
+  if (k && k.raw) return k.raw;
+  const v = vaultGet(keyId);
+  return v ? v.key : '';
+}
+function selectedKey() { return keyRaw($('test-key').value) || keyRaw($('snippet-key').value) || ''; }
+
+async function toggleKey(keyId, pause) {
+  try {
+    await rpcSafe('overauth_update_key', {
+      p_username: dev.username, p_password_hash: dev.passwordHash,
+      p_key_id: keyId, p_name: null, p_allowed_origins: null, p_is_active: !pause
+    });
+    toast(pause ? 'Key paused — logins with it now fail' : 'Key resumed');
+    await loadKeys();
+  } catch (e) { toast('Failed: ' + e.message); }
+}
+
+async function deleteKey(keyId) {
+  const k = keyById(keyId);
+  const label = k ? k.name : keyId;
+  if (!confirm('Delete “' + label + '”?\n\nEvery site using it stops working immediately and its sessions are revoked. This cannot be undone.')) return;
+  try {
+    if (backend === 'ready' && k && k.source === 'db') {
+      await rpcSafe('overauth_delete_key', { p_username: dev.username, p_password_hash: dev.passwordHash, p_key_id: keyId });
+    }
+    vaultRemove(keyId);
+    toast('Key deleted');
+    await loadKeys();
+    await loadStats();
+  } catch (e) { toast('Failed: ' + e.message); }
+}
+
+function openEdit(keyId) {
+  const k = keyById(keyId) || vaultGet(keyId);
+  if (!k) return;
+  editingKeyId = keyId;
+  $('edit-name').value = k.name || '';
+  $('edit-origins').value = (k.allowed_origins || k.origins || []).join('\n');
+  $('edit-error').classList.add('hidden');
+  openModal('edit-modal');
+}
+
+async function saveEdit() {
+  const name = $('edit-name').value.trim() || 'Untitled key';
+  const origins = parseOrigins($('edit-origins').value);
+  const err = $('edit-error');
+  if (!origins.length) {
+    err.textContent = 'Add at least one allowed website.';
+    err.classList.remove('hidden');
+    return;
+  }
+  try {
+    const k = keyById(editingKeyId);
+    if (backend === 'ready' && k && k.source === 'db') {
+      await rpcSafe('overauth_update_key', {
+        p_username: dev.username, p_password_hash: dev.passwordHash,
+        p_key_id: editingKeyId, p_name: name, p_allowed_origins: origins, p_is_active: null
+      });
+    }
+    const v = vaultGet(editingKeyId);
+    if (v) { v.name = name; v.origins = origins; saveVault(); }
+    closeModal('edit-modal');
+    toast('Saved');
+    await loadKeys();
+    renderSnippets();
+  } catch (e) {
+    err.textContent = 'Could not save: ' + e.message;
+    err.classList.remove('hidden');
+  }
+}
+
+async function loadStats() {
+  if (!dev) return;
+  if (backend !== 'ready') {
+    $('stat-keys').textContent = vault.filter(v => v.owner === dev.username).length;
+    $('stat-uses').textContent = '—';
+    return;
+  }
+  try {
+    const data = await rpcSafe('overauth_stats', { p_username: dev.username, p_password_hash: dev.passwordHash });
+    if (data) {
+      $('stat-keys').textContent = data.keys;
+      $('stat-uses').textContent = data.verifications;
+    }
+  } catch (e) { /* non-fatal */ }
+}
+
+function selectKey(keyId) {
+  ['snippet-key', 'test-key'].forEach(id => { if ($(id)) $(id).value = keyId; });
+}
+
+function downloadKey() {
+  const key = $('reveal-key').textContent;
+  const name = ($('key-name').value.trim() || 'overauth-key').replace(/[^a-z0-9-_]+/gi, '-').toLowerCase();
+  const blob = new Blob([
+    'overAuth 1.0 key — ' + name + '\n',
+    'Owner: ' + (dev ? dev.username : '?') + '\n',
+    'Created: ' + new Date().toISOString() + '\n\n',
+    key + '\n\n',
+    'Docs: ' + SITE + '/overauth.html\n'
+  ], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name + '.overauth-key.txt';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+
+function openDemo(key) {
+  if (!key) { toast('That key isn\'t stored in this browser — create a new one'); return; }
+  window.open('overauth-demo.html?key=' + encodeURIComponent(key), '_blank', 'noopener');
+}
+
+function useInTester(key) {
+  if (!key) { toast('No raw key stored for that one'); return; }
+  const k = OvermindAuth.parseKey(key);
+  if (k.keyId) selectKey(k.keyId);
+  $('test-origin').value = location.origin;
+  renderSnippets();
+  $('tester').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  toast('Key loaded into the tester');
+}
+
+/* ---------------------------- snippets ----------------------------- */
+
+function showPane(btn) {
+  document.querySelectorAll('#code .tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#code .pane').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  $(btn.dataset.pane).classList.add('active');
+}
+
+function copyPane(paneId) {
+  const pre = $(paneId).querySelector('pre');
+  copyText(pre ? pre.textContent : '');
+}
+
+function snippetKey() {
+  const id = $('snippet-key').value || $('test-key').value;
+  return keyRaw(id) || '';
+}
+
+function renderSnippets() {
+  const key = snippetKey() || 'oav1_YOUR_KEY_HERE';
+  const parsed = key.indexOf('oav1_') === 0 ? OvermindAuth.parseKey(key) : null;
+  const keyId = parsed && parsed.keyId ? parsed.keyId : 'oak_your_key_id';
+  const keyHash = parsed ? U.sha256Hex(key) : '<sha256 of your key>';
+
+  $('snippet-widget').textContent =
+'<!-- 1) where the login box should appear -->\n' +
+'<div id="overmind-login"></div>\n\n' +
+'<!-- 2) just before </body> -->\n' +
+'<script\n' +
+'  src="' + SITE + '/overauth.js"\n' +
+'  data-key="' + key + '"\n' +
+'  data-container="#overmind-login"\n' +
+'  data-theme="dark"\n' +
+'  data-redirect="/dashboard.html"><\/script>\n\n' +
+'<!-- optional: react to the login yourself -->\n' +
+'<script>\n' +
+'  document.addEventListener("overauth:ready", (e) => console.log("overAuth ready", e.detail));\n' +
+'  OvermindAuth.onAuthChange((event) => {\n' +
+'    if (event.type === "SIGNED_IN") console.log("Hello", event.user.username);\n' +
+'  });\n' +
+'<\/script>';
+
+  $('snippet-api').textContent =
+'<script src="' + SITE + '/overauth.js"><\/script>\n' +
+'<script>\n' +
+'  OvermindAuth.init({ key: \'' + key + '\' });\n\n' +
+'  // keep people logged in between visits\n' +
+'  OvermindAuth.getSession().then((session) => {\n' +
+'    if (session && session.ok) showDashboard(session.user.username);\n' +
+'  });\n\n' +
+'  document.getElementById(\'login-form\').addEventListener(\'submit\', async (event) => {\n' +
+'    event.preventDefault();\n\n' +
+'    const result = await OvermindAuth.signIn(\n' +
+'      document.getElementById(\'username\').value,\n' +
+'      document.getElementById(\'password\').value\n' +
+'    );\n\n' +
+'    if (result.ok) {\n' +
+'      // result.user.username, result.session_token\n' +
+'      location.href = \'/dashboard.html\';\n' +
+'    } else {\n' +
+'      // result.reason  -> machine readable (invalid_credentials, key_expired, ...)\n' +
+'      // result.message -> safe to show the visitor\n' +
+'      document.getElementById(\'error\').textContent = result.message;\n' +
+'    }\n' +
+'  });\n\n' +
+'  // sign out\n' +
+'  // await OvermindAuth.signOut();\n' +
+'<\/script>';
+
+  $('snippet-rest').textContent =
+'# Works from PHP, Python, Go, curl, Cloudflare Workers — anything with HTTPS.\n' +
+'# Passwords are hashed with plain SHA-256 first:\n' +
+'#   echo -n "hunter2" | sha256sum\n\n' +
+'curl -sS -X POST \'' + SB_URL + '/rest/v1/rpc/overauth_verify\' \\\n' +
+'  -H \'apikey: ' + SB_ANON + '\' \\\n' +
+'  -H \'Authorization: Bearer ' + SB_ANON + '\' \\\n' +
+'  -H \'Content-Type: application/json\' \\\n' +
+'  -d \'{\n' +
+'    "p_key_id":        "' + keyId + '",\n' +
+'    "p_key_hash":      "' + keyHash + '",\n' +
+'    "p_username":      "alice",\n' +
+'    "p_password_hash": "<sha256 of the password>",\n' +
+'    "p_origin":        "https://your-site.com",\n' +
+'    "p_remember":      true\n' +
+'  }\'\n\n' +
+'# -> {"ok":true,"user":{"username":"alice"},"session_token":"...","session_expires_at":"..."}\n' +
+'# -> {"ok":false,"reason":"invalid_credentials"}';
+
+  $('snippet-node').textContent =
+'// node 18+ — verify a login, then trust the session token on later requests.\n' +
+'const SUPABASE = \'' + SB_URL + '\';\n' +
+'const ANON     = \'' + SB_ANON + '\';\n' +
+'const KEY_ID   = \'' + keyId + '\';\n' +
+'const KEY_HASH = \'' + keyHash + '\';  // sha256 of the full oav1_... key\n' +
+'const crypto   = require(\'node:crypto\');\n\n' +
+'const sha256 = (s) => crypto.createHash(\'sha256\').update(s, \'utf8\').digest(\'hex\');\n\n' +
+'async function rpc(fn, params) {\n' +
+'  const res = await fetch(`${SUPABASE}/rest/v1/rpc/${fn}`, {\n' +
+'    method: \'POST\',\n' +
+'    headers: {\n' +
+'      apikey: ANON,\n' +
+'      Authorization: `Bearer ${ANON}`,\n' +
+'      \'Content-Type\': \'application/json\'\n' +
+'    },\n' +
+'    body: JSON.stringify(params)\n' +
+'  });\n' +
+'  return res.json();\n' +
+'}\n\n' +
+'// POST /login  { username, password }\n' +
+'async function login(username, password, origin) {\n' +
+'  return rpc(\'overauth_verify\', {\n' +
+'    p_key_id:        KEY_ID,\n' +
+'    p_key_hash:      KEY_HASH,\n' +
+'    p_username:      username,\n' +
+'    p_password_hash: sha256(password),\n' +
+'    p_origin:        origin || \'https://your-site.com\',\n' +
+'    p_remember:      true\n' +
+'  });\n' +
+'  // -> put result.session_token in an httpOnly cookie\n' +
+'}\n\n' +
+'// every later request: is that cookie still good?\n' +
+'async function whoami(sessionToken) {\n' +
+'  const s = await rpc(\'overauth_session\', { p_token: sessionToken });\n' +
+'  return s.ok ? s.user : null;\n' +
+'}\n\n' +
+'// logout\n' +
+'// await rpc(\'overauth_end_session\', { p_token: sessionToken });';
+
+  updateTesterMode();
+}
+
+function copySnippetFor(keyId) {
+  selectKey(keyId);
+  renderSnippets();
+  const pane = document.querySelector('#code .pane.active pre');
+  if (pane) copyText(pane.textContent);
+}
+
+/* ----------------------------- tester ------------------------------ */
+
+function updateTesterMode() {
+  const chip = $('tester-mode');
+  const raw = selectedKey();
+  const parsed = raw ? OvermindAuth.parseKey(raw) : null;
+  const mode = backend === 'ready' ? 'db mode' : 'local mode';
+  chip.className = 'chip ' + (backend === 'ready' ? 'ok' : 'warn');
+  chip.lastElementChild.textContent = parsed ? mode + ' · ' + parsed.keyId : mode;
+}
+
+async function runTest() {
+  const raw = selectedKey();
+  const out = $('test-output');
+  const verdict = $('test-verdict');
+  const btn = $('test-btn');
+
+  if (!raw) {
+    verdict.className = 'verdict show';
+    verdict.innerHTML = '<div class="alert warn"><span class="ico">!</span><div>Create a key first, then pick it in the dropdown.</div></div>';
+    return;
+  }
+
+  btn.disabled = true; btn.textContent = 'Verifying…';
+  out.textContent = 'Contacting overAuth…';
+  verdict.className = 'verdict';
+
+  const started = performance.now();
+  try {
+    const info = await OvermindAuth.init({
+      key: raw,
+      origin: $('test-origin').value.trim() || location.origin,
+      storage: false,
+      remember: false
+    });
+    if (info && info.ok === false) throw Object.assign(new Error(info.message), { result: info });
+
+    const result = await OvermindAuth.checkCredentials($('test-user').value, $('test-pass').value, {
+      origin: $('test-origin').value.trim() || location.origin,
+      remember: false
+    });
+    const ms = Math.round(performance.now() - started);
+
+    out.textContent = JSON.stringify(result, null, 2) + '\n\n// ' + ms + ' ms · mode: ' + (result.mode || info.mode) + ' · backend: ' + info.backend;
+    verdict.className = 'verdict show';
+    verdict.innerHTML = result.ok
+      ? '<div class="alert ok"><span class="ico">✓</span><div><b>Login accepted.</b> ' + esc(result.user && result.user.username) +
+        ' is a real Overmind account and the password matched. Your site would now sign them in.</div></div>'
+      : '<div class="alert bad"><span class="ico">✕</span><div><b>Rejected — ' + esc(result.reason) + '.</b> ' + esc(result.message) + '</div></div>';
+  } catch (e) {
+    const result = e.result || { ok: false, reason: 'error', message: e.message };
+    out.textContent = JSON.stringify(result, null, 2);
+    verdict.className = 'verdict show';
+    verdict.innerHTML = '<div class="alert bad"><span class="ico">✕</span><div>' + esc(result.message || e.message) + '</div></div>';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Run verify';
+  }
+}
+
+/* --------------------------- live preview --------------------------- */
+
+function mountPreview() {
+  const raw = selectedKey();
+  if (!raw || typeof OvermindAuth.mount !== 'function') return;
+  OvermindAuth.init({ key: raw, storage: false, origin: location.origin });
+  previewWidget = OvermindAuth.mount('#preview-card', { theme: previewTheme });
+  previewButton = OvermindAuth.renderButton('#preview-button', {
+    theme: previewTheme,
+    buttonText: 'Continue with Overmind'
+  });
+  $('theme-toggle').textContent = previewTheme === 'dark' ? 'Light theme' : 'Dark theme';
+}
+
+function togglePreviewTheme() {
+  previewTheme = previewTheme === 'dark' ? 'light' : 'dark';
+  OvermindAuth.signOut();
+  if (selectedKey()) mountPreview();
+  else mountPreviewDemoKey();
+  $('theme-toggle').textContent = previewTheme === 'dark' ? 'Light theme' : 'Dark theme';
+}
+
+/* ------------------------------- boot ------------------------------- */
+
+async function refreshAll() {
+  await checkBackend(true);
+  if (dev) { await loadKeys(); await loadStats(); renderSnippets(); mountPreview(); }
+}
+
+(async function boot() {
+  $('dev-password').addEventListener('keydown', e => { if (e.key === 'Enter') devSignIn(); });
+  $('dev-username').addEventListener('keydown', e => { if (e.key === 'Enter') $('dev-password').focus(); });
+  ['test-user', 'test-pass', 'test-origin'].forEach(id => {
+    $(id).addEventListener('keydown', e => { if (e.key === 'Enter') runTest(); });
+  });
+
+  $('test-origin').value = location.origin;
+  renderSnippets();
+  await checkBackend(true);
+
+  const saved = restoreDevSession();
+  if (saved) {
+    dev = saved;
+    await onSignedIn();
+  } else {
+    mountPreviewDemoKey();
+  }
+})();
+
+/* Before sign-in there are no keys, but the preview should still show something. */
+function mountPreviewDemoKey() {
+  const demo = U.buildKey({ owner: 'preview', origins: ['*'], scopes: ['profile'], name: 'Preview' });
+  OvermindAuth.init({ key: demo.key, storage: false, origin: location.origin, mode: 'local' });
+  previewWidget = OvermindAuth.mount('#preview-card', { theme: previewTheme });
+  previewButton = OvermindAuth.renderButton('#preview-button', { theme: previewTheme, buttonText: 'Continue with Overmind' });
+}
+</script>
+</body>
+</html>
